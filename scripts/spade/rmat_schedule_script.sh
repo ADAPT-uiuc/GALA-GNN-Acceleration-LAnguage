@@ -107,7 +107,7 @@ for node in "${nodes_Array[@]}"; do
   for edge_mul in "${edge_mul_Array[@]}"; do
     for pw in "${power_law_Array[@]}"; do
       for pw_ratio in "${pw_edge_ratio_Array[@]}"; do
-        python ../data/rmat_generate.py --pw_abcd "$pw" --rat_pw "$pw_ratio" --nodes "$node" --mul_edges "$edge_mul" --outp "$matrix_gen_path"
+        python3 ../data/rmat_generate.py --pw_abcd "$pw" --rat_pw "$pw_ratio" --nodes "$node" --mul_edges "$edge_mul" --outp "$matrix_gen_path"
 
         for emb_size in "${emb_Array[@]}"; do
           for col_tile in "${col_tile_Array[@]}"; do
