@@ -1,5 +1,5 @@
 # Name of the matrix to be downloaded from suite sparse
-matrix_gen_path="/home/damitha/PycharmProjects/generate/"
+matrix_gen_path="../../data_schedule/"
 
 row_tile_size=2
 column_tile_size=20000
@@ -55,20 +55,18 @@ declare -a reord_Array=("0" \
 declare -a prefetch_Array=("0") # TODO
 
 # Create a main data folder if there isn't one
-#if [ -d "../../data_schedule" ]
-#then
-#    echo "data_schedule folder exists"
-#else
-#    mkdir "../../data_schedule"
-#fi
-#
-## Create a sub data folder for the specific matrix
-#if [ -d "../../data_schedule/$mtx_ss_name" ]
-#then
-#    echo "data_schedule/$mtx_ss_name folder exists"
-#else
-#    mkdir "../../data_schedule/$mtx_ss_name"
-#fi
+if [ -d "../../data_schedule" ]
+then
+  echo "data_schedule folder exists"
+else
+  mkdir "../../data_schedule"
+fi
+
+# Make the PaRMAT file in not there
+if [ -f "../../utils/third_party/parmat/Release/PaRMAT" ]
+then
+  (cd ../../utils/third_party/parmat/Release && make)
+fi
 
 if [[ $nPEs -lt $feat_size ]]
 then
