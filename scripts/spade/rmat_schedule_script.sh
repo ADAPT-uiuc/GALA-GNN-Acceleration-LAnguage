@@ -5,71 +5,71 @@ schedule_output="../../data_schedule/"
 nPEs=5
 generate_empty=0
 
-############ Single test for testing pipeline
-# Graph configurations
-declare -a nodes_Array=(10000)
-declare -a edge_mul_Array=(2)
-declare -a power_law_Array=("1000")
-declare -a pw_edge_ratio_Array=(1)
-
-# Embedding configurations
-declare -a emb_Array=(32)
-# Optimization options
-declare -a col_tile_Array=(2048)
-declare -a row_tile_Array=(16)
-declare -a barriered_Array=("0")
-declare -a bypass_Array=("0")
-declare -a work_div_Array=("0") # TODO
-declare -a reord_Array=("1")
-declare -a prefetch_Array=("0") # TODO
-#################
-
-
-########### Actual ###################
+############# Single test for testing pipeline
 ## Graph configurations
-#declare -a nodes_Array=(10000 \
-#100000 \
-#1000000)
-#declare -a edge_mul_Array=(2 \
-#10 \
-#100)
-#declare -a power_law_Array=("1000" \
-#"1100" \
-#"1110")
-#declare -a pw_edge_ratio_Array=(1 \
-#2 \
-#10 \
-#99)
+#declare -a nodes_Array=(10000)
+#declare -a edge_mul_Array=(2)
+#declare -a power_law_Array=("1000")
+#declare -a pw_edge_ratio_Array=(1)
 #
 ## Embedding configurations
-#declare -a emb_Array=(32 \
-#128 \
-#512 \
-#2048)
+#declare -a emb_Array=(32)
 ## Optimization options
-#declare -a col_tile_Array=(512 \
-#2048 \
-#8192 \
-#32768 \
-#131072 \
-#524228 \
-#2097152)
-#declare -a row_tile_Array=(1 \
-#4 \
-#16 \
-#64 \
-#256 \
-#1024 \
-#4096)
-#declare -a barriered_Array=("0" \
-#"1")
-#declare -a bypass_Array=("0" \
-#"1")
+#declare -a col_tile_Array=(2048)
+#declare -a row_tile_Array=(16)
+#declare -a barriered_Array=("0")
+#declare -a bypass_Array=("0")
 #declare -a work_div_Array=("0") # TODO
-#declare -a reord_Array=("0" \
-#"1")
+#declare -a reord_Array=("1")
 #declare -a prefetch_Array=("0") # TODO
-###################################
+##################
+
+
+########## Actual ###################
+# Graph configurations
+declare -a nodes_Array=(10000 \
+100000 \
+1000000)
+declare -a edge_mul_Array=(2 \
+10 \
+100)
+declare -a power_law_Array=("1000" \
+"1100" \
+"1110")
+declare -a pw_edge_ratio_Array=(1 \
+2 \
+10 \
+99)
+
+# Embedding configurations
+declare -a emb_Array=(32 \
+128 \
+512 \
+2048)
+# Optimization options
+declare -a col_tile_Array=(512 \
+2048 \
+8192 \
+32768 \
+131072 \
+524228 \
+2097152)
+declare -a row_tile_Array=(1 \
+4 \
+16 \
+64 \
+256 \
+1024 \
+4096)
+declare -a barriered_Array=("0" \
+"1")
+declare -a bypass_Array=("0" \
+"1")
+declare -a work_div_Array=("0") # TODO
+declare -a reord_Array=("0" \
+"1")
+declare -a prefetch_Array=("0") # TODO
+##################################
 
 # Create a main data folder if there isn't one
 if [ -d "../../data_schedule" ]
@@ -101,14 +101,6 @@ fi
 #  echo "Code generation for SPADE exists."
 #else
 #  (cd ../../build && cmake .. && make)
-#fi
-
-#if [[ $nPEs -lt $feat_size ]]
-#then
-# a=$(( 4*$nPEs))
-# echo $a
-#else
-#  echo "still works"
 #fi
 
 for node in "${nodes_Array[@]}"; do
