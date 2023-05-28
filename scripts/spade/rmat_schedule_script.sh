@@ -65,15 +65,18 @@ fi
 # Make the PaRMAT file in not there
 if [ -f "../../utils/third_party/parmat/Release/PaRMAT" ]
 then
+  echo "PaRMAT exists."
+else
+  echo "Works"
   (cd ../../utils/third_party/parmat/Release && make)
 fi
 
-if [[ $nPEs -lt $feat_size ]]
-then
- echo "Works"
-else
-  echo "still works"
-fi
+#if [[ $nPEs -lt $feat_size ]]
+#then
+# echo "Works"
+#else
+#  echo "still works"
+#fi
 
 for node in "${nodes_Array[@]}"; do
   for edge_mul in "${edge_mul_Array[@]}"; do
