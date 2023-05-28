@@ -95,12 +95,13 @@ then
 else
   mkdir "../../build"
 fi
-if [ -f "../../build/tests/spade_codegen_spmm_test" ]
-then
-  echo "Code generation for SPADE exists."
-else
-  (cd ../../build && cmake .. && make)
-fi
+(cd ../../build && rm -r * && cmake .. && make)
+#if [ -f "../../build/tests/spade_codegen_spmm_test" ]
+#then
+#  echo "Code generation for SPADE exists."
+#else
+#  (cd ../../build && cmake .. && make)
+#fi
 
 #if [[ $nPEs -lt $feat_size ]]
 #then
