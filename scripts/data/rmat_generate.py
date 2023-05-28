@@ -29,7 +29,7 @@ if __name__ == '__main__':
     parmat_path = args.rmatp
     current_path = args.outp
 
-    inp_prefix = current_path + "coo_"
+    inp_prefix = current_path
     inp_suffix = ".coo"
 
     n = args.nodes
@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     for mi in m:
         if mi == 1:
-            cg.append("{rati:.3f}".format(rati=main_per))
+            cg.append("{rati:.3f}".format(rati=math.floor(main_per * 100)/100))
         else:
             cg.append("{rati:.3f}".format(rati=rest_per))
 
