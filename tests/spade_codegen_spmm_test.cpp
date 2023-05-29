@@ -49,8 +49,6 @@ int main(int argc, char **argv) {
     // 11. Generate empty tiles // TODO is this necessary?
     // 12. Output path
 
-
-
     typedef typename SM_t::itype iT;
     typedef typename SM_t::ntype nT;
     typedef typename SM_t::vtype vT;
@@ -119,11 +117,12 @@ int main(int argc, char **argv) {
     if (reord_mtx) {
         std::unique_ptr<vint[]> perm_rabbit;
         auto nvals_var = adj.nvals();
+        auto nrows_var = adj.nrows();
         SM_t::itype *col_ids_var = adj.ids_ptr();
         auto vals_var = adj.vals_ptr();
         SM_t::itype *row_ids_var;
         get_row_ids<SM_t>(&adj, row_ids_var);
-        get_perm_graph<SM_t>(nvals_var, row_ids_var, col_ids_var, vals_var, perm_rabbit);
+        get_perm_graph<SM_t>(nrows_var, nvals_var, row_ids_var, col_ids_var, vals_var, perm_rabbit);
         SM_t::itype *perm = (SM_t::itype *) aligned_alloc(64, sizeof(SM_t::itype) * nrows);
         for (SM_t::itype p_i = 0; p_i < nrows; p_i++) {
             perm[p_i] = (SM_t::itype) perm_rabbit[p_i];

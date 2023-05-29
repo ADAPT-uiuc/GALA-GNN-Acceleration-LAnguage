@@ -806,6 +806,9 @@ void rowReorderToAdj(SM *adj,
 
     for (iT i = 0; i < adj->nrows(); i += 1) {
         iT new_loc = perm[i];
+        if (new_loc < 0 || new_loc > nrows){
+            std::cout << "A proper location was not generated for: " << i << std::endl;
+        }
 
         nT old_pre_offset = adj_offset_ptr[i];
         nT old_post_offset = adj_offset_ptr[i + 1];

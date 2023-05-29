@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--rmatp", type=str, default="../../utils/third_party/parmat/Release/PaRMAT",
                         help="Location of RMAT")
-    parser.add_argument("--outp", type=str, default="/home/damitha/PycharmProjects/generate/",
+    parser.add_argument("--outp", type=str, default="../../data_schedule",
                         help="Output path")
     args = parser.parse_args()
     print(args)

@@ -165,7 +165,8 @@ adjacency_list read_graph(SM* src) {
 }
 
 template<class SM>
-adjacency_list read_graph(typename SM::ntype nvals,
+adjacency_list read_graph(typename SM::itype nrows,
+                          typename SM::ntype nvals,
                           typename SM::itype *row_ids,
                           typename SM::itype *col_ids,
                           typename SM::vtype *vals) {
@@ -204,11 +205,13 @@ adjacency_list read_graph(typename SM::ntype nvals,
     start_time = get_time();
 #endif
     // The number of vertices = max vertex ID + 1 (assuming IDs start from zero)
+//    const auto n =
+//            boost::accumulate(edges, static_cast<vint>(0), [](vint s, auto &e) {
+//                return std::max(s, std::max(std::get<0>(e), std::get<1>(e)) + 1);
+//            });
 
-    const auto n =
-            boost::accumulate(edges, static_cast<vint>(0), [](vint s, auto &e) {
-                return std::max(s, std::max(std::get<0>(e), std::get<1>(e)) + 1);
-            });
+    const auto n = nrows;
+
 
 #ifdef DBG_RO
     time_accum = (get_time() - start_time);
@@ -269,7 +272,8 @@ void get_perm_graph(SM* src,
 }
 
 template<class SM>
-void get_perm_graph(typename SM::ntype nvals,
+void get_perm_graph(typename SM::itype nrows,
+                    typename SM::ntype nvals,
                     typename SM::itype *row_ids,
                     typename SM::itype *col_ids,
                     typename SM::vtype *vals,
@@ -280,7 +284,7 @@ void get_perm_graph(typename SM::ntype nvals,
     std::cerr << "Number of threads: " << omp_get_max_threads() << std::endl;
 
     // TODO add the new graph read here
-    auto adj = read_graph<SM>(nvals, row_ids, col_ids, vals);
+    auto adj = read_graph<SM>(nrows, nvals, row_ids, col_ids, vals);
 
     const auto m =
             boost::accumulate(adj | transformed([](auto &es) { return es.size(); }),
