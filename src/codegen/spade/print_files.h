@@ -141,8 +141,11 @@ void print_meta_n_data(const std::string &out_path,
         nT prev_offset = 0;
         for (iT i = 0; i < local_adj->nrows(); i++) {
             // Print COO to data
+//            for (iT j = local_adj->offset_ptr()[i]; j < local_adj->offset_ptr()[i + 1]; j++) {
+//                data_file << i << "," << local_adj->ids_ptr()[j] << "," << local_adj->vals_ptr()[j] << "\n";
+//            }
             for (iT j = local_adj->offset_ptr()[i]; j < local_adj->offset_ptr()[i + 1]; j++) {
-                data_file << i << "," << local_adj->ids_ptr()[j] << "," << local_adj->vals_ptr()[j] << "\n";
+                data_file << i << "," << local_adj->ids_ptr()[j] << "\n";
             }
             // Print Tile start offsets to metadata
             if (i == local_tile_offset.at(current_row_tile)) {
@@ -415,8 +418,11 @@ void print_meta_n_data(const std::string &out_path,
         nT prev_offset = 0;
         for (iT i = 0; i < local_adj->nrows(); i++) {
             // Print COO to data
+//            for (iT j = local_adj->offset_ptr()[i]; j < local_adj->offset_ptr()[i + 1]; j++) {
+//                data_file << i << "," << local_adj->ids_ptr()[j] << "," << local_adj->vals_ptr()[j] << "\n";
+//            }
             for (iT j = local_adj->offset_ptr()[i]; j < local_adj->offset_ptr()[i + 1]; j++) {
-                data_file << i << "," << local_adj->ids_ptr()[j] << "," << local_adj->vals_ptr()[j] << "\n";
+                data_file << i << "," << local_adj->ids_ptr()[j] << "\n";
             }
             // Print Tile start offsets to metadata
             if (i == local_tile_offset.at(current_row_tile)) {
@@ -568,7 +574,9 @@ void print_meta_n_data(const std::string &out_path,
                             ntiles += 1;
                         }
 
-                        data_file << v << "," << u << "," << A_val << "\n";
+//                        data_file << v << "," << u << "," << A_val << "\n";
+                        data_file << v << "," << u << "\n";
+
                         current_val += 1;
                     } else if (u >= drows_end) {
                         copy_offsets[v] = e;
