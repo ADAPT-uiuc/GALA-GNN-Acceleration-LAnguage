@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--rmatp", type=str, default="../../utils/third_party/parmat/Release/PaRMAT",
                         help="Location of RMAT")
-    parser.add_argument("--outp", type=str, default="../../data_schedule",
+    parser.add_argument("--outp", type=str, default="../../data_schedule/",
                         help="Output path")
 
     args = parser.parse_args()
@@ -193,10 +193,13 @@ if __name__ == '__main__':
 
                         src_node = np.append([n, n], coo_src)
                         dst_node = coo_dst
-                        with open(inp_path + "_src.npy", 'wb') as file_src:
+
+                        res1 = os.system("mkdir " + inp_path)
+
+                        with open(inp_path + "/Adj_src.npy", 'wb') as file_src:
                             np.save(file_src, src_node.astype(np.uint32))
 
-                        with open(inp_path + "_dst.npy", 'wb') as file_dst:
+                        with open(inp_path + "/Adj_dst.npy", 'wb') as file_dst:
                             np.save(file_dst, dst_node.astype(np.uint32))
 
                         os.system("rm " + coo_inp_path)
