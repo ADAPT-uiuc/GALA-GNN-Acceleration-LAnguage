@@ -1,4 +1,6 @@
 if (GEN_SPADE)
     add_executable(spade_codegen_spmm_test spade_codegen_spmm_test.cpp)
-#    add_executable(spade_codegen_sddmm_test spade_codegen_sddmm_test.cpp)
+endif ()
+if (SP_TEST)
+    add_executable(spade_cpu_spmm_impl spade_cpu_spmm_impl.cpp)
 endif ()

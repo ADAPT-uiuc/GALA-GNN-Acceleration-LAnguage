@@ -15,10 +15,8 @@ typedef int val_int_t;
 #include "common.h"
 
 #ifdef RO_1
-
 #include "../src/ops/reordering.h"
 #include "../src/third_party/rabbit_reorder/rabbit_reordering.h"
-
 #endif
 
 #include "../src/codegen/spade/scheduler.h"
