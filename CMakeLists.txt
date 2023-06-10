@@ -7,7 +7,7 @@ set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
 
 ######################### Project Components ###########################
 # SPADE Accelerator code-gen
-option(GEN_SPADE "Build for code-gen in spade" ON)
+option(GEN_SPADE "Build for code-gen in spade" OFF)
 # Sparse transfer learning tests
 option(SP_TEST "Build for code for sparse matrix ops and it's dependencies." ON)
 # GNN DSL
@@ -50,7 +50,7 @@ if (NOT PROC_TILE)
 endif ()
 # The loop order for executing sparse matrix operations, default 2 (jj, iip, i, j, k)
 if (NOT L_ORDER)
-    set(L_ORDER 3)
+    set(L_ORDER 2)
 endif ()
 # The GCN Normalization method, default 1
 # TODO currently tightly coupled to the sparse ops. Remove it from there.
