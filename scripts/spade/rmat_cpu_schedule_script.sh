@@ -38,6 +38,13 @@ declare -a loop_order_Array=(2 \
 3 \
 5)
 
+if [ -d "../../build" ]
+then
+  echo "build folder exists"
+else
+  mkdir "../../build"
+fi
+
 
 echo "path,emb_size,col_tile,row_tile,loop_order,slice_size,barrier,work_div,reorder,prefetch" > transf_times
 for lo in "${loop_order_Array[@]}"; do
