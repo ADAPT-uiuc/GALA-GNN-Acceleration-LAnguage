@@ -1,7 +1,7 @@
 # Name of the matrix to be downloaded from suite sparse
 data_path="/home/damitha2/GNN-Acceleration-Language/data_schedule/"
 test_path="../../build/tests/spade_cpu_spmm_impl"
-iters=100
+iters=20
 
 # Embedding configurations
 declare -a emb_Array=(32 \
@@ -69,7 +69,7 @@ for lo in "${loop_order_Array[@]}"; do
             then
 
               for reord in "${reord_Array[@]}"; do
-                echo "$d,$emb_size,$col_tile,$row_tile,$lo,no_slice,no_barr,no_wdiv,$reord,no_pref," >> transf_times
+                printf '%s' "$d,$emb_size,$col_tile,$row_tile,$lo,no_slice,no_barr,no_wdiv,$reord,no_pref," >> transf_times
                 numactl --physcpubind=0-55 --interleave=all $test_path $d $emb_size $col_tile $row_tile 0 0 0 $reord 0 $iters >> transf_times
               done
 
