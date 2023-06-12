@@ -1,5 +1,5 @@
 # Name of the matrix to be downloaded from suite sparse
-data_path="/home/damitha/GNN-Acceleration-Language/data_schedule/"
+data_path="/home/damitha2/GNN-Acceleration-Language/data_schedule/"
 test_path="../../build/tests/spade_cpu_spmm_impl"
 iters=100
 
