@@ -15,7 +15,8 @@ declare -a col_tile_Array=(512 \
 32768 \
 131072 \
 524228 \
-2097152)
+2097152 \
+16777216)
 declare -a row_tile_Array=(1 \
 4 \
 16 \
