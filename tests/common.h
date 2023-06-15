@@ -24,17 +24,17 @@ void readDM(std::string filename, DM *mtx, typename DM::DENSE_MTX_TYPE type) {
     dvT *vals;
 
 #ifdef RNPY
-    std::vector<unsigned long> shape {};
+    std::vector<unsigned long> shape{};
     bool fortran_order;
     std::vector<dvT> data;
     npy::LoadArrayFromNumpy(filename, shape, fortran_order, data);
 
-    nrows = (diT)shape.at(0);
-    ncols = (diT)shape.at(1);
+    nrows = (diT) shape.at(0);
+    ncols = (diT) shape.at(1);
 
 //    std::cout << filename << " | shape: " << nrows << " " << ncols << std::endl;
 
-    vals = (dvT *) aligned_alloc(64, (nrows*ncols) * sizeof(dvT));
+    vals = (dvT *) aligned_alloc(64, (nrows * ncols) * sizeof(dvT));
     std::copy(data.begin(), data.end(), vals);
 #else
     MtxIO<diT, dnT, dvT> reader;
@@ -62,17 +62,17 @@ void readDV(std::string filename, DM *mtx, typename DM::DENSE_MTX_TYPE type) {
     dvT *vals;
 
 #ifdef RNPY
-    std::vector<unsigned long> shape {};
+    std::vector<unsigned long> shape{};
     bool fortran_order;
     std::vector<dvT> data;
     npy::LoadArrayFromNumpy(filename, shape, fortran_order, data);
 
-    nrows = (diT)shape.at(0);
+    nrows = (diT) shape.at(0);
     ncols = 1;
 
 //    std::cout << filename << " | shape: " << nrows << " " << ncols << std::endl;
 
-    vals = (dvT *) aligned_alloc(64, (nrows*ncols) * sizeof(dvT));
+    vals = (dvT *) aligned_alloc(64, (nrows * ncols) * sizeof(dvT));
     std::copy(data.begin(), data.end(), vals);
 #else
     MtxIO<diT, dnT, dvT> reader;
@@ -100,17 +100,17 @@ void readDM_d(std::string filename, DM *mtx, typename DM::DENSE_MTX_TYPE type) {
     dvT *vals;
 
 #ifdef RNPY
-    std::vector<unsigned long> shape {};
+    std::vector<unsigned long> shape{};
     bool fortran_order;
     std::vector<double> data;
     npy::LoadArrayFromNumpy(filename, shape, fortran_order, data);
 
-    nrows = (diT)shape.at(0);
-    ncols = (diT)shape.at(1);
+    nrows = (diT) shape.at(0);
+    ncols = (diT) shape.at(1);
 
 //    std::cout << filename << " | shape: " << nrows << " " << ncols << std::endl;
 
-    vals = (dvT *) aligned_alloc(64, (nrows*ncols) * sizeof(dvT));
+    vals = (dvT *) aligned_alloc(64, (nrows * ncols) * sizeof(dvT));
     std::copy(data.begin(), data.end(), vals);
 #else
     MtxIO<diT, dnT, dvT> reader;
@@ -138,17 +138,17 @@ void readDM_dV(std::string filename, DM *mtx, typename DM::DENSE_MTX_TYPE type) 
     dvT *vals;
 
 #ifdef RNPY
-    std::vector<unsigned long> shape {};
+    std::vector<unsigned long> shape{};
     bool fortran_order;
     std::vector<double> data;
     npy::LoadArrayFromNumpy(filename, shape, fortran_order, data);
 
-    nrows = (diT)shape.at(0);
+    nrows = (diT) shape.at(0);
     ncols = 1;
 
 //    std::cout << filename << " | shape: " << nrows << " " << ncols << std::endl;
 
-    vals = (dvT *) aligned_alloc(64, (nrows*ncols) * sizeof(dvT));
+    vals = (dvT *) aligned_alloc(64, (nrows * ncols) * sizeof(dvT));
     std::copy(data.begin(), data.end(), vals);
 #else
     MtxIO<diT, dnT, dvT> reader;
@@ -173,7 +173,7 @@ void readSM_npy(std::string path, SM *adj) {
     typedef typename SM::vtype vT;
 
     std::string filename;
-    std::vector<unsigned long> shape {};
+    std::vector<unsigned long> shape{};
     bool fortran_order;
 
 //    std::cout << 1 << std::endl;
@@ -189,7 +189,7 @@ void readSM_npy(std::string path, SM *adj) {
     shape.clear();
     std::vector<iT> data_adj_dst;
     npy::LoadArrayFromNumpy(filename, shape, fortran_order, data_adj_dst);
-    nT adj_nvals = (nT)shape.at(0);
+    nT adj_nvals = (nT) shape.at(0);
     iT *adj_row_ids = (iT *) aligned_alloc(64, (adj_nvals) * sizeof(iT));
     std::copy(data_adj_src.begin() + 2, data_adj_src.end(), adj_row_ids);
     iT *adj_col_ids = (iT *) aligned_alloc(64, (adj_nvals) * sizeof(iT));
@@ -211,7 +211,7 @@ void readSM_npy32(std::string path, SM *adj) {
     typedef typename SM::vtype vT;
 
     std::string filename;
-    std::vector<unsigned long> shape {};
+    std::vector<unsigned long> shape{};
     bool fortran_order;
 
     iT adj_nrows, adj_ncols;
@@ -219,14 +219,14 @@ void readSM_npy32(std::string path, SM *adj) {
     shape.clear();
     std::vector<uint32_t> data_adj_src;
     npy::LoadArrayFromNumpy(filename, shape, fortran_order, data_adj_src);
-    adj_nrows = (iT)data_adj_src.at(0);
-    adj_ncols = (iT)data_adj_src.at(1);
+    adj_nrows = (iT) data_adj_src.at(0);
+    adj_ncols = (iT) data_adj_src.at(1);
 
     filename = path + "Adj_dst.npy";
     shape.clear();
     std::vector<uint32_t> data_adj_dst;
     npy::LoadArrayFromNumpy(filename, shape, fortran_order, data_adj_dst);
-    nT adj_nvals = (nT)shape.at(0);
+    nT adj_nvals = (nT) shape.at(0);
     iT *adj_row_ids = (iT *) aligned_alloc(64, (adj_nvals) * sizeof(iT));
     std::copy(data_adj_src.begin() + 2, data_adj_src.end(), adj_row_ids);
     iT *adj_col_ids = (iT *) aligned_alloc(64, (adj_nvals) * sizeof(iT));
@@ -293,7 +293,7 @@ void readSM(std::string filename, COOMatrix<typename SM::itype, typename SM::nty
 }
 
 template<class SM>
-void writeSM_mtx(SM* adj, std::string &out_path) {
+void writeSM_mtx(SM *adj, std::string &out_path) {
     typedef typename SM::itype iT;
     typedef typename SM::ntype nT;
     typedef typename SM::vtype vT;
@@ -319,7 +319,7 @@ void writeSM_mtx(SM* adj, std::string &out_path) {
         for (nT e = adj_offset_ptr[v]; e < adj_offset_ptr[v + 1]; e++) {
             iT u = adj_ids_ptr[e];
             vT val = adj_vals_ptr[e];
-            out_mtx << v+1 << " " << u+1 << " " << val << "\n";
+            out_mtx << v + 1 << " " << u + 1 << " " << val << "\n";
         }
     }
 
@@ -329,17 +329,17 @@ void writeSM_mtx(SM* adj, std::string &out_path) {
 
 template<class SM>
 void
-get_row_ids(CSRCMatrix<typename SM::itype, typename SM::ntype, typename SM::vtype> *mtx, typename SM::itype* &row_ids) {
+get_row_ids(CSRCMatrix<typename SM::itype, typename SM::ntype, typename SM::vtype> *mtx, typename SM::itype *&row_ids) {
     typedef typename SM::itype iT;
     typedef typename SM::ntype nT;
     typedef typename SM::vtype vT;
 
-    row_ids = (iT*)aligned_alloc(64, mtx->nvals() * sizeof(iT));
+    row_ids = (iT *) aligned_alloc(64, mtx->nvals() * sizeof(iT));
 #pragma omp parallel for schedule(static)
-    for (iT i = 0; i < mtx->nrows(); i++){
+    for (iT i = 0; i < mtx->nrows(); i++) {
         nT start_row = mtx->offset_ptr()[i];
-        nT end_row = mtx->offset_ptr()[i+1];
-        for (nT j = start_row; j < end_row; j++){
+        nT end_row = mtx->offset_ptr()[i + 1];
+        for (nT j = start_row; j < end_row; j++) {
             row_ids[j] = i;
         }
     }
@@ -377,86 +377,106 @@ float cahce_flush(long val_i, long val_j){
 #pragma optimize("", on)
 #endif
 
-template <class SM>
-void check_equal(SM* adj1, SM* adj2) {
+template<class SM>
+void check_equal(SM *adj1, SM *adj2) {
     typedef typename SM::itype iT;
     typedef typename SM::ntype nT;
     typedef typename SM::vtype vT;
 
     bool is_diff = false;
-    if (adj1->nrows() != adj2->nrows()){
+    if (adj1->nrows() != adj2->nrows()) {
         is_diff = true;
     }
-    if(is_diff){
+    if (is_diff) {
         std::cout << "The number of rows are different." << std::endl;
     }
-    if (!is_diff){
-        for (iT i = 0; i < adj1->nrows() + 1; i++){
-            if (adj1->offset_ptr()[i] != adj2->offset_ptr()[i]){
+    if (!is_diff) {
+        for (iT i = 0; i < adj1->nrows() + 1; i++) {
+            if (adj1->offset_ptr()[i] != adj2->offset_ptr()[i]) {
                 is_diff = true;
                 break;
             }
         }
     }
-    if(is_diff){
+    if (is_diff) {
         std::cout << "The offsets are different." << std::endl;
     }
 
-    if (!is_diff){
-        for (nT j = 0; j < adj1->nvals(); j++){
-            if (adj1->vals_ptr()[j] != adj2->vals_ptr()[j]){
+    if (!is_diff) {
+        for (nT j = 0; j < adj1->nvals(); j++) {
+            if (adj1->vals_ptr()[j] != adj2->vals_ptr()[j]) {
                 is_diff = true;
                 break;
             }
         }
     }
-    if(is_diff){
+    if (is_diff) {
         std::cout << "The values are different." << std::endl;
     }
 
-    if (!is_diff){
-        for (nT j = 0; j < adj1->nvals(); j++){
-            if (adj1->ids_ptr()[j] != adj2->ids_ptr()[j]){
+    if (!is_diff) {
+        for (nT j = 0; j < adj1->nvals(); j++) {
+            if (adj1->ids_ptr()[j] != adj2->ids_ptr()[j]) {
                 is_diff = true;
                 break;
             }
         }
     }
-    if(is_diff){
+    if (is_diff) {
         std::cout << "The ids are different." << std::endl;
     }
 
-    if(is_diff){
+    if (is_diff) {
         std::cout << "The graphs are different." << std::endl;
     } else {
         std::cout << "The graphs are the same." << std::endl;
     }
 }
 
-double calc_std(std::vector<double> vec){
-    if ((double)vec.size() > 0){
+std::tuple<double, double> calc_mean_std(std::vector<double> vec) {
+    if ((double) vec.size() > 1) {
         double mean = 0;
-        for (auto val: vec){
+        for (auto val: vec) {
             mean += val;
         }
-        mean /= (double)vec.size();
+        mean /= (double) vec.size();
 
         double std = 0;
         std::for_each(std::begin(vec), std::end(vec), [&](const double d) {
             std += (d - mean) * (d - mean);
         });
-        return sqrt(std / ((double)vec.size() - 1));
+        return std::make_tuple(mean, sqrt(std / ((double) vec.size() - 1)));
+    } else if ((double) vec.size() > 0) {
+        return std::make_tuple(vec.at(0), 0);
+    } else {
+        return std::make_tuple(0, 0);
+    }
+}
+
+double calc_std(std::vector<double> vec) {
+    if ((double) vec.size() > 1) {
+        double mean = 0;
+        for (auto val: vec) {
+            mean += val;
+        }
+        mean /= (double) vec.size();
+
+        double std = 0;
+        std::for_each(std::begin(vec), std::end(vec), [&](const double d) {
+            std += (d - mean) * (d - mean);
+        });
+        sqrt(std / ((double) vec.size() - 1));
     }
     return 0;
 }
 
-double calc_mean(std::vector<double> vec){
-    if ((double)vec.size() > 0){
+double calc_mean(std::vector<double> vec) {
+    if ((double) vec.size() > 0) {
         double mean = 0;
-        for (auto val: vec){
+        for (auto val: vec) {
             mean += val;
         }
-        mean /= (double)vec.size();
+        mean /= (double) vec.size();
 
         return mean;
     }
