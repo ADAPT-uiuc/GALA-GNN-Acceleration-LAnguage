@@ -1,6 +1,6 @@
 # Name of the matrix to be downloaded from suite sparse
 data_path="/home/damitha2/GNN-Acceleration-Language/data_schedule/"
-test_path="../../build/tests/spade_cpu_spmm_impl"
+test_path="../../build/tests/spade_cpu_spmm_impl_bulk"
 
 if [ -d "../../build" ]; then
   echo "build folder exists"
