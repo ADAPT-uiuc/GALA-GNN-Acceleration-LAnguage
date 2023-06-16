@@ -187,7 +187,7 @@ int main(int argc, char **argv) {
                                     if (loop_ord == 3) {
                                         total = 0;
                                         times_arr.clear();
-                                        for (i = 0; i < max_num_iters + skip_cache_warmup; i++) {
+                                        for (int i = 0; i < max_num_iters + skip_cache_warmup; i++) {
                                             out_emb.set_all(0);
 
                                             start = get_time();
