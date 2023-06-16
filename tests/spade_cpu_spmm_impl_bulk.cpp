@@ -71,7 +71,6 @@ int main(int argc, char **argv) {
     auto wsum_aggr = wsumAgg<val_t, val_t, ind2_t>;
     // Timing init
     double start, end, total;
-    int i;
     std::vector<double> times_arr;
 
     std::string filename;
@@ -158,7 +157,7 @@ int main(int argc, char **argv) {
                             if (loop_ord == 2) {
                                 total = 0;
                                 times_arr.clear();
-                                for (i = 0; i < max_num_iters + skip_cache_warmup; i++) {
+                                for (int i = 0; i < max_num_iters + skip_cache_warmup; i++) {
                                     out_emb.set_all(0);
 
                                     start = get_time();
@@ -218,7 +217,7 @@ int main(int argc, char **argv) {
                                     } else if (loop_ord == 5) {
                                         total = 0;
                                         times_arr.clear();
-                                        for (i = 0; i < max_num_iters + skip_cache_warmup; i++) {
+                                        for (int i = 0; i < max_num_iters + skip_cache_warmup; i++) {
                                             out_emb.set_all(0);
 
                                             start = get_time();
@@ -255,7 +254,7 @@ int main(int argc, char **argv) {
                         times_arr.clear();
 
                         int loop_ord = 2;
-                        for (i = 0; i < max_num_iters + skip_cache_warmup; i++) {
+                        for (int i = 0; i < max_num_iters + skip_cache_warmup; i++) {
                             out_emb.set_all(0);
 
                             start = get_time();
@@ -289,7 +288,7 @@ int main(int argc, char **argv) {
                 if (loop_ord == 2) {
                     total = 0;
                     times_arr.clear();
-                    for (i = 0; i < max_num_iters + skip_cache_warmup; i++) {
+                    for (int i = 0; i < max_num_iters + skip_cache_warmup; i++) {
                         out_emb.set_all(0);
 
                         start = get_time();
@@ -319,7 +318,7 @@ int main(int argc, char **argv) {
                         if (loop_ord == 3) {
                             total = 0;
                             times_arr.clear();
-                            for (i = 0; i < max_num_iters + skip_cache_warmup; i++) {
+                            for (int i = 0; i < max_num_iters + skip_cache_warmup; i++) {
                                 out_emb.set_all(0);
 
                                 start = get_time();
@@ -349,7 +348,7 @@ int main(int argc, char **argv) {
                         } else if (loop_ord == 5) {
                             total = 0;
                             times_arr.clear();
-                            for (i = 0; i < max_num_iters + skip_cache_warmup; i++) {
+                            for (int i = 0; i < max_num_iters + skip_cache_warmup; i++) {
                                 out_emb.set_all(0);
 
                                 start = get_time();

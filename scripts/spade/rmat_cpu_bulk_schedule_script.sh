@@ -14,7 +14,7 @@ fi
   echo "**********"
   echo "emb_size,col_tile,row_tile,loop_order,slice_size,barrier,work_div,reorder,prefetch"
 } >transf_times
-(cd ../../build && rm -r * && cmake .. && make)
+#(cd ../../build && rm -r * && cmake .. && make)
 
 for d in "$data_path"*/; do
   folder_name=$(basename $d)
