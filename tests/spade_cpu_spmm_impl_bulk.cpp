@@ -184,6 +184,9 @@ int main(int argc, char **argv) {
                                           << std::get<1>(out_times) << std::endl;
                             } else {
                                 for (auto slice_size: slice_arr) {
+                                    if (slice_size >= emb_size){
+                                        break;
+                                    }
                                     if (loop_ord == 3) {
                                         total = 0;
                                         times_arr.clear();
@@ -315,6 +318,9 @@ int main(int argc, char **argv) {
                               << std::get<1>(out_times) << std::endl;
                 } else {
                     for (auto slice_size: slice_arr) {
+                        if (slice_size >= emb_size){
+                            break;
+                        }
                         if (loop_ord == 3) {
                             total = 0;
                             times_arr.clear();
