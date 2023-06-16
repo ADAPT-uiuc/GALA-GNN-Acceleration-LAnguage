@@ -27,7 +27,7 @@ for d in "$data_path"*/; do
       echo "$folder_name"
       echo "**********"
     } >>transf_times
-    numactl --physcpubind=0-55 --interleave=all $test_path "$d" >>transf_times
+    numactl --physcpubind=0-55 --interleave=all $test_path "$d" 0 >>transf_times
   fi
 done
 
@@ -42,6 +42,36 @@ for d in "$data_path"*/; do
       echo "$folder_name"
       echo "**********"
     } >>transf_times
-    numactl --physcpubind=0-55 --interleave=all $test_path "$d" >>transf_times
+    numactl --physcpubind=0-55 --interleave=all $test_path "$d" 0 >>transf_times
+  fi
+done
+
+for d in "$data_path"*/; do
+  folder_name=$(basename $d)
+  IFS='_' read -ra name_Array <<< "$folder_name"
+
+  if [[ $((name_Array[0])) -le 250000 ]]
+  then
+    {
+      echo "**********"
+      echo "$folder_name"
+      echo "**********"
+    } >>transf_times
+    numactl --physcpubind=0-55 --interleave=all $test_path "$d" 1 >>transf_times
+  fi
+done
+
+for d in "$data_path"*/; do
+  folder_name=$(basename $d)
+  IFS='_' read -ra name_Array <<< "$folder_name"
+
+  if [[ $((name_Array[0])) -gt 250000 ]]
+  then
+    {
+      echo "**********"
+      echo "$folder_name"
+      echo "**********"
+    } >>transf_times
+    numactl --physcpubind=0-55 --interleave=all $test_path "$d" 1 >>transf_times
   fi
 done

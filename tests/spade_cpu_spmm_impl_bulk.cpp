@@ -43,10 +43,15 @@ int main(int argc, char **argv) {
     typedef typename DM::vtype dvT;
 
     std::string path = argv[1];
+    int exec_feat_group = stoi(string(argv[2]));
 
     // Test parameters settings
     // Embedding sizes
-    diT emb_arr[4] = {32, 128, 512, 2048};
+    diT emb_arr[2] = {32, 128};
+    if (exec_feat_group == 1){
+        emb_arr[0] = 512;
+        emb_arr[1] = 2048;
+    }
 
     // Test opt params
     // Col tile sizes
@@ -54,7 +59,7 @@ int main(int argc, char **argv) {
     // Row tile sizes
     iT row_arr[7] = {1, 4, 16, 64, 256, 1024, 4096};
     // Slice sizes
-    diT slice_arr[4] = {32, 128, 512, 2048};
+    diT slice_arr[4] = {32, 128, 512};
     // Do reordering as well
     bool reord_arr[2] = {false, true};
     // Loop orderings
