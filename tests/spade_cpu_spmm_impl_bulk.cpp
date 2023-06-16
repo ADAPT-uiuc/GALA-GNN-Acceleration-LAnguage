@@ -178,10 +178,10 @@ int main(int argc, char **argv) {
                                         }
                                     }
                                 }
-                                std::tuple<int, int> out_times = calc_mean_std(times_arr);
+                                std::tuple<double, double> out_times = calc_mean_std(times_arr);
                                 std::cout << emb_size << "," << cols_per_tile << "," << rows_per_tile << "," << loop_ord
                                           << ",no_slice,no_barr,no_wdiv,0,no_pref," << std::get<0>(out_times) << ","
-                                          << std::get<1>(out_times);
+                                          << std::get<1>(out_times) << std::endl;
                             } else {
                                 for (auto slice_size: slice_arr) {
                                     if (loop_ord == 3) {
@@ -208,12 +208,12 @@ int main(int argc, char **argv) {
                                                 }
                                             }
                                         }
-                                        std::tuple<int, int> out_times = calc_mean_std(times_arr);
+                                        std::tuple<double, double> out_times = calc_mean_std(times_arr);
                                         std::cout << emb_size << "," << cols_per_tile << "," << rows_per_tile << ","
                                                   << loop_ord
                                                   << "," << slice_size << ",no_barr,no_wdiv,0,no_pref,"
                                                   << std::get<0>(out_times) << ","
-                                                  << std::get<1>(out_times);
+                                                  << std::get<1>(out_times) << std::endl;
                                     } else if (loop_ord == 5) {
                                         total = 0;
                                         times_arr.clear();
@@ -238,12 +238,12 @@ int main(int argc, char **argv) {
                                                 }
                                             }
                                         }
-                                        std::tuple<int, int> out_times = calc_mean_std(times_arr);
+                                        std::tuple<double, double> out_times = calc_mean_std(times_arr);
                                         std::cout << emb_size << "," << cols_per_tile << "," << rows_per_tile << ","
                                                   << loop_ord
                                                   << "," << slice_size << ",no_barr,no_wdiv,0,no_pref,"
                                                   << std::get<0>(out_times) << ","
-                                                  << std::get<1>(out_times);
+                                                  << std::get<1>(out_times) << std::endl;
 
                                     }
                                 }
@@ -275,10 +275,10 @@ int main(int argc, char **argv) {
                                 }
                             }
                         }
-                        std::tuple<int, int> out_times = calc_mean_std(times_arr);
+                        std::tuple<double, double> out_times = calc_mean_std(times_arr);
                         std::cout << emb_size << "," << cols_per_tile << "," << rows_per_tile << "," << loop_ord
                                   << ",no_slice,no_barr,no_wdiv,0,no_pref," << std::get<0>(out_times) << ","
-                                  << std::get<1>(out_times);
+                                  << std::get<1>(out_times) << std::endl;
                     }
                 }
             }
@@ -309,10 +309,10 @@ int main(int argc, char **argv) {
                             }
                         }
                     }
-                    std::tuple<int, int> out_times = calc_mean_std(times_arr);
+                    std::tuple<double, double> out_times = calc_mean_std(times_arr);
                     std::cout << emb_size << "," << ncols << "," << 1 << "," << loop_ord
                               << ",no_slice,no_barr,no_wdiv,0,no_pref," << std::get<0>(out_times) << ","
-                              << std::get<1>(out_times);
+                              << std::get<1>(out_times) << std::endl;
                 } else {
                     for (auto slice_size: slice_arr) {
                         if (loop_ord == 3) {
@@ -339,12 +339,12 @@ int main(int argc, char **argv) {
                                     }
                                 }
                             }
-                            std::tuple<int, int> out_times = calc_mean_std(times_arr);
+                            std::tuple<double, double> out_times = calc_mean_std(times_arr);
                             std::cout << emb_size << "," << ncols << "," << 1 << ","
                                       << loop_ord
                                       << "," << slice_size << ",no_barr,no_wdiv,0,no_pref,"
                                       << std::get<0>(out_times) << ","
-                                      << std::get<1>(out_times);
+                                      << std::get<1>(out_times) << std::endl;
                         } else if (loop_ord == 5) {
                             total = 0;
                             times_arr.clear();
@@ -369,12 +369,12 @@ int main(int argc, char **argv) {
                                     }
                                 }
                             }
-                            std::tuple<int, int> out_times = calc_mean_std(times_arr);
+                            std::tuple<double, double> out_times = calc_mean_std(times_arr);
                             std::cout << emb_size << "," << ncols << "," << 1 << ","
                                       << loop_ord
                                       << "," << slice_size << ",no_barr,no_wdiv,0,no_pref,"
                                       << std::get<0>(out_times) << ","
-                                      << std::get<1>(out_times);
+                                      << std::get<1>(out_times) << std::endl;
                         }
                     }
                 }
