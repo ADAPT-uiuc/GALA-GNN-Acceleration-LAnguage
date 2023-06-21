@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
     // Test parameters settings
     // Embedding sizes
     diT emb_arr[2] = {32, 128};
-    if (exec_feat_group == 1){
+    if (exec_feat_group == 1) {
         emb_arr[0] = 512;
         emb_arr[1] = 2048;
     }
@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
                 tiled_adj.push_back(&adj);
             }
             for (auto cols_per_tile: col_arr) {
-                if (cols_per_tile > ncols){
+                if (cols_per_tile > ncols) {
                     break;
                 }
 
@@ -166,11 +166,11 @@ int main(int argc, char **argv) {
                                     out_emb.set_all(0);
 
                                     start = get_time();
-                                    tile_jj_ii_i_j_kv(tiled_adj,
-                                                      &input_emb,
-                                                      &out_emb,
-                                                      rows_per_tile,
-                                                      wsum_aggr);
+                                    trans_jj_iip_i_j_kv(tiled_adj,
+                                                        &input_emb,
+                                                        &out_emb,
+                                                        rows_per_tile,
+                                                        wsum_aggr);
 
                                     end = get_time();
 
@@ -189,7 +189,7 @@ int main(int argc, char **argv) {
                                           << std::get<1>(out_times) << std::endl;
                             } else {
                                 for (auto slice_size: slice_arr) {
-                                    if (slice_size >= emb_size){
+                                    if (slice_size >= emb_size) {
                                         break;
                                     }
                                     if (loop_ord == 3) {
@@ -199,12 +199,12 @@ int main(int argc, char **argv) {
                                             out_emb.set_all(0);
 
                                             start = get_time();
-                                            tile_kk_jj_iip_i_j_kv(tiled_adj,
-                                                                  &input_emb,
-                                                                  &out_emb,
-                                                                  rows_per_tile,
-                                                                  wsum_aggr,
-                                                                  slice_size);
+                                            trans_kk_jj_iip_i_j_kv(tiled_adj,
+                                                                   &input_emb,
+                                                                   &out_emb,
+                                                                   rows_per_tile,
+                                                                   wsum_aggr,
+                                                                   slice_size);
                                             end = get_time();
 
                                             if (i >= skip_cache_warmup) {
@@ -229,12 +229,12 @@ int main(int argc, char **argv) {
                                             out_emb.set_all(0);
 
                                             start = get_time();
-                                            tile_jj_kk_iip_i_j_kv(tiled_adj,
-                                                                  &input_emb,
-                                                                  &out_emb,
-                                                                  rows_per_tile,
-                                                                  wsum_aggr,
-                                                                  slice_size);
+                                            trans_jj_kk_iip_i_j_kv(tiled_adj,
+                                                                   &input_emb,
+                                                                   &out_emb,
+                                                                   rows_per_tile,
+                                                                   wsum_aggr,
+                                                                   slice_size);
                                             end = get_time();
 
                                             if (i >= skip_cache_warmup) {
@@ -266,11 +266,11 @@ int main(int argc, char **argv) {
                             out_emb.set_all(0);
 
                             start = get_time();
-                            tile_jj_ii_i_j_kv(tiled_adj,
-                                              &input_emb,
-                                              &out_emb,
-                                              rows_per_tile,
-                                              wsum_aggr);
+                            trans_jj_iip_i_j_kv(tiled_adj,
+                                                &input_emb,
+                                                &out_emb,
+                                                rows_per_tile,
+                                                wsum_aggr);
 
                             end = get_time();
 
@@ -300,11 +300,11 @@ int main(int argc, char **argv) {
                         out_emb.set_all(0);
 
                         start = get_time();
-                        tile_jj_ii_i_j_kv(tiled_adj,
-                                          &input_emb,
-                                          &out_emb,
-                                          1,
-                                          wsum_aggr);
+                        trans_jj_iip_i_j_kv(tiled_adj,
+                                            &input_emb,
+                                            &out_emb,
+                                            1,
+                                            wsum_aggr);
 
                         end = get_time();
 
@@ -323,7 +323,7 @@ int main(int argc, char **argv) {
                               << std::get<1>(out_times) << std::endl;
                 } else {
                     for (auto slice_size: slice_arr) {
-                        if (slice_size >= emb_size){
+                        if (slice_size >= emb_size) {
                             break;
                         }
                         if (loop_ord == 3) {
@@ -333,12 +333,12 @@ int main(int argc, char **argv) {
                                 out_emb.set_all(0);
 
                                 start = get_time();
-                                tile_kk_jj_iip_i_j_kv(tiled_adj,
-                                                      &input_emb,
-                                                      &out_emb,
-                                                      1,
-                                                      wsum_aggr,
-                                                      slice_size);
+                                trans_kk_jj_iip_i_j_kv(tiled_adj,
+                                                       &input_emb,
+                                                       &out_emb,
+                                                       1,
+                                                       wsum_aggr,
+                                                       slice_size);
                                 end = get_time();
 
                                 if (i >= skip_cache_warmup) {
@@ -363,12 +363,12 @@ int main(int argc, char **argv) {
                                 out_emb.set_all(0);
 
                                 start = get_time();
-                                tile_jj_kk_iip_i_j_kv(tiled_adj,
-                                                      &input_emb,
-                                                      &out_emb,
-                                                      1,
-                                                      wsum_aggr,
-                                                      slice_size);
+                                trans_jj_kk_iip_i_j_kv(tiled_adj,
+                                                       &input_emb,
+                                                       &out_emb,
+                                                       1,
+                                                       wsum_aggr,
+                                                       slice_size);
                                 end = get_time();
 
                                 if (i >= skip_cache_warmup) {

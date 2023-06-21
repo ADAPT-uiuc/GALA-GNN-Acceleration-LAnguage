@@ -119,58 +119,84 @@ int main(int argc, char **argv) {
             input_emb.vals_ptr()[i * emb_size + j] = (dvT) (rand() % 100) / 100;
         }
     }
-    input_emb.set_all(1);
+//    input_emb.set_all(1);
 
     DM out_emb;
     out_emb.build(adj.nrows(), emb_size, DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
 
     DM out_emb2;
     out_emb2.build(adj.nrows(), emb_size, DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
+    out_emb2.set_all(0);
+
+    std::vector<DM *> sliced_inp;
+    slice_tiling(slice_size, &input_emb, sliced_inp);
+
+    std::vector<DM *> sliced_out;
+    slice_tiling(slice_size, &out_emb, sliced_out);
 
     auto wsum_aggr = wsumAgg<val_t, val_t, ind2_t>;
 
-    int i;
+    // Standard CSR Sum - For comparison of results
+
+    gSpMM(&adj, &input_emb, &out_emb2, wsum_aggr);
+
     double start, end;
     std::vector<double> times_arr;
-    for (i = 0; i < num_iters + skip_cache_warmup; i++) {
-        out_emb.set_all(0);
-//        out_emb2.set_all(0);
+    for (int i = 0; i < num_iters + skip_cache_warmup; i++) {
+        // TODO need to set all sliced outs to 0
+        for (auto out_s: sliced_out){
+            out_s->set_all(0);
+        }
 
         start = get_time();
-
-        // This is the standard CSR SpMM
-//        gSpMM(&adj, &input_emb, &out_emb2, wsum_aggr);
-        // ^ Should be replaced with tiled version
-
-#ifdef LO_1
-        std::cout << "Not intended" << std::endl;
-        tile_ii_jj_i_j_kv(adj_vec, &HW, h_out, sparse_tile_rows);
-#elif defined(LO_2) || defined(LO_3) || defined(LO_5)
-        tile_jj_ii_i_j_kv(tiled_adj,
-                          &input_emb,
-                          &out_emb,
-                          rows_per_tile,
-                          wsum_aggr
-#ifdef LO_KK
-                , slice_size
-#endif
-        );
-#elif LO_10
-        std::cout << "Not intended" << std::endl;
-        tile_jj_iip_i_j_kv(adj_vec, &HW, h_out, sparse_tile_rows);
-#elif LO_11
-        std::cout << "Not intended" << std::endl;
-        tile_jj_iip_i_j_kv(adj_vec, &HW, h_out, sparse_tile_rows);
-#elif LO_12
-        std::cout << "Not intended" << std::endl;
-        tile_jj_kk_ii_i_j_k(adj_vec, &HW, h_out, sparse_tile_rows, dense_segments);
-#endif
+        slice_kk_jj_iip_i_j_kv(tiled_adj,
+                               sliced_inp,
+                               sliced_out,
+                               rows_per_tile,
+                               wsum_aggr);
         end = get_time();
 
         if (i >= skip_cache_warmup) {
             times_arr.push_back(end - start);
         }
     }
+
+    bool mismatch = false;
+    for (diT kk = 0; kk < sliced_out.size(); kk++) {
+        auto local_out = sliced_out.at(kk);
+
+        if (mismatch){
+            break;
+        }
+
+#pragma omp parallel for schedule(static, 4)
+        for (diT i = 0; i < nrows; i += 1) {
+//            if (mismatch){
+//                break;
+//            }
+
+            for (diT k = 0; k < local_out->ncols(); k += 1) {
+//                if (mismatch){
+//                    break;
+//                }
+
+                if (local_out->vals_ptr()[i * local_out->ncols() + k] !=
+                    out_emb2.vals_ptr()[i * out_emb.ncols() + kk * slice_size + k]) {
+                    std::cout << "The results don't match at: " << i << ", " << kk << ", " << k << ", "
+                              << local_out->vals_ptr()[i * local_out->ncols() + k] << ", "
+                              << out_emb2.vals_ptr()[i * out_emb.ncols() + kk * slice_size + k] << std::endl;
+                    mismatch = true;
+                }
+            }
+        }
+    }
+//    for (nT j = 0; j < nvals; j++) {
+//        if (out_emb.vals_ptr()[j] != out_emb2.vals_ptr()[j]) {
+//            std::cout << "The results don't match at: " << j << ", " << out_emb.vals_ptr()[j] << ", "
+//                      << out_emb2.vals_ptr()[j] << std::endl;
+//            break;
+//        }
+//    }
 
 //    std::cout << adj.offset_ptr()[1] << " " << adj.offset_ptr()[2] << " " << adj.offset_ptr()[3] << " "
 //              << adj.offset_ptr()[4] << " " << adj.offset_ptr()[5] << std::endl;

@@ -732,7 +732,39 @@ void ord_col_tiling(std::vector<typename SM::itype> &col_breakpoints,
 //}
 //#endif
 
+template<class DM>
+void slice_tiling(typename DM::itype slice_size,
+                  DM *src,
+                  std::vector<DM *> &res) {
+    // Get types
+    typedef typename DM::itype diT;
+    typedef typename DM::ntype dnT;
+    typedef typename DM::vtype dvT;
+
+    // Full size of the input dense matrix
+    diT src_ncols = src->ncols();
+    diT src_nrows = src->nrows();
+    dvT *src_vals_ptr = src->vals_ptr();
+
+    // Create a slice of the input dense matrix
+    for (diT k_0 = 0; k_0 < src_ncols; k_0 += slice_size) {
+        DM *new_dense = new DM();
+        diT k_num = std::min(slice_size, src_ncols - k_0);
+        auto local_vals = (dvT *) aligned_alloc(64, (src_nrows * k_num) * sizeof(dvT));
+
+#pragma omp parallel for schedule(static, 4)
+        for (diT i_i = 0; i_i < src_nrows; i_i += 1) {
+            for (diT k_i = k_0; k_i < k_0 + k_num; k_i += 1) {
+                local_vals[(dnT)(i_i * k_num + (k_i - k_0))] = src_vals_ptr[(dnT)(i_i * src_ncols + k_i)];
+            }
+        }
+        new_dense->import_mtx(src_nrows, k_num, src_nrows * k_num, local_vals);
+        res.push_back(new_dense);
+    }
+}
+
 #ifdef PT_2
+
 template<class SM>
 void ord_col_tiling(std::vector<typename SM::itype> &col_breakpoints,
                     std::vector<SM *> &res,
@@ -809,7 +841,7 @@ void ord_col_tiling(std::vector<typename SM::itype> &col_breakpoints,
             if (found_nnz) {
                 row_counter_vec[i_i] = row_nvals;
                 row_dcsr_vec[i_i] = true;
-            }else {
+            } else {
                 row_dcsr_vec[i_i] = false;
             }
         }
@@ -821,7 +853,7 @@ void ord_col_tiling(std::vector<typename SM::itype> &col_breakpoints,
 #ifdef DBG_PT2
         start_time = get_time();
 #endif
-        iT new_nrows = __gnu_parallel::count(row_dcsr_vec, row_dcsr_vec+src_nrows, true);
+        iT new_nrows = __gnu_parallel::count(row_dcsr_vec, row_dcsr_vec + src_nrows, true);
         nT *new_offset_ptr = (nT *) aligned_alloc(64, (new_nrows + 1) * sizeof(nT));
         iT *new_rows = (iT *) aligned_alloc(64, (new_nrows) * sizeof(iT));
         new_offset_ptr[0] = 0;
@@ -834,10 +866,10 @@ void ord_col_tiling(std::vector<typename SM::itype> &col_breakpoints,
             }
         }
 #ifdef DBG_PT2
-//        total_es += new_nvals;
-//        std::cout << "e:" << new_nvals << std::endl;
-        time_serial_offset += (get_time() - start_time);
-//        std::cout << "Finish serial offset" << std::endl;
+        //        total_es += new_nvals;
+        //        std::cout << "e:" << new_nvals << std::endl;
+                time_serial_offset += (get_time() - start_time);
+        //        std::cout << "Finish serial offset" << std::endl;
 #endif
 
 #ifdef DBG_PT2
@@ -920,6 +952,7 @@ void ord_col_tiling(std::vector<typename SM::itype> &col_breakpoints,
 //    std::cout << "es: " << total_es << std::endl;
 #endif
 }
+
 #endif
 
 
