@@ -138,7 +138,7 @@ int main(int argc, char **argv) {
 
     // Standard CSR Sum - For comparison of results
 
-    gSpMM(&adj, &input_emb, &out_emb2, wsum_aggr);
+//    gSpMM(&adj, &input_emb, &out_emb2, wsum_aggr);
 
     double start, end;
     std::vector<double> times_arr;
@@ -161,55 +161,33 @@ int main(int argc, char **argv) {
         }
     }
 
-    bool mismatch = false;
-    for (diT kk = 0; kk < sliced_out.size(); kk++) {
-        auto local_out = sliced_out.at(kk);
-
-        if (mismatch){
-            break;
-        }
-
-#pragma omp parallel for schedule(static, 4)
-        for (diT i = 0; i < nrows; i += 1) {
-//            if (mismatch){
-//                break;
-//            }
-
-            for (diT k = 0; k < local_out->ncols(); k += 1) {
-//                if (mismatch){
-//                    break;
-//                }
-
-                if (local_out->vals_ptr()[i * local_out->ncols() + k] !=
-                    out_emb2.vals_ptr()[i * out_emb.ncols() + kk * slice_size + k]) {
-                    std::cout << "The results don't match at: " << i << ", " << kk << ", " << k << ", "
-                              << local_out->vals_ptr()[i * local_out->ncols() + k] << ", "
-                              << out_emb2.vals_ptr()[i * out_emb.ncols() + kk * slice_size + k] << std::endl;
-                    mismatch = true;
-                }
-            }
-        }
-    }
-//    for (nT j = 0; j < nvals; j++) {
-//        if (out_emb.vals_ptr()[j] != out_emb2.vals_ptr()[j]) {
-//            std::cout << "The results don't match at: " << j << ", " << out_emb.vals_ptr()[j] << ", "
-//                      << out_emb2.vals_ptr()[j] << std::endl;
+//    bool mismatch = false;
+//    for (diT kk = 0; kk < sliced_out.size(); kk++) {
+//        auto local_out = sliced_out.at(kk);
+//
+//        if (mismatch){
 //            break;
 //        }
-//    }
-
-//    std::cout << adj.offset_ptr()[1] << " " << adj.offset_ptr()[2] << " " << adj.offset_ptr()[3] << " "
-//              << adj.offset_ptr()[4] << " " << adj.offset_ptr()[5] << std::endl;
-//    std::cout << adj.ids_ptr()[1] << " " << adj.ids_ptr()[2] << " " << adj.ids_ptr()[3] << " "
-//              << adj.ids_ptr()[4] << " " << adj.ids_ptr()[5] << std::endl;
-//    std::cout << out_emb2.vals_ptr()[0] << " " << out_emb2.vals_ptr()[0 + input_emb.ncols() * 8] << std::endl;
-//    std::cout << out_emb.vals_ptr()[0] << " " << out_emb.vals_ptr()[0 + out_emb.ncols() * 8] << std::endl;
-
-//    for (nT j = 0; j < nvals; j++) {
-//        if (out_emb.vals_ptr()[j] != out_emb2.vals_ptr()[j]) {
-//            std::cout << "The results don't match at: " << j << ", " << out_emb.vals_ptr()[j] << ", "
-//                      << out_emb2.vals_ptr()[j] << std::endl;
-//            break;
+//
+//#pragma omp parallel for schedule(static, 4)
+//        for (diT i = 0; i < nrows; i += 1) {
+////            if (mismatch){
+////                break;
+////            }
+//
+//            for (diT k = 0; k < local_out->ncols(); k += 1) {
+////                if (mismatch){
+////                    break;
+////                }
+//
+//                if (local_out->vals_ptr()[i * local_out->ncols() + k] !=
+//                    out_emb2.vals_ptr()[i * out_emb.ncols() + kk * slice_size + k]) {
+//                    std::cout << "The results don't match at: " << i << ", " << kk << ", " << k << ", "
+//                              << local_out->vals_ptr()[i * local_out->ncols() + k] << ", "
+//                              << out_emb2.vals_ptr()[i * out_emb.ncols() + kk * slice_size + k] << std::endl;
+//                    mismatch = true;
+//                }
+//            }
 //        }
 //    }
     std::cout << calc_mean(times_arr) << "," << calc_std(times_arr) << std::endl;
