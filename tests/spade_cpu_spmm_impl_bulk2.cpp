@@ -53,15 +53,6 @@ int main(int argc, char **argv) {
         emb_arr[1] = 2048;
     }
 
-    // Test opt params
-    // Col tile sizes
-    iT col_arr[8] = {512, 2048, 8192, 32768, 131072, 524228, 2097152};
-    // Row tile sizes
-    iT row_arr[7] = {1, 4, 16, 64, 256, 1024, 4096};
-    // Slice sizes
-    diT slice_arr[4] = {32, 128, 512};
-    // Do reordering as well
-    bool reord_arr[2] = {false, true};
     // TODO Barriers
     // TODO Prefetch
     // TODO Work division
@@ -95,6 +86,17 @@ int main(int argc, char **argv) {
     iT nrows = adj.nrows();
     iT ncols = adj.ncols();
     nT nvals = adj.nvals();
+
+    // Test opt params
+    // Col tile sizes
+    iT col_arr[8] = {512, 2048, 8192, 32768, 131072, 524228, 2097152, ncols};
+    std::sort(col_arr, col_arr + 8);
+    // Row tile sizes
+    iT row_arr[7] = {1, 4, 16, 64, 256, 1024, 4096};
+    // Slice sizes
+    diT slice_arr[4] = {32, 128, 512};
+    // Do reordering as well
+    bool reord_arr[2] = {false, true};
 
     // One time reordering
     SM adj_reord;
@@ -200,7 +202,6 @@ int main(int argc, char **argv) {
 
                 // Row tile
                 for (auto rows_per_tile: row_arr) {
-
                     // Unsliced execution
                     total = 0;
                     times_arr.clear();
@@ -227,147 +228,72 @@ int main(int argc, char **argv) {
                     }
                     out_times = calc_mean_std(times_arr);
                     std::cout << emb_size << "," << cols_per_tile << "," << rows_per_tile << ","
-                              << "no_slice,no_barr,no_wdiv,0,no_pref,"
+                              << "no_slice,no_barr,no_wdiv," << reord_mtx << ",no_pref,"
                               << std::get<0>(out_times) << ","
                               << std::get<1>(out_times) << std::endl;
 
-                    if (!reord_mtx) {
-                        // Sliced execution
-                        for (auto slice_size: slice_arr) {
-                            if (slice_size >= emb_size) {
-                                break;
-                            }
 
-                            total = 0;
-                            times_arr.clear();
-                            for (int i = 0; i < max_num_iters + skip_cache_warmup; i++) {
-                                std::vector<DM *> sliced_inp = slice_inp_map[slice_size];
-                                std::vector<DM *> sliced_out = slice_out_map[slice_size];
-                                for (auto slice_out: sliced_out){
-                                    slice_out->set_all(0);
-                                }
-
-                                start = get_time();
-                                slice_kk_jj_iip_i_j_kv(tiled_adj,
-                                                       sliced_inp,
-                                                       sliced_out,
-                                                       rows_per_tile,
-                                                       wsum_aggr);
-                                end = get_time();
-
-                                if (i >= skip_cache_warmup) {
-                                    times_arr.push_back(end - start);
-                                    total += (end - start);
-
-                                    if (total > threshold_s) {
-                                        break;
-                                    }
-                                }
-                            }
-                            out_times = calc_mean_std(times_arr);
-                            std::cout << emb_size << "," << cols_per_tile << "," << rows_per_tile << ","
-                                      << slice_size << ",no_barr,no_wdiv,0,no_pref,"
-                                      << std::get<0>(out_times) << ","
-                                      << std::get<1>(out_times) << std::endl;
-                        }
-                    }
-                }
-            }
-
-            // Reinit tiled adj with the original untiled matrix
-            std::vector<SM *> tiled_adj;
-            if (reord_mtx) {
-                tiled_adj.push_back(&adj_reord);
-            } else {
-                tiled_adj.push_back(&adj);
-            }
-
-            // Unsliced version
-            total = 0;
-            times_arr.clear();
-            for (int i = 0; i < max_num_iters + skip_cache_warmup; i++) {
-                out_emb.set_all(0);
-
-                start = get_time();
-                trans_jj_iip_i_j_kv(tiled_adj,
-                                    &input_emb,
-                                    &out_emb,
-                                    1,
-                                    wsum_aggr);
-                end = get_time();
-
-                if (i >= skip_cache_warmup) {
-                    times_arr.push_back(end - start);
-                    total += (end - start);
-
-                    if (total > threshold_s) {
-                        break;
-                    }
-                }
-            }
-            out_times = calc_mean_std(times_arr);
-            std::cout << emb_size << "," << ncols << "," << 1 << ","
-                      << "no_slice,no_barr,no_wdiv,0,no_pref,"
-                      << std::get<0>(out_times) << ","
-                      << std::get<1>(out_times) << std::endl;
-
-            // Sliced execution
-            for (auto slice_size: slice_arr) {
-                if (slice_size >= emb_size) {
-                    break;
-                }
-                total = 0;
-                times_arr.clear();
-                for (int i = 0; i < max_num_iters + skip_cache_warmup; i++) {
-                    std::vector<DM *> sliced_inp = slice_inp_map[slice_size];
-                    std::vector<DM *> sliced_out = slice_out_map[slice_size];
-                    for (auto slice_out: sliced_out){
-                        slice_out->set_all(0);
-                    }
-
-                    start = get_time();
-                    slice_kk_jj_iip_i_j_kv(tiled_adj,
-                                           sliced_inp,
-                                           sliced_out,
-                                           1,
-                                           wsum_aggr);
-                    end = get_time();
-
-                    if (i >= skip_cache_warmup) {
-                        times_arr.push_back(end - start);
-                        total += (end - start);
-
-                        if (total > threshold_s) {
+                    // Sliced execution
+                    for (auto slice_size: slice_arr) {
+                        if (slice_size >= emb_size) {
                             break;
                         }
+
+                        total = 0;
+                        times_arr.clear();
+                        for (int i = 0; i < max_num_iters + skip_cache_warmup; i++) {
+                            std::vector<DM *> sliced_inp = slice_inp_map[slice_size];
+                            std::vector<DM *> sliced_out = slice_out_map[slice_size];
+                            for (auto slice_out: sliced_out) {
+                                slice_out->set_all(0);
+                            }
+
+                            start = get_time();
+                            slice_kk_jj_iip_i_j_kv(tiled_adj,
+                                                   sliced_inp,
+                                                   sliced_out,
+                                                   rows_per_tile,
+                                                   wsum_aggr);
+                            end = get_time();
+
+                            if (i >= skip_cache_warmup) {
+                                times_arr.push_back(end - start);
+                                total += (end - start);
+
+                                if (total > threshold_s) {
+                                    break;
+                                }
+                            }
+                        }
+                        out_times = calc_mean_std(times_arr);
+                        std::cout << emb_size << "," << cols_per_tile << "," << rows_per_tile << ","
+                                  << slice_size << ",no_barr,no_wdiv," << reord_mtx << ",no_pref,"
+                                  << std::get<0>(out_times) << ","
+                                  << std::get<1>(out_times) << std::endl;
                     }
+
                 }
-                out_times = calc_mean_std(times_arr);
-                std::cout << emb_size << "," << ncols << "," << 1 << ","
-                          << slice_size << ",no_barr,no_wdiv,0,no_pref,"
-                          << std::get<0>(out_times) << ","
-                          << std::get<1>(out_times) << std::endl;
             }
         }
 
         // Cleanup
-//        for (auto slice_size: slice_arr) {
-//            if (slice_size >= emb_size) {
-//                break;
-//            }
-//
-//            std::vector<DM *> sliced_inp = slice_inp_map[slice_size];
-//            for (auto slice_inp: sliced_inp){
-//                slice_inp->clear();
-//            }
-//            std::vector<DM *> sliced_out = slice_out_map[slice_size];
-//            for (auto slice_out: sliced_out){
-//                slice_out->clear();
-//            }
-//
-//            sliced_inp.clear();
-//            sliced_out.clear();
-//        }
+        for (auto slice_size: slice_arr) {
+            if (slice_size >= emb_size) {
+                break;
+            }
+
+            std::vector<DM *> sliced_inp = slice_inp_map[slice_size];
+            for (auto slice_inp: sliced_inp){
+                slice_inp->clear();
+            }
+            std::vector<DM *> sliced_out = slice_out_map[slice_size];
+            for (auto slice_out: sliced_out){
+                slice_out->clear();
+            }
+
+            sliced_inp.clear();
+            sliced_out.clear();
+        }
         slice_inp_map.clear();
         slice_out_map.clear();
         input_emb.clear();
