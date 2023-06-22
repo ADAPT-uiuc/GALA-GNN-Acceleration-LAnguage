@@ -351,23 +351,23 @@ int main(int argc, char **argv) {
         }
 
         // Cleanup
-        for (auto slice_size: slice_arr) {
-            if (slice_size >= emb_size) {
-                break;
-            }
-
-            std::vector<DM *> sliced_inp = slice_inp_map[slice_size];
-            for (auto slice_inp: sliced_inp){
-                slice_inp->clear();
-            }
-            std::vector<DM *> sliced_out = slice_out_map[slice_size];
-            for (auto slice_out: sliced_out){
-                slice_out->clear();
-            }
-
-            sliced_inp.clear();
-            sliced_out.clear();
-        }
+//        for (auto slice_size: slice_arr) {
+//            if (slice_size >= emb_size) {
+//                break;
+//            }
+//
+//            std::vector<DM *> sliced_inp = slice_inp_map[slice_size];
+//            for (auto slice_inp: sliced_inp){
+//                slice_inp->clear();
+//            }
+//            std::vector<DM *> sliced_out = slice_out_map[slice_size];
+//            for (auto slice_out: sliced_out){
+//                slice_out->clear();
+//            }
+//
+//            sliced_inp.clear();
+//            sliced_out.clear();
+//        }
         slice_inp_map.clear();
         slice_out_map.clear();
         input_emb.clear();
