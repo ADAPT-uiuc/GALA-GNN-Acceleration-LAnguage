@@ -2089,6 +2089,38 @@ void trans_jj_iip_i_j_kv(std::vector<SM *> adj_vec,
 }
 
 template<class SM, class DM, class Function>
+void bless_jj_iip_i_j_kv(std::vector<SM *> adj_vec,
+                         DM *inp_dense,
+                         DM *out_dense,
+                         typename SM::itype sparse_tile_rows,
+                         Function wsum_aggr
+) {
+    typedef typename SM::itype iT;
+    typedef typename SM::ntype nT;
+    typedef typename SM::vtype vT;
+
+    typedef typename DM::itype diT;
+    typedef typename DM::ntype dnT;
+    typedef typename DM::vtype dvT;
+
+    for (diT j = 0; j < adj_vec.size(); j += 1) {
+#pragma omp parallel for schedule(dynamic, 1)
+        for (iT i = 0; i < adj_vec.at(j)->nrows(); i += sparse_tile_rows) {
+            GNOpTile<SM, DM> tile_info;
+
+            tile_info.srows_start = i;
+            tile_info.srows_end = std::min(i + sparse_tile_rows, adj_vec.at(j)->nrows());
+
+            gSpMM_row_transf(adj_vec.at(j),
+                             inp_dense,
+                             out_dense,
+                             wsum_aggr,
+                             &tile_info);
+        }
+    }
+}
+
+template<class SM, class DM, class Function>
 void trans_kk_jj_iip_i_j_kv(std::vector<SM *> adj_vec,
                             DM *inp_dense,
                             DM *out_dense,

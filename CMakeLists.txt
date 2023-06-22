@@ -50,7 +50,7 @@ if (NOT PROC_TILE)
 endif ()
 # The loop order for executing sparse matrix operations, default 2 (jj, iip, i, j, k)
 if (NOT L_ORDER)
-    set(L_ORDER 3)
+    set(L_ORDER 2)
 endif ()
 # The GCN Normalization method, default 1
 # TODO currently tightly coupled to the sparse ops. Remove it from there.

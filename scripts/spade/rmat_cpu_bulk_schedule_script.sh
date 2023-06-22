@@ -1,6 +1,6 @@
 # Name of the matrix to be downloaded from suite sparse
 data_path="/home/damitha2/GNN-Acceleration-Language/data_schedule/"
-test_path="../../build/tests/spade_cpu_spmm_impl_bulk"
+test_path="../../build/tests/spade_cpu_spmm_impl_bulk2"
 
 if [ -d "../../build" ]; then
   echo "build folder exists"
@@ -12,7 +12,7 @@ fi
   echo "**********"
   echo "graph"
   echo "**********"
-  echo "emb_size,col_tile,row_tile,loop_order,slice_size,barrier,work_div,reorder,prefetch"
+  echo "emb_size,col_tile,row_tile,slice_size,barrier,work_div,reorder,prefetch,time,time_std"
 } >transf_times
 #(cd ../../build && rm -r * && cmake .. && make)
 

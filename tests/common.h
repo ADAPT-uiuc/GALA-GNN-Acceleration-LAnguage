@@ -453,8 +453,8 @@ std::tuple<double, double> calc_mean_std(std::vector<double> vec) {
     }
 }
 
-double calc_std(std::vector<double> vec) {
-    if ((double) vec.size() > 1) {
+double calc_std(std::vector<double> &vec) {
+    if (vec.size() > 1) {
         double mean = 0;
         for (auto val: vec) {
             mean += val;
@@ -465,12 +465,12 @@ double calc_std(std::vector<double> vec) {
         std::for_each(std::begin(vec), std::end(vec), [&](const double d) {
             std += (d - mean) * (d - mean);
         });
-        sqrt(std / ((double) vec.size() - 1));
+        return (std / ((double) vec.size() - 1));
     }
     return 0;
 }
 
-double calc_mean(std::vector<double> vec) {
+double calc_mean(std::vector<double> &vec) {
     if ((double) vec.size() > 0) {
         double mean = 0;
         for (auto val: vec) {
