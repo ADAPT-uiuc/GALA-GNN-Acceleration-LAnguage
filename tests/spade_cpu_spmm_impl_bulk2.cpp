@@ -227,7 +227,7 @@ int main(int argc, char **argv) {
                     }
                     out_times = calc_mean_std(times_arr);
                     std::cout << emb_size << "," << cols_per_tile << "," << rows_per_tile << ","
-                              << ",no_slice,no_barr,no_wdiv,0,no_pref,"
+                              << "no_slice,no_barr,no_wdiv,0,no_pref,"
                               << std::get<0>(out_times) << ","
                               << std::get<1>(out_times) << std::endl;
 
@@ -266,7 +266,7 @@ int main(int argc, char **argv) {
                             }
                             out_times = calc_mean_std(times_arr);
                             std::cout << emb_size << "," << cols_per_tile << "," << rows_per_tile << ","
-                                      << "," << slice_size << ",no_barr,no_wdiv,0,no_pref,"
+                                      << slice_size << ",no_barr,no_wdiv,0,no_pref,"
                                       << std::get<0>(out_times) << ","
                                       << std::get<1>(out_times) << std::endl;
                         }
@@ -307,7 +307,7 @@ int main(int argc, char **argv) {
             }
             out_times = calc_mean_std(times_arr);
             std::cout << emb_size << "," << ncols << "," << 1 << ","
-                      << ",no_slice,no_barr,no_wdiv,0,no_pref,"
+                      << "no_slice,no_barr,no_wdiv,0,no_pref,"
                       << std::get<0>(out_times) << ","
                       << std::get<1>(out_times) << std::endl;
 
@@ -344,7 +344,7 @@ int main(int argc, char **argv) {
                 }
                 out_times = calc_mean_std(times_arr);
                 std::cout << emb_size << "," << ncols << "," << 1 << ","
-                          << "," << slice_size << ",no_barr,no_wdiv,0,no_pref,"
+                          << slice_size << ",no_barr,no_wdiv,0,no_pref,"
                           << std::get<0>(out_times) << ","
                           << std::get<1>(out_times) << std::endl;
             }
