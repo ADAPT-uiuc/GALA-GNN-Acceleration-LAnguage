@@ -711,7 +711,7 @@ void rowReorderTo(SM *adj,
         nT old_post_offset = adj_offset_ptr[i + 1];
         nT nneigh = old_post_offset - old_pre_offset;
 
-        std::pair<iT, vT> local_id_vals[nneigh];
+        std::pair<iT, vT>* local_id_vals = (std::pair<iT, vT> *) malloc((nneigh) * sizeof(std::pair<iT, vT>));
 
         for (nT e = old_pre_offset; e < old_post_offset; e++) {
             local_id_vals[e - old_pre_offset].first = perm[adj_ids_ptr[e]];
@@ -838,7 +838,7 @@ void rowReorderToAdj(SM *adj,
         nT old_post_offset = adj_offset_ptr[i + 1];
         nT nneigh = old_post_offset - old_pre_offset;
 
-        std::pair<iT, vT> local_id_vals[nneigh];
+        std::pair<iT, vT>* local_id_vals = (std::pair<iT, vT> *) malloc((nneigh) * sizeof(std::pair<iT, vT>));
 
         for (nT e = old_pre_offset; e < old_post_offset; e++) {
             local_id_vals[e - old_pre_offset].first = perm[adj_ids_ptr[e]];
