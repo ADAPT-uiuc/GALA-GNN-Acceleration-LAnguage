@@ -826,7 +826,7 @@ void rowReorderToAdj(SM *adj,
         new_offset_ptr[i + 1] = new_offset_ptr[i] + new_offset_ptr[i + 1];
     }
 
-#pragma omp parallel for schedule(dynamic) default(none) shared(adj, new_offset_ptr, new_ids_ptr, new_vals_ptr, perm, adj_offset_ptr, adj_ids_ptr, adj_vals_ptr)
+#pragma omp parallel for schedule(dynamic)
     for (iT i = 0; i < adj->nrows(); i += 1) {
         iT new_loc = perm[i];
         if (new_loc < 0 || new_loc > adj->nrows()){
