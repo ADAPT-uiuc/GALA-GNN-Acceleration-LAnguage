@@ -679,6 +679,9 @@ void rowReorderTo(SM *adj,
 #pragma omp parallel for schedule(static)
     for (iT i = 0; i < adj->nrows(); i += 1) {
         iT new_loc = perm[i];
+        if (new_loc < 0 || new_loc > nrows){
+            continue;
+        }
 
         nT old_pre_offset = adj_offset_ptr[i];
         nT old_post_offset = adj_offset_ptr[i + 1];
@@ -699,6 +702,9 @@ void rowReorderTo(SM *adj,
 #pragma omp parallel for schedule(dynamic) default(none) shared(adj, new_offset_ptr, new_ids_ptr, new_vals_ptr, perm, adj_offset_ptr, adj_ids_ptr, adj_vals_ptr)
     for (iT i = 0; i < adj->nrows(); i += 1) {
         iT new_loc = perm[i];
+        if (new_loc < 0 || new_loc > nrows){
+            continue;
+        }
         nT new_pre_offset = new_offset_ptr[new_loc];
 
         nT old_pre_offset = adj_offset_ptr[i];
@@ -808,6 +814,7 @@ void rowReorderToAdj(SM *adj,
         iT new_loc = perm[i];
         if (new_loc < 0 || new_loc > nrows){
             std::cout << "A proper location was not generated for: " << i << std::endl;
+            continue;
         }
 
         nT old_pre_offset = adj_offset_ptr[i];
@@ -822,6 +829,9 @@ void rowReorderToAdj(SM *adj,
 #pragma omp parallel for schedule(dynamic) default(none) shared(adj, new_offset_ptr, new_ids_ptr, new_vals_ptr, perm, adj_offset_ptr, adj_ids_ptr, adj_vals_ptr)
     for (iT i = 0; i < adj->nrows(); i += 1) {
         iT new_loc = perm[i];
+        if (new_loc < 0 || new_loc > nrows){
+            continue;
+        }
         nT new_pre_offset = new_offset_ptr[new_loc];
 
         nT old_pre_offset = adj_offset_ptr[i];

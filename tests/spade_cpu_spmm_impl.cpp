@@ -89,6 +89,9 @@ int main(int argc, char **argv) {
 
     if (reord_mtx) {
         std::unique_ptr<vint[]> perm_rabbit;
+        for (iT p_i = 0; p_i < nrows; p_i++) {
+            perm_rabbit[p_i] = -1;
+        }
         auto nvals_var = adj.nvals();
         auto nrows_var = adj.nrows();
         iT *col_ids_var = adj.ids_ptr();
