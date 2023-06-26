@@ -25,8 +25,8 @@ void gSpMM_tiled(const SM *A,
                  DM *out,
                  Function aggregator,
 #ifdef LO_KK
-                 typename DM::ntype k_i,
-                 typename DM::ntype k_length,
+        typename DM::ntype k_i,
+        typename DM::ntype k_length,
 #endif
                  GNOpTile<SM, DM> *tile_info,
                  typename SM::ntype *offset_copy) {
@@ -108,8 +108,8 @@ void gSpMM_dgl_tiled(const SM *A,
                      DM *out,
                      Function aggregator,
 #ifdef LO_KK
-                     typename DM::ntype k_i,
-                     typename DM::ntype k_length,
+        typename DM::ntype k_i,
+        typename DM::ntype k_length,
 #endif
                      GNOpTile<SM, DM> *tile_info,
                      typename SM::ntype *offset_copy) {
@@ -249,8 +249,8 @@ void gSpMM_row_tiled(const SM *A,
                      DM *out,
                      Function aggregator,
 #ifdef LO_KK
-                     typename DM::ntype k_i,
-                     typename DM::ntype k_length,
+        typename DM::ntype k_i,
+        typename DM::ntype k_length,
 #endif
                      GNOpTile<SM, DM> *tile_info) {
     //Generalized SpMM.
@@ -286,7 +286,7 @@ void gSpMM_row_tiled(const SM *A,
     for (iT v_i = tile_info->srows_start; v_i < tile_info->srows_end; v_i++) {
         auto v = A_row_ptr[v_i];
 #else
-        for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
+    for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
 #endif
 
 #ifdef LO_KK
@@ -355,8 +355,8 @@ void gSpMM_row_tiled_gn2(const SM *A,
                          DM *out,
                          Function aggregator,
 #ifdef LO_KK
-                         typename DM::ntype k_i,
-                         typename DM::ntype k_length,
+        typename DM::ntype k_i,
+        typename DM::ntype k_length,
 #endif
                          GNOpTile<SM, DM> *tile_info) {
     //Generalized SpMM.
@@ -389,7 +389,7 @@ void gSpMM_row_tiled_gn2(const SM *A,
     for (iT v_i = tile_info->srows_start; v_i < tile_info->srows_end; v_i++) {
         auto v = A_row_ptr[v_i];
 #else
-        for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
+    for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
 #endif
 
 #ifdef LO_KK
@@ -473,7 +473,7 @@ void gSpMM_row_tiled_split(const SM *A, const DM *B, DM *out, Function aggregato
     for (iT v_i = tile_info->srows_start; v_i < tile_info->srows_end; v_i++) {
         auto v = A_row_ptr[v_i];
 #else
-        for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
+    for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
 #endif
         dnT row_offset1 = (dnT) (v * B_cols + k_i);
         dvT *base1 = out_vals_ptr + row_offset1;
@@ -1272,7 +1272,7 @@ void gSpMM_slice_row_tiled(const SM *A, const DM *B, DM *out, Function aggregato
     for (iT v_i = tile_info->srows_start; v_i < tile_info->srows_end; v_i++) {
         auto v = A_row_ptr[v_i];
 #else
-        for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
+    for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
 #endif
         dnT row_offset1 = (dnT) v * B_cols;
         dvT *base1 = out_vals_ptr + row_offset1;
@@ -2035,7 +2035,7 @@ void gSDDVV(const SM *A,
     for (iT v_i = tile_info->srows_start; v_i < tile_info->srows_end; v_i++) {
         auto v = A_row_ptr[v_i];
 #else
-        for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
+    for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
 #endif
 #ifdef CCMP
         nT first_node_edge = A_offset_ptr[v_i];
@@ -2089,7 +2089,7 @@ void trans_jj_iip_i_j_kv(std::vector<SM *> adj_vec,
 }
 
 template<class SM, class DM, class Function>
-void bless_jj_iip_i_j_kv(std::vector<SM *> adj_vec,
+void bless_jj_iip_i_j_kv(std::vector<SM *> &adj_vec,
                          DM *inp_dense,
                          DM *out_dense,
                          typename SM::itype sparse_tile_rows,
@@ -2103,25 +2103,53 @@ void bless_jj_iip_i_j_kv(std::vector<SM *> adj_vec,
     typedef typename DM::ntype dnT;
     typedef typename DM::vtype dvT;
 
-    for (diT j = 0; j < adj_vec.size(); j += 1) {
-#pragma omp parallel for schedule(dynamic, 1)
+    diT j = 0;
+
+#ifdef CCMP
+    std::cout << "Barrier-less won't work with DCSR, switch to CSR (set C_COMP to OFF)" << std::endl;
+#else
+#pragma omp parallel
+#pragma omp single nowait
+    {
         for (iT i = 0; i < adj_vec.at(j)->nrows(); i += sparse_tile_rows) {
             GNOpTile<SM, DM> tile_info;
 
             tile_info.srows_start = i;
             tile_info.srows_end = std::min(i + sparse_tile_rows, adj_vec.at(j)->nrows());
 
-            gSpMM_row_transf(adj_vec.at(j),
-                             inp_dense,
-                             out_dense,
-                             wsum_aggr,
-                             &tile_info);
+#pragma omp task
+            gSpMM_row_bless(adj_vec,
+                            j,
+                            inp_dense,
+                            out_dense,
+                            wsum_aggr,
+                            &tile_info);
         }
     }
+
+//#pragma omp parallel
+//    for (iT i = 0; i < adj_vec.at(j)->nrows(); i += sparse_tile_rows) {
+//        GNOpTile<SM, DM> tile_info;
+//
+//        tile_info.srows_start = i;
+//        tile_info.srows_end = std::min(i + sparse_tile_rows, adj_vec.at(j)->nrows());
+//
+//#pragma omp task
+//        {
+//            gSpMM_row_bless(adj_vec,
+//                            j,
+//                            inp_dense,
+//                            out_dense,
+//                            wsum_aggr,
+//                            &tile_info);
+//        };
+//    }
+
+#endif
 }
 
 template<class SM, class DM, class Function>
-void trans_kk_jj_iip_i_j_kv(std::vector<SM *> adj_vec,
+void trans_kk_jj_iip_i_j_kv(std::vector<SM *> &adj_vec,
                             DM *inp_dense,
                             DM *out_dense,
                             typename SM::itype sparse_tile_rows,
@@ -2158,9 +2186,9 @@ void trans_kk_jj_iip_i_j_kv(std::vector<SM *> adj_vec,
 }
 
 template<class SM, class DM, class Function>
-void slice_kk_jj_iip_i_j_kv(std::vector<SM *> adj_vec,
-                            std::vector<DM *> inp_dense_vec,
-                            std::vector<DM *> out_dense_vec,
+void slice_kk_jj_iip_i_j_kv(std::vector<SM *> &adj_vec,
+                            std::vector<DM *> &inp_dense_vec,
+                            std::vector<DM *> &out_dense_vec,
                             typename SM::itype sparse_tile_rows,
                             Function wsum_aggr
 ) {
@@ -2193,7 +2221,7 @@ void slice_kk_jj_iip_i_j_kv(std::vector<SM *> adj_vec,
 }
 
 template<class SM, class DM, class Function>
-void trans_jj_kk_iip_i_j_kv(std::vector<SM *> adj_vec,
+void trans_jj_kk_iip_i_j_kv(std::vector<SM *> &adj_vec,
                             DM *inp_dense,
                             DM *out_dense,
                             typename SM::itype sparse_tile_rows,
@@ -2263,7 +2291,7 @@ void gSpMM_row_transf(const SM *A,
     for (iT v_i = tile_info->srows_start; v_i < tile_info->srows_end; v_i++) {
         auto v = A_row_ptr[v_i];
 #else
-        for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
+    for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
 #endif
 
         dnT row_offset1 = (dnT) v * B_cols;
@@ -2295,6 +2323,76 @@ void gSpMM_row_transf(const SM *A,
         }
     }
     free(tempArr);
+}
+
+template<class DM, class SM, class Function>
+void gSpMM_row_bless(std::vector<SM *> &adj_vec,
+                     typename DM::itype jj,
+                     const DM *B,
+                     DM *out,
+                     Function aggregator,
+                     GNOpTile<SM, DM> *tile_info) {
+    //Generalized SpMM.
+    //The output dense matrix line is used as an accumulator for the aggregated neighbour vectors.
+
+    typedef typename SM::itype iT;
+    typedef typename SM::ntype nT;
+    typedef typename SM::vtype vT;
+
+    typedef typename DM::itype diT;
+    typedef typename DM::ntype dnT;
+    typedef typename DM::vtype dvT;
+
+    const SM *A = adj_vec.at(jj);
+
+    dnT B_cols = B->ncols();
+    iT A_rows = A->nrows();
+    vT *A_vals_ptr = A->vals_ptr();
+    nT *A_offset_ptr = A->offset_ptr();
+    iT *A_ids_ptr = A->ids_ptr();
+    dvT *out_vals_ptr = out->vals_ptr();
+    dvT *B_vals_ptr = B->vals_ptr();
+
+    auto tempArr = (dvT *) aligned_alloc(64, sizeof(dvT) * B_cols);
+
+    for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
+
+        dnT row_offset1 = (dnT) v * B_cols;
+        dvT *base1 = out_vals_ptr + row_offset1;
+        std::memset(tempArr, 0, sizeof(dvT) * B_cols);
+        nT first_node_edge = A_offset_ptr[v];
+        nT last_node_edge = A_offset_ptr[v + 1];
+
+        for (nT e = first_node_edge; e < last_node_edge; e++) {
+            iT u = A_ids_ptr[e];
+#ifdef GN_1
+            // You can make this more efficient by having an assignable offset array
+            vT A_val = A_vals_ptr[e];
+#endif
+            dnT row_offset2 = (dnT) u * B_cols;
+            dvT *base2 = B_vals_ptr + row_offset2;
+
+
+            aggregator(tempArr, base2, A_val, B_cols);
+//            aggregator(base1, base2, A_val, B_cols);
+        }
+        for (dnT k = 0; k < B_cols; k++) {
+            base1[k] += tempArr[k];
+        }
+    }
+    free(tempArr);
+
+    if (adj_vec.size() < (jj + 1)) {
+#pragma omp task
+        {
+            gSpMM_row_bless(adj_vec,
+                            jj,
+                            B,
+                            out,
+                            aggregator,
+                            tile_info);
+        }
+    }
 }
 
 template<class DM, class SM, class Function>
@@ -2334,7 +2432,7 @@ void gSpMM_row_transf_kk(const SM *A,
     for (iT v_i = tile_info->srows_start; v_i < tile_info->srows_end; v_i++) {
         auto v = A_row_ptr[v_i];
 #else
-        for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
+    for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
 #endif
 
         dnT row_offset1 = (dnT) (v * B_cols + k_i);
@@ -2402,41 +2500,41 @@ void tile_jj_ii_i_j_kv(std::vector<SM *> adj_vec,
 #endif
     for (diT k = 0; k < inp_dense->ncols(); k += dense_tile_cols) {
 #endif
-        for (diT j = 0; j < adj_vec.size(); j += 1) {
+    for (diT j = 0; j < adj_vec.size(); j += 1) {
 #ifdef LO_JJ_KK_II
 #ifdef LO_KK_P
 #pragma omp parallel for schedule(static)
 #endif
-            for (diT k = 0; k < inp_dense->ncols(); k += dense_tile_cols) {
+        for (diT k = 0; k < inp_dense->ncols(); k += dense_tile_cols) {
 #endif
 #ifdef LO_II_P
-            //#pragma omp for nowait schedule(dynamic, 4)
-            //#pragma omp parallel for schedule(guided)
+        //#pragma omp for nowait schedule(dynamic, 4)
+        //#pragma omp parallel for schedule(guided)
 #pragma omp parallel for schedule(dynamic, 1)
 #endif
-            for (iT i = 0; i < adj_vec.at(j)->nrows(); i += sparse_tile_rows) {
-                GNOpTile<SM, DM> tile_info;
+        for (iT i = 0; i < adj_vec.at(j)->nrows(); i += sparse_tile_rows) {
+            GNOpTile<SM, DM> tile_info;
 
-                tile_info.srows_start = i;
-                tile_info.srows_end = std::min(i + sparse_tile_rows, adj_vec.at(j)->nrows());
+            tile_info.srows_start = i;
+            tile_info.srows_end = std::min(i + sparse_tile_rows, adj_vec.at(j)->nrows());
 
-                gSpMM_row_tiled(adj_vec.at(j),
-                                inp_dense,
-                                out_dense,
-                                wsum_aggr,
+            gSpMM_row_tiled(adj_vec.at(j),
+                            inp_dense,
+                            out_dense,
+                            wsum_aggr,
 #ifdef LO_KK
-                                k,
-                                dense_tile_cols,
+                    k,
+                    dense_tile_cols,
 #endif
-                                &tile_info);
-            }
+                            &tile_info);
+        }
 #ifdef LO_JJ_KK_II
-            }
+        }
 #endif
 //#ifdef LO_II_P
 //        }
 //#endif
-        }
+    }
 #ifdef LO_KK_JJ_II
     }
 #endif
@@ -2599,41 +2697,41 @@ void tile_jj_iip_i_j_kv_gn2(std::vector<SM *> adj_vec,
 #endif
     for (diT k = 0; k < inp_dense->ncols(); k += dense_tile_cols) {
 #endif
-        for (diT j = 0; j < adj_vec.size(); j += 1) {
+    for (diT j = 0; j < adj_vec.size(); j += 1) {
 #ifdef LO_JJ_KK_II
 #ifdef LO_KK_P
 #pragma omp parallel for schedule(static)
 #endif
-            for (diT k = 0; k < inp_dense->ncols(); k += dense_tile_cols) {
+        for (diT k = 0; k < inp_dense->ncols(); k += dense_tile_cols) {
 #endif
 #ifdef LO_II_P
-            //#pragma omp for nowait schedule(dynamic, 4)
-            //#pragma omp parallel for schedule(guided)
+        //#pragma omp for nowait schedule(dynamic, 4)
+        //#pragma omp parallel for schedule(guided)
 #pragma omp parallel for schedule(dynamic, 1)
 #endif
-            for (iT i = 0; i < adj_vec.at(j)->nrows(); i += sparse_tile_rows) {
-                GNOpTile<SM, DM> tile_info;
+        for (iT i = 0; i < adj_vec.at(j)->nrows(); i += sparse_tile_rows) {
+            GNOpTile<SM, DM> tile_info;
 
-                tile_info.srows_start = i;
-                tile_info.srows_end = std::min(i + sparse_tile_rows, adj_vec.at(j)->nrows());
+            tile_info.srows_start = i;
+            tile_info.srows_end = std::min(i + sparse_tile_rows, adj_vec.at(j)->nrows());
 
-                gSpMM_row_tiled_gn2(adj_vec.at(j),
-                                    inp_dense,
-                                    out_dense,
-                                    wsum_aggr,
+            gSpMM_row_tiled_gn2(adj_vec.at(j),
+                                inp_dense,
+                                out_dense,
+                                wsum_aggr,
 #ifdef LO_KK
-                                    k,
-                                    dense_tile_cols,
+                    k,
+                    dense_tile_cols,
 #endif
-                                    &tile_info);
-            }
+                                &tile_info);
+        }
 #ifdef LO_JJ_KK_II
-            }
+        }
 #endif
 //#ifdef LO_II_P
 //        }
 //#endif
-        }
+    }
 #ifdef LO_KK_JJ_II
     }
 #endif

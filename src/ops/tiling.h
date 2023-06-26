@@ -467,7 +467,6 @@ void ord_col_tiling(std::vector<typename SM::itype> &col_breakpoints,
 #else
         nT *new_offset_ptr = (nT *) malloc((src_nrows + 1) * sizeof(nT));
 #endif
-        nT *new_offset_ptr = (nT *) malloc((src_nrows + 1) * sizeof(nT));
 #endif
         std::copy(new_offset_ptr_vec.begin(), new_offset_ptr_vec.end(), new_offset_ptr);
 

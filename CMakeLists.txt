@@ -46,7 +46,7 @@ if (NOT STILE)
 endif ()
 # The preprocessing function for segmented tiling, default 2 (max parallel)
 if (NOT PROC_TILE)
-    set(PROC_TILE 2)
+    set(PROC_TILE 1) # TODO SAND
 endif ()
 # The loop order for executing sparse matrix operations, default 2 (jj, iip, i, j, k)
 if (NOT L_ORDER)
@@ -84,7 +84,7 @@ endif ()
 if (SP_TEST)
     # Turn off MKL
     option(USE_MKL "MKL option" OFF)
-    set(C_COMP ON)
+    set(C_COMP OFF)  # TODO SAND
 
     message("Build for code for sparse matrix ops and it's dependencies.")
     add_compile_definitions(GNN_Sparse)
@@ -101,6 +101,11 @@ endif ()
 if (C_COMP)
     add_compile_definitions(CCMP)
     message("Further compress the sparse matrix whenever possible. (Ex - CSR -> DCSR)")
+endif ()
+
+if (ALI_ALLOC)
+    add_compile_definitions(A_ALLOC)
+    message("Allocate with alligned_alloc")
 endif ()
 
 # Reorder matrix
