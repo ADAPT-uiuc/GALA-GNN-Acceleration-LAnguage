@@ -10,4 +10,4 @@
 
 export OMP_NUM_THREADS=63
 
-numactl --interleave=all --physcpubind=0-63 tests/spade_cpu_spmm_impl "/home/damitha2/projects/SparseAcc/data_exp_npy/mycielskian17/" 256 1024 2 32 0 0 0 0 10
+numactl --interleave=all --physcpubind=0-63 ../../build/tests/spade_cpu_spmm_impl "/home/damitha2/projects/SparseAcc/data_exp_npy/mycielskian17/" 256 1024 2 32 0 0 0 0 10
