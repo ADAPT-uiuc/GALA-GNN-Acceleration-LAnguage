@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
             input_emb.vals_ptr()[i * emb_size + j] = (dvT) (rand() % 100) / 100;
         }
     }
-    input_emb.set_all(1);
+//    input_emb.set_all(1);
 
     DM out_emb;
     out_emb.build(adj.nrows(), emb_size, DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);

@@ -16,6 +16,8 @@ fi
 } >transf_times
 #(cd ../../build && rm -r * && cmake .. && make)
 
+export OMP_NUM_THREADS=56
+
 for d in "$data_path"*/; do
   folder_name=$(basename $d)
   IFS='_' read -ra name_Array <<< "$folder_name"

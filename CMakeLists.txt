@@ -46,7 +46,7 @@ if (NOT STILE)
 endif ()
 # The preprocessing function for segmented tiling, default 2 (max parallel)
 if (NOT PROC_TILE)
-    set(PROC_TILE 1) # TODO SAND
+    set(PROC_TILE 0) # TODO SAND
 endif ()
 # The loop order for executing sparse matrix operations, default 2 (jj, iip, i, j, k)
 if (NOT L_ORDER)

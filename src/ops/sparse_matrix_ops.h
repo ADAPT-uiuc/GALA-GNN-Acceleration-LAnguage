@@ -2103,27 +2103,28 @@ void bless_jj_iip_i_j_kv(std::vector<SM *> &adj_vec,
     typedef typename DM::ntype dnT;
     typedef typename DM::vtype dvT;
 
-    diT j = 0;
-
 #ifdef CCMP
     std::cout << "Barrier-less won't work with DCSR, switch to CSR (set C_COMP to OFF)" << std::endl;
 #else
 #pragma omp parallel
 #pragma omp single nowait
     {
-        for (iT i = 0; i < adj_vec.at(j)->nrows(); i += sparse_tile_rows) {
-            GNOpTile<SM, DM> tile_info;
+        for (iT i = 0; i < adj_vec.at(0)->nrows(); i += sparse_tile_rows) {
+            auto tile_info = new GNOpTile<SM, DM>();
 
-            tile_info.srows_start = i;
-            tile_info.srows_end = std::min(i + sparse_tile_rows, adj_vec.at(j)->nrows());
+            tile_info->srows_start = i;
+            tile_info->srows_end = std::min(i + sparse_tile_rows, adj_vec.at(0)->nrows());
+//            std::cout << "Row: " << i + sparse_tile_rows << " "  << adj_vec.at(0)->nrows() << std::endl;
 
 #pragma omp task
-            gSpMM_row_bless(adj_vec,
-                            j,
-                            inp_dense,
-                            out_dense,
-                            wsum_aggr,
-                            &tile_info);
+            {
+                gSpMM_row_bless(adj_vec,
+                                0,
+                                inp_dense,
+                                out_dense,
+                                wsum_aggr,
+                                tile_info);
+            }
         }
     }
 
@@ -2343,7 +2344,7 @@ void gSpMM_row_bless(std::vector<SM *> &adj_vec,
     typedef typename DM::ntype dnT;
     typedef typename DM::vtype dvT;
 
-    const SM *A = adj_vec.at(jj);
+    SM *A = adj_vec.at(jj);
 
     dnT B_cols = B->ncols();
     iT A_rows = A->nrows();
@@ -2353,18 +2354,20 @@ void gSpMM_row_bless(std::vector<SM *> &adj_vec,
     dvT *out_vals_ptr = out->vals_ptr();
     dvT *B_vals_ptr = B->vals_ptr();
 
-    auto tempArr = (dvT *) aligned_alloc(64, sizeof(dvT) * B_cols);
+//    auto tempArr = (dvT *) aligned_alloc(64, sizeof(dvT) * B_cols);
 
     for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
 
         dnT row_offset1 = (dnT) v * B_cols;
         dvT *base1 = out_vals_ptr + row_offset1;
-        std::memset(tempArr, 0, sizeof(dvT) * B_cols);
+//        std::memset(tempArr, 0, sizeof(dvT) * B_cols);
+//        std::cout << v << std::endl;
         nT first_node_edge = A_offset_ptr[v];
         nT last_node_edge = A_offset_ptr[v + 1];
 
         for (nT e = first_node_edge; e < last_node_edge; e++) {
             iT u = A_ids_ptr[e];
+//            std::cout << "u: " << u << "," << v << " " << e << " " << jj << "|" << tile_info->srows_start << " " << tile_info->srows_end << std::endl;
 #ifdef GN_1
             // You can make this more efficient by having an assignable offset array
             vT A_val = A_vals_ptr[e];
@@ -2373,25 +2376,30 @@ void gSpMM_row_bless(std::vector<SM *> &adj_vec,
             dvT *base2 = B_vals_ptr + row_offset2;
 
 
-            aggregator(tempArr, base2, A_val, B_cols);
-//            aggregator(base1, base2, A_val, B_cols);
+//            aggregator(tempArr, base2, A_val, B_cols);
+            aggregator(base1, base2, A_val, B_cols);
         }
-        for (dnT k = 0; k < B_cols; k++) {
-            base1[k] += tempArr[k];
-        }
+//        for (dnT k = 0; k < B_cols; k++) {
+//            base1[k] += tempArr[k];
+//        }
     }
-    free(tempArr);
+//    free(tempArr);
 
-    if (adj_vec.size() < (jj + 1)) {
+//    std::cout << "this is called" << adj_vec.size() << " " << jj + 1 << std::endl;
+    if (adj_vec.size() > (jj + 1)) {
+//        std::cout << "this is called" << std::endl;
 #pragma omp task
         {
+//            std::cout << "Call: " << tile_info->srows_start << " " << tile_info->srows_end << std::endl;
             gSpMM_row_bless(adj_vec,
-                            jj,
+                            jj + 1,
                             B,
                             out,
                             aggregator,
                             tile_info);
         }
+    } else {
+        delete tile_info;
     }
 }
 
