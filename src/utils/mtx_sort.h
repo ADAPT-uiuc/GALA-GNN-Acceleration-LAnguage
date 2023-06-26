@@ -167,8 +167,8 @@ void partial_sum(const N_* counts, N_* psum, I_ nitems) {
   double s, e;
   s = get_time();
   psum[0] = 0;
-  __gnu_parallel::partial_sum(&(counts[0]), &(counts[0]) + nitems, &(psum[1])); // CHANGED FROM
-//  std::partial_sum(&(counts[0]), &(counts[0]) + nitems, &(psum[1]));
+//  __gnu_parallel::partial_sum(&(counts[0]), &(counts[0]) + nitems, &(psum[1])); // CHANGED FROM
+  std::partial_sum(&(counts[0]), &(counts[0]) + nitems, &(psum[1]));
   e = get_time();
   MTXSORT_DBG_MSG << "TimePsum: " << (e - s) << " secs." << std::endl;
 }

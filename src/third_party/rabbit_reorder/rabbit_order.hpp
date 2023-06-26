@@ -535,10 +535,10 @@ std::unique_ptr<std::pair<vint, vint>[]> merge_order(const graph& g) {
   for (vint v = 0; v < g.n(); ++v)
     ord[v] = {v, static_cast<vint>(g.es[v].size())};
 
-  __gnu_parallel::sort(&ord[0], &ord[g.n()],  // CHANGED FROM
-                       [](auto x, auto y) {return x.second < y.second;});
-//  std::sort(&ord[0], &ord[g.n()],
-//            [](auto x, auto y) {return x.second < y.second;});
+//  __gnu_parallel::sort(&ord[0], &ord[g.n()],  // CHANGED FROM
+//                       [](auto x, auto y) {return x.second < y.second;});
+  std::sort(&ord[0], &ord[g.n()],
+            [](auto x, auto y) {return x.second < y.second;});
   return ord;
 }
 

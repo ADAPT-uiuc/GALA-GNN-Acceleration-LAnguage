@@ -62,8 +62,8 @@ adjacency_list make_adj_list(const vint n, const RandomAccessRange &es) {
     start_time = get_time();
 #endif
     // Sort the edges
-    __gnu_parallel::sort(ss.begin(), ss.end()); // CHANGED FROM
-//    std::sort(ss.begin(), ss.end());
+//    __gnu_parallel::sort(ss.begin(), ss.end()); // CHANGED FROM
+    std::sort(ss.begin(), ss.end());
 
 #ifdef DBG_RO
     time_sort = (get_time() - start_time);
