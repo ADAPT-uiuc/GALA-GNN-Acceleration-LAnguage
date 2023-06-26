@@ -216,7 +216,8 @@ message(STATUS "Compiling for ${ARCH}")
 if (CMAKE_CXX_COMPILER_ID STREQUAL Clang)
     message("Compiler: Identifies as Clang")
     # Set settings based on the compiler
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -O3 -fopenmp=libomp")
+#    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -O3 -fopenmp=libomp")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -O3 -DICC -restrict")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL Intel)
     message("Compiler: Identifies as Intel")
     # Set settings based on the compiler
