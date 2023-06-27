@@ -10,8 +10,8 @@
 
 export OMP_NUM_THREADS=64
 
-numactl --interleave=all --physcpubind=0-63 ../../build/tests/spade_cpu_spmm_impl_test_barrierless "/home/damitha2/projects/SparseAcc/data_exp_npy/mycielskian17/" 32 80000 2 32 0 0 0 0 10
-numactl --interleave=all --physcpubind=0-63 ../../build/tests/spade_cpu_spmm_impl_test_barrierless "/home/damitha2/projects/SparseAcc/data_exp_npy/as-Skitter/" 32 80000 2 32 0 0 0 0 10
-numactl --interleave=all --physcpubind=0-63 ../../build/tests/spade_cpu_spmm_impl_test_barrierless "/home/damitha2/projects/SparseAcc/data_exp_npy/asia_osm/" 32 80000 2 32 0 0 0 0 10
-numactl --interleave=all --physcpubind=0-63 ../../build/tests/spade_cpu_spmm_impl_test_barrierless "/home/damitha2/projects/SparseAcc/data_exp_npy/delaunay_n21/" 32 80000 2 32 0 0 0 0 10
-numactl --interleave=all --physcpubind=0-63 ../../build/tests/spade_cpu_spmm_impl_test_barrierless "/home/damitha2/projects/SparseAcc/data_exp_npy/com-LiveJournal/" 32 80000 2 32 0 0 0 0 10
+numactl --interleave=all --physcpubind=0-63 ../../build/tests/spade_cpu_spmm_impl_test_barrierless "/home/damitha2/projects/SparseAcc/data_exp_npy/mycielskian17/" 128 80000 2 32 0 0 0 0 10
+numactl --interleave=all --physcpubind=0-63 ../../build/tests/spade_cpu_spmm_impl_test_barrierless "/home/damitha2/projects/SparseAcc/data_exp_npy/as-Skitter/" 128 80000 2 32 0 0 0 0 10
+numactl --interleave=all --physcpubind=0-63 ../../build/tests/spade_cpu_spmm_impl_test_barrierless "/home/damitha2/projects/SparseAcc/data_exp_npy/asia_osm/" 128 80000 2 32 0 0 0 0 10
+numactl --interleave=all --physcpubind=0-63 ../../build/tests/spade_cpu_spmm_impl_test_barrierless "/home/damitha2/projects/SparseAcc/data_exp_npy/delaunay_n21/" 128 80000 2 32 0 0 0 0 10
+numactl --interleave=all --physcpubind=0-63 ../../build/tests/spade_cpu_spmm_impl_test_barrierless "/home/damitha2/projects/SparseAcc/data_exp_npy/com-LiveJournal/" 128 80000 2 32 0 0 0 0 10
