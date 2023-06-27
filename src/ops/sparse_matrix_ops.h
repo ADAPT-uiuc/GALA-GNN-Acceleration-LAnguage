@@ -2227,6 +2227,97 @@ void bless2_jj_iip_i_j_kv(std::vector<SM *> &adj_vec,
 }
 
 
+template<typename T>
+class ConcurrentQueue {
+private:
+    std::queue<T> queue_;
+    omp_lock_t lock_;
+
+public:
+    ConcurrentQueue() {
+        omp_init_lock(&lock_);
+    }
+
+    ~ConcurrentQueue() {
+        omp_destroy_lock(&lock_);
+    }
+
+    void Push(const T &item) {
+        omp_set_lock(&lock_);
+        queue_.push(item);
+        omp_unset_lock(&lock_);
+    }
+
+    bool Pop(T &item) {
+        omp_set_lock(&lock_);
+        if (queue_.empty()) {
+            omp_unset_lock(&lock_);
+            return false;
+        }
+        item = queue_.front();
+        queue_.pop();
+        omp_unset_lock(&lock_);
+        return true;
+    }
+};
+
+template<class SM, class DM, class Function>
+void bless3_jj_iip_i_j_kv(std::vector<SM *> &adj_vec,
+                          DM *inp_dense,
+                          DM *out_dense,
+                          typename SM::itype sparse_tile_rows,
+                          Function wsum_aggr
+) {
+    typedef typename SM::itype iT;
+    typedef typename SM::ntype nT;
+    typedef typename SM::vtype vT;
+
+    typedef typename DM::itype diT;
+    typedef typename DM::ntype dnT;
+    typedef typename DM::vtype dvT;
+
+#ifdef CCMP
+    std::cout << "Barrier-less won't work with DCSR, switch to CSR (set C_COMP to OFF)" << std::endl;
+#else
+    ConcurrentQueue<spmmColTile<SM, DM>> taskQueue;
+
+    for (iT i = 0; i < adj_vec.at(0)->nrows(); i += sparse_tile_rows) {
+        auto tile_info = new GNOpTile<SM, DM>();
+
+        tile_info->srows_start = i;
+        tile_info->srows_end = std::min(i + sparse_tile_rows, adj_vec.at(0)->nrows());
+
+        auto newTask = new spmmColTile<SM, DM>();
+        newTask->tile_info = tile_info;
+        newTask->jj = 0;
+
+        taskQueue.Push(*newTask);
+    }
+
+#pragma omp parallel
+    {
+        while (true) {
+            spmmColTile<SM, DM> local_task;
+
+            taskQueue.Pop(local_task);
+
+            if (local_task.isValid()) {
+                // Execute the task
+                gSpMM_row_bless3(adj_vec,
+                                 local_task.jj,
+                                 inp_dense,
+                                 out_dense,
+                                 wsum_aggr,
+                                 local_task.tile_info,
+                                 taskQueue);
+            } else {
+                break; // No more tasks in the queue
+            }
+        }
+    }
+#endif
+}
+
 template<class SM, class DM, class Function>
 void trans_kk_jj_iip_i_j_kv(std::vector<SM *> &adj_vec,
                             DM *inp_dense,
@@ -2559,6 +2650,80 @@ void gSpMM_row_bless2(std::vector<SM *> &adj_vec,
             taskQueue.push(*newTask);
         }
         delete tile_info;
+    }
+}
+
+template<class DM, class SM, class Function>
+void gSpMM_row_bless3(std::vector<SM *> &adj_vec,
+                      typename DM::itype jj,
+                      const DM *B,
+                      DM *out,
+                      Function aggregator,
+                      GNOpTile<SM, DM> *tile_info,
+                      ConcurrentQueue<spmmColTile<SM, DM>> &taskQueue) {
+    //Generalized SpMM.
+    //The output dense matrix line is used as an accumulator for the aggregated neighbour vectors.
+
+    typedef typename SM::itype iT;
+    typedef typename SM::ntype nT;
+    typedef typename SM::vtype vT;
+
+    typedef typename DM::itype diT;
+    typedef typename DM::ntype dnT;
+    typedef typename DM::vtype dvT;
+
+    SM *A = adj_vec.at(jj);
+
+    dnT B_cols = B->ncols();
+    iT A_rows = A->nrows();
+    vT *A_vals_ptr = A->vals_ptr();
+    nT *A_offset_ptr = A->offset_ptr();
+    iT *A_ids_ptr = A->ids_ptr();
+    dvT *out_vals_ptr = out->vals_ptr();
+    dvT *B_vals_ptr = B->vals_ptr();
+
+//    auto tempArr = (dvT *) aligned_alloc(64, sizeof(dvT) * B_cols);
+
+    for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
+
+        dnT row_offset1 = (dnT) v * B_cols;
+        dvT *base1 = out_vals_ptr + row_offset1;
+//        std::memset(tempArr, 0, sizeof(dvT) * B_cols);
+//        std::cout << v << std::endl;
+        nT first_node_edge = A_offset_ptr[v];
+        nT last_node_edge = A_offset_ptr[v + 1];
+
+        for (nT e = first_node_edge; e < last_node_edge; e++) {
+            iT u = A_ids_ptr[e];
+//            std::cout << "u: " << u << "," << v << " " << e << " " << jj << "|" << tile_info->srows_start << " " << tile_info->srows_end << std::endl;
+#ifdef GN_1
+            // You can make this more efficient by having an assignable offset array
+            vT A_val = A_vals_ptr[e];
+#endif
+            dnT row_offset2 = (dnT) u * B_cols;
+            dvT *base2 = B_vals_ptr + row_offset2;
+
+
+//            aggregator(tempArr, base2, A_val, B_cols);
+            aggregator(base1, base2, A_val, B_cols);
+        }
+//        for (dnT k = 0; k < B_cols; k++) {
+//            base1[k] += tempArr[k];
+//        }
+    }
+//    free(tempArr);
+
+//    std::cout << "this is called" << adj_vec.size() << " " << jj + 1 << std::endl;
+    if (adj_vec.size() > (jj + 1)) {
+        auto newTask = new spmmColTile<SM, DM>();
+        newTask->tile_info = tile_info;
+        newTask->jj = jj + 1;
+        taskQueue.Push(*newTask);
+    } else {
+        auto newTask = new spmmColTile<SM, DM>();
+        newTask->tile_info = tile_info;
+        newTask->jj = -1;
+        taskQueue.Push(*newTask);
     }
 }
 

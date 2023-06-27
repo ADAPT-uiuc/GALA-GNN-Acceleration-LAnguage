@@ -143,11 +143,17 @@ int main(int argc, char **argv) {
 //                            rows_per_tile,
 //                            wsum_aggr
 //        );
-        bless2_jj_iip_i_j_kv(tiled_adj,
-                            &input_emb,
-                            &out_emb,
-                            rows_per_tile,
-                            wsum_aggr
+//        bless2_jj_iip_i_j_kv(tiled_adj,
+//                            &input_emb,
+//                            &out_emb,
+//                            rows_per_tile,
+//                            wsum_aggr
+//        );
+        bless3_jj_iip_i_j_kv(tiled_adj,
+                             &input_emb,
+                             &out_emb,
+                             rows_per_tile,
+                             wsum_aggr
         );
         end = get_time();
 
