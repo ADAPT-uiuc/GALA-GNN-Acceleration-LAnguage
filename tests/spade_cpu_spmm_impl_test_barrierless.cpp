@@ -137,7 +137,13 @@ int main(int argc, char **argv) {
         out_emb.set_all(0);
 
         start = get_time();
-        bless_jj_iip_i_j_kv(tiled_adj,
+//        bless_jj_iip_i_j_kv(tiled_adj,
+//                            &input_emb,
+//                            &out_emb,
+//                            rows_per_tile,
+//                            wsum_aggr
+//        );
+        bless2_jj_iip_i_j_kv(tiled_adj,
                             &input_emb,
                             &out_emb,
                             rows_per_tile,
