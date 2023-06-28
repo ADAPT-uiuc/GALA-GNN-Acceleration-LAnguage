@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
     int num_iters = stoi(string(argv[10]));
 
     // Const settings
-    int skip_cache_warmup = 5;
+    int skip_cache_warmup = 0;
 
     std::string filename;
     filename = path;

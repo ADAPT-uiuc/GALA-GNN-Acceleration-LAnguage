@@ -2287,11 +2287,11 @@ void bless3_jj_iip_i_j_kv(std::vector<SM *> &adj_vec,
         tile_info->srows_start = i;
         tile_info->srows_end = std::min(i + sparse_tile_rows, adj_vec.at(0)->nrows());
 
-        auto newTask = new spmmColTile<SM, DM>();
-        newTask->tile_info = tile_info;
-        newTask->jj = 0;
+        spmmColTile<SM, DM> newTask;
+        newTask.tile_info = tile_info;
+        newTask.jj = 0;
 
-        taskQueue.Push(*newTask);
+        taskQueue.Push(newTask);
     }
 
 #pragma omp parallel
@@ -2682,14 +2682,13 @@ void gSpMM_row_bless3(std::vector<SM *> &adj_vec,
     dvT *out_vals_ptr = out->vals_ptr();
     dvT *B_vals_ptr = B->vals_ptr();
 
-//    auto tempArr = (dvT *) aligned_alloc(64, sizeof(dvT) * B_cols);
+    auto tempArr = (dvT *) aligned_alloc(64, sizeof(dvT) * B_cols);
 
     for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
 
         dnT row_offset1 = (dnT) v * B_cols;
         dvT *base1 = out_vals_ptr + row_offset1;
-//        std::memset(tempArr, 0, sizeof(dvT) * B_cols);
-//        std::cout << v << std::endl;
+        std::memset(tempArr, 0, sizeof(dvT) * B_cols);
         nT first_node_edge = A_offset_ptr[v];
         nT last_node_edge = A_offset_ptr[v + 1];
 
@@ -2704,26 +2703,27 @@ void gSpMM_row_bless3(std::vector<SM *> &adj_vec,
             dvT *base2 = B_vals_ptr + row_offset2;
 
 
-//            aggregator(tempArr, base2, A_val, B_cols);
-            aggregator(base1, base2, A_val, B_cols);
+            aggregator(tempArr, base2, A_val, B_cols);
+//            aggregator(base1, base2, A_val, B_cols);
         }
-//        for (dnT k = 0; k < B_cols; k++) {
-//            base1[k] += tempArr[k];
-//        }
+        for (dnT k = 0; k < B_cols; k++) {
+            base1[k] += tempArr[k];
+        }
     }
-//    free(tempArr);
+    free(tempArr);
 
 //    std::cout << "this is called" << adj_vec.size() << " " << jj + 1 << std::endl;
+//    std::cout << "Run: " << jj << "," << tile_info->srows_start << "," << tile_info->srows_end << std::endl;
     if (adj_vec.size() > (jj + 1)) {
-        auto newTask = new spmmColTile<SM, DM>();
-        newTask->tile_info = tile_info;
-        newTask->jj = jj + 1;
-        taskQueue.Push(*newTask);
+        spmmColTile<SM, DM> newTask;
+        newTask.tile_info = tile_info;
+        newTask.jj = jj + 1;
+        taskQueue.Push(newTask);
     } else {
-        auto newTask = new spmmColTile<SM, DM>();
-        newTask->tile_info = tile_info;
-        newTask->jj = -1;
-        taskQueue.Push(*newTask);
+        spmmColTile<SM, DM> newTask;
+        newTask.tile_info = tile_info;
+        newTask.jj = -1;
+        taskQueue.Push(newTask);
     }
 }
 
