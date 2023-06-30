@@ -2261,6 +2261,21 @@ public:
     }
 };
 
+template<class SM, class DM>
+struct spmmFullTile {
+    typename DM::itype jj;
+    typename SM::itype srow_start;
+    typename SM::itype srow_end;
+
+    bool isValid() {
+        if (jj == -1) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+};
+
 template<class SM, class DM, class Function>
 void bless3_jj_iip_i_j_kv(std::vector<SM *> &adj_vec,
                           DM *inp_dense,
@@ -2279,16 +2294,13 @@ void bless3_jj_iip_i_j_kv(std::vector<SM *> &adj_vec,
 #ifdef CCMP
     std::cout << "Barrier-less won't work with DCSR, switch to CSR (set C_COMP to OFF)" << std::endl;
 #else
-    ConcurrentQueue<spmmColTile<SM, DM>> taskQueue;
+    ConcurrentQueue<spmmFullTile<SM, DM>> taskQueue;
 
     for (iT i = 0; i < adj_vec.at(0)->nrows(); i += sparse_tile_rows) {
-        auto tile_info = new GNOpTile<SM, DM>();
+        spmmFullTile<SM, DM> newTask;
+        newTask.srow_start = i;
+        newTask.srow_end = std::min(i + sparse_tile_rows, adj_vec.at(0)->nrows());
 
-        tile_info->srows_start = i;
-        tile_info->srows_end = std::min(i + sparse_tile_rows, adj_vec.at(0)->nrows());
-
-        spmmColTile<SM, DM> newTask;
-        newTask.tile_info = tile_info;
         newTask.jj = 0;
 
         taskQueue.Push(newTask);
@@ -2297,7 +2309,7 @@ void bless3_jj_iip_i_j_kv(std::vector<SM *> &adj_vec,
 #pragma omp parallel
     {
         while (true) {
-            spmmColTile<SM, DM> local_task;
+            spmmFullTile<SM, DM> local_task;
 
             taskQueue.Pop(local_task);
 
@@ -2308,7 +2320,8 @@ void bless3_jj_iip_i_j_kv(std::vector<SM *> &adj_vec,
                                  inp_dense,
                                  out_dense,
                                  wsum_aggr,
-                                 local_task.tile_info,
+                                 local_task.srow_start,
+                                 local_task.srow_end,
                                  taskQueue);
             } else {
                 break; // No more tasks in the queue
@@ -2659,8 +2672,9 @@ void gSpMM_row_bless3(std::vector<SM *> &adj_vec,
                       const DM *B,
                       DM *out,
                       Function aggregator,
-                      GNOpTile<SM, DM> *tile_info,
-                      ConcurrentQueue<spmmColTile<SM, DM>> &taskQueue) {
+                      typename SM::itype srows_start,
+                      typename SM::itype srows_end,
+                      ConcurrentQueue<spmmFullTile<SM, DM>> &taskQueue) {
     //Generalized SpMM.
     //The output dense matrix line is used as an accumulator for the aggregated neighbour vectors.
 
@@ -2684,7 +2698,7 @@ void gSpMM_row_bless3(std::vector<SM *> &adj_vec,
 
     auto tempArr = (dvT *) aligned_alloc(64, sizeof(dvT) * B_cols);
 
-    for (iT v = tile_info->srows_start; v < tile_info->srows_end; v++) {
+    for (iT v = srows_start; v < srows_end; v++) {
 
         dnT row_offset1 = (dnT) v * B_cols;
         dvT *base1 = out_vals_ptr + row_offset1;
@@ -2715,13 +2729,15 @@ void gSpMM_row_bless3(std::vector<SM *> &adj_vec,
 //    std::cout << "this is called" << adj_vec.size() << " " << jj + 1 << std::endl;
 //    std::cout << "Run: " << jj << "," << tile_info->srows_start << "," << tile_info->srows_end << std::endl;
     if (adj_vec.size() > (jj + 1)) {
-        spmmColTile<SM, DM> newTask;
-        newTask.tile_info = tile_info;
+        spmmFullTile<SM, DM> newTask;
+        newTask.srow_start = srows_start;
+        newTask.srow_end = srows_end;
         newTask.jj = jj + 1;
         taskQueue.Push(newTask);
     } else {
-        spmmColTile<SM, DM> newTask;
-        newTask.tile_info = tile_info;
+        spmmFullTile<SM, DM> newTask;
+        newTask.srow_start = srows_start;
+        newTask.srow_end = srows_end;
         newTask.jj = -1;
         taskQueue.Push(newTask);
     }
