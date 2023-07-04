@@ -9,4 +9,6 @@ if (SP_TEST)
     add_executable(spade_cpu_spmm_impl_test_slice spade_cpu_spmm_impl_test_slice.cpp)
     add_executable(spade_cpu_spmm_impl_test_barrierless spade_cpu_spmm_impl_test_barrierless.cpp)
     add_executable(spade_cpu_spmm_impl_test_aos spade_cpu_spmm_impl_test_aos.cpp)
+
+    add_executable(spade_graph_data spade_graph_data.cpp)
 endif ()
