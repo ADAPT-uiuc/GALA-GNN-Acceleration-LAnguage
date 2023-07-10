@@ -2,6 +2,7 @@ project(GNN_Acceleration_Language)
 cmake_minimum_required(VERSION 3.0)
 set(CMAKE_CXX_STANDARD 17)
 
+set(CMAKE_BUILD_TYPE RelWithDebInfo)
 # Print the time for the compling
 set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
 
