@@ -10,9 +10,9 @@ set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
 # SPADE Accelerator code-gen
 option(GEN_SPADE "Build for code-gen in spade" OFF)
 # Sparse transfer learning tests
-option(SP_TEST "Build for code for sparse matrix ops and it's dependencies." ON)
+option(SP_TEST "Build for code for sparse matrix ops and it's dependencies." OFF)
 # GNN DSL
-option(DSL "Build for code for the GNN DSL" OFF)
+option(DSL "Build for code for the GNN DSL" ON)
 
 ######################### General Build options ###########################
 # Build with debug info or not
@@ -37,13 +37,17 @@ if (READ_NPY)
 endif ()
 
 ######################### Default choices for optimizations ###########################
-# This is the reordering method (rabbit), default 1 (rabbit)
+# This is the reordering method, no reordering 0, rabbit 1 (rabbit)
 if (NOT REORD)
-    set(REORD 1)
+    set(REORD 0)
 endif ()
 # This is the tiling method (segmented, info based etc), default 0 (segmented)
 if (NOT STILE)
     set(STILE 0)
+endif ()
+# This is the type of the sparse matrix used. (default is 1 to give CSR)
+if (NOT SM_TYPE)
+    set(SM_TYPE 1) # Default is CSR (1)
 endif ()
 # The preprocessing function for segmented tiling, default 2 (max parallel)
 if (NOT PROC_TILE)
@@ -95,8 +99,14 @@ if (SP_TEST)
     endif ()
 endif ()
 ######################### GNN DSL ###########################
-# TODO Fill up this area
+if (DSL)
+    # Turn MKL on (for the dense matrix multiplications)
+    option(USE_MKL "MKL option" ON)
+    set(C_COMP ON) # Compress the sparse matrices
 
+    message("Build for code for sparse matrix ops and it's dependencies.")
+    add_compile_definitions(GNN_Sparse)
+endif ()
 ######################### Optimization configuration ###########################
 # Compress the sparse matrix representation
 if (C_COMP)
@@ -125,6 +135,18 @@ elseif (STILE EQUAL 1)
 elseif (STILE EQUAL 2)
     add_compile_definitions(ST_2)
     message("Tile sparse matrix using DGL (offset re-write) based tiling")
+endif ()
+
+# Sparse matrix representation
+if (SM_TYPE EQUAL 1)
+    add_compile_definitions(SM_1)
+    message("Sparse Matrix type is CSR")
+elseif (SM_TYPE EQUAL 2)
+    add_compile_definitions(SM_2)
+    message("Sparse Matrix type is COO")
+elseif (SM_TYPE EQUAL 3)
+    add_compile_definitions(SM_3)
+    message("Sparse Matrix type is DCSR ( CSR with an ID array, where only rows with NNZs would be stored. Needed for split based tiling of larger matrices.)")
 endif ()
 
 # Tile processing algorithm
