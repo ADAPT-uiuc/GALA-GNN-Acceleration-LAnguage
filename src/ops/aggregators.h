@@ -23,7 +23,7 @@ inline void wsumAgg(dvT *accum, dvT *to_add, vT weight, dnT length) {
         }
     }
 #else
-#pragma omp simd
+//#pragma omp simd
     for (dnT j = 0; j < length; j++) {
         accum[j] += weight * to_add[j];
     }

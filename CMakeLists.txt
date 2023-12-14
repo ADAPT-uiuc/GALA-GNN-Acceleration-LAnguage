@@ -30,7 +30,7 @@ option(ALI_ALLOC "Allocate with alligned_alloc" ON)
 option(C_COMP "Compress Sparse Matrix further. Ex - CSR -> DCSR" ON)
 # TODO Somehow try to get C_COMP into the spade code generation? Or even ignore it?
 
-option(READ_NPY "Export torch." ON)
+option(READ_NPY "Export torch." OFF)
 if (READ_NPY)
     add_compile_definitions(RNPY)
     message("Read from .npy files")
@@ -39,7 +39,7 @@ endif ()
 ######################### Default choices for optimizations ###########################
 # This is the reordering method, no reordering 0, rabbit 1 (rabbit)
 if (NOT REORD)
-    set(REORD 0)
+    set(REORD 1)
 endif ()
 # This is the tiling method (segmented, info based etc), default 0 (segmented)
 if (NOT STILE)
@@ -219,6 +219,18 @@ if (OPENMP_FOUND)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 else ()
     message(FATAL_ERROR "Need OpenMP")
+endif ()
+
+# Torch / Aten for the DSL
+if (DSL)
+    find_package(Torch REQUIRED)
+    message("Torch cxx flags: ${TORCH_CXX_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+#    message("CUDA flags: ${CMAKE_CUDA_ARCHITECTURES}")
+#    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -I /home/damitha/torch/libtorch/include/torch/csrc/api/include")
+#    message("Torch linker flags: ${TORCH_LIBRARIES}")
+#    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${TORCH_LIBRARIES}")
+#    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ltorch -ltorch_cpu -lc10")
 endif ()
 
 # Check include files

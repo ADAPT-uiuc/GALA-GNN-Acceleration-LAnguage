@@ -1,0 +1,95 @@
+import math
+import torch
+
+from dgl import function as fn
+from dgl.base import DGLError
+from dgl.utils import expand_as_pair
+
+# Our module!
+import gather_cpp
+
+torch.manual_seed(42)
+
+
+class GatherFunction(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx,
+                input_dense,
+                offset_graph,
+                cols_graph,
+                vals_graph,
+                weights,
+                bias):
+        output_res = gather_cpp.forward(input_dense,
+                                        offset_graph,
+                                        cols_graph,
+                                        vals_graph,
+                                        weights,
+                                        bias)
+        # TODO Normally you pass the intermediate outputs as well.
+        #  but not here since there is no "intermediate" outputs.
+        #  just pass in the weights for now.
+        # TODO bias is not passed here since its pretty much the difference
+        #  from the result and input (threshold)
+        # variables = output_res + [weights]
+        variables = [weights, offset_graph, cols_graph, vals_graph]
+
+        ctx.save_for_backward(*variables)
+        return output_res
+
+    @staticmethod
+    def backward(ctx, grad_h):  # Output of the forward function
+        # TODO Only get the first element
+        # outputs = gather_cpp.backward(
+        #     grad_h.contiguous(), *ctx.saved_tensors[:1])
+        # d_input_dense, d_offset_graph, d_cols_graph, d_vals_graph, d_weights, d_bias = outputs
+        # d_input_dense = torch.zeros()
+        # return d_input_dense, d_offset_graph, d_cols_graph, d_vals_graph, d_weights, d_bias  # Inputs to the forward function
+        return torch.zeros((10000, 32)), torch.zeros(1000000), torch.zeros(1000000), torch.zeros((32, 128)), torch.zeros(128)
+
+class GCN(torch.nn.Module):
+    def __init__(self, in_feats, out_feats):
+        super(GCN, self).__init__()
+        self._in_feats = in_feats
+        self._out_feats = out_feats
+
+        self.weights = torch.nn.Parameter(torch.Tensor(in_feats, out_feats))
+        self.bias = torch.nn.Parameter(torch.Tensor(out_feats))
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        torch.nn.init.xavier_uniform_(self.weights)
+        torch.nn.init.zeros_(self.bias)
+
+    def forward(self, input_dense, offset_graph, cols_graph, vals_graph):
+        return GatherFunction.apply(input_dense,
+                                    offset_graph,
+                                    cols_graph,
+                                    vals_graph,
+                                    self.weights,
+                                    self.bias)
+
+
+class GCN_DGL(torch.nn.Module):
+    def __init__(self, in_feats, out_feats):
+        super(GCN_DGL, self).__init__()
+        self._in_feats = in_feats
+        self._out_feats = out_feats
+
+        self.weights = torch.nn.Parameter(torch.Tensor(in_feats, out_feats))
+        self.bias = torch.nn.Parameter(torch.Tensor(out_feats))
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        torch.nn.init.xavier_uniform_(self.weights)
+        torch.nn.init.zeros_(self.bias)
+
+    def forward(self, graph, feat):
+        with graph.local_scope():
+            aggregate_fn = fn.u_mul_e("h", "dd", "m")
+            feat_src, feat_dst = expand_as_pair(feat, graph)
+            graph.srcdata["h"] = feat_src
+            graph.update_all(aggregate_fn, fn.sum(msg="m", out="h"))
+            rst = graph.dstdata["h"]
+
+            return rst

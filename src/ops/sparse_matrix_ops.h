@@ -307,6 +307,7 @@ void gSpMM_row_tiled(const SM *A,
 
         for (nT e = first_node_edge; e < last_node_edge; e++) {
             iT u = A_ids_ptr[e];
+//            std::cout << std::to_string(u) + "\n";
 #ifdef AU_C
             if (u == -1) {
                 continue;

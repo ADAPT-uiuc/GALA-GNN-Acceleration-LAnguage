@@ -19,14 +19,15 @@ typedef int val_int_t;
 #define MKL_INT ind1_t
 
 
-#include "../utils/mtx_io.h"
-#include "../utils/threading_utils.h"
-#include "../gnn/gnn.h"
-#include "../gnn/enums.h"
-#include "../gnn/tiling.h"
-#include "../gnn/reordering.h"
+#include "../src/utils/mtx_io.h"
+#include "../src/utils/threading_utils.h"
+#include "../src/gnn/gnn.h"
+#include "../src/ops/enums.h"
+#include "../src/ops/tiling.h"
+#include "../src/ops/reordering.h"
 #ifdef RO_1
-#include "../reorder/rabbit/rabbit_reordering.h"
+#include "../src/ops/reordering.h"
+#include "../src/third_party/rabbit_reorder/rabbit_reordering.h"
 #endif
 #include "common.h"
 

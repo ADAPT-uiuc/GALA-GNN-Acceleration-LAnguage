@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
 #else
     suffix = ".mtx";
     filename = path + "Adj" + suffix;
-    readSM<SM_t>(filename, &adj);
+    readSM<SM>(filename, &adj);
 #endif
     adj.set_all(1);
 
@@ -113,12 +113,12 @@ int main(int argc, char **argv) {
 
     // Init input with random numbers
     DM input_emb;
-    input_emb.build(adj.nrows(), emb_size, DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
-    for (diT i = 0; i < adj.nrows(); i++) {
-        for (dnT j = 0; j < emb_size; j++) {
-            input_emb.vals_ptr()[i * emb_size + j] = (dvT) (rand() % 100) / 100;
-        }
-    }
+    input_emb.build(adj.ncols(), emb_size, DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
+//    for (diT i = 0; i < adj.nrows(); i++) {
+//        for (dnT j = 0; j < emb_size; j++) {
+//            input_emb.vals_ptr()[i * emb_size + j] = (dvT) (rand() % 100) / 100;
+//        }
+//    }
     input_emb.set_all(1);
 
     DM out_emb;
@@ -128,6 +128,8 @@ int main(int argc, char **argv) {
     out_emb2.build(adj.nrows(), emb_size, DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
 
     auto wsum_aggr = wsumAgg<val_t, val_t, ind2_t>;
+
+    std::cout << adj.nrows() <<  " " << adj.ncols() <<  " "  << adj.nvals() << std::endl;
 
     int i;
     double start, end;

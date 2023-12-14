@@ -8,12 +8,12 @@ typedef uint64_t ind2_t;
 typedef float val_t;
 typedef int val_int_t;
 
-#include "../utils/mtx_io.h"
-#include "../utils/threading_utils.h"
-#include "../gnn/gnn.h"
+#include "../src/utils/mtx_io.h"
+#include "../src/utils/threading_utils.h"
+#include "../src/gnn/gnn.h"
 #ifdef RO_1
-#include "../gnn/reordering.h"
-#include "../reorder/rabbit/rabbit_reordering.h"
+#include "../src/ops/reordering.h"
+#include "../src/third_party/rabbit_reorder/rabbit_reordering.h"
 #endif
 #include "common.h"
 
