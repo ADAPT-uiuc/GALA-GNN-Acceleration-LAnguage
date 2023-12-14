@@ -9,7 +9,7 @@ from dgl.data import CoraGraphDataset, RedditDataset
 from dgl.utils import expand_as_pair
 from dgl import function as fn
 
-graph = CoraGraphDataset()
+# graph = CoraGraphDataset()
 graph = RedditDataset()
 graph = graph[0]
 
@@ -25,8 +25,8 @@ graph.apply_edges(fn.u_mul_v("di", "do", "dd"))
 # print(graph.adj_tensors('csr')[0], graph.adj_tensors('csr')[0].shape)
 edges = graph.number_of_edges()
 
-in_feats = 32
-out_feats = 128
+in_feats = input_dense.shape[1]
+out_feats = 32
 iters = 100
 
 # # TODO eval using a DGL graph and have a method to call DGL functions
