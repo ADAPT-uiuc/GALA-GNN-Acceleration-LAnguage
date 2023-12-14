@@ -57,11 +57,11 @@ std::vector<at::Tensor> gather_forward(
 #pragma omp parallel for schedule(static, 1)
     for (int32_t i = 0; i < nrows; i++) {
         for (int64_t e = offset_ptr[i]; e < offset_ptr[i + 1]; e++) {
-            int32_t u = col_ptr[e];
+            int32_t v = col_ptr[e];
             float val = val_ptr[e];
 
             for (int k = 0; k < dcols; k++) {
-                oden_array[i * dcols + k] += (val * iden_ptr[i * dcols + k]);
+                oden_array[i * dcols + k] += (val * iden_ptr[v * dcols + k]);
             }
         }
     }

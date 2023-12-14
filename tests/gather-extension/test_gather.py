@@ -5,11 +5,12 @@ import torch
 from gather import GCN
 from gather import GCN_DGL
 
-from dgl.data import CoraGraphDataset
+from dgl.data import CoraGraphDataset, RedditDataset
 from dgl.utils import expand_as_pair
 from dgl import function as fn
 
 graph = CoraGraphDataset()
+graph = RedditDataset()
 graph = graph[0]
 
 input_dense = graph.ndata["feat"]
