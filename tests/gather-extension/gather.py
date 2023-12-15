@@ -34,6 +34,7 @@ class GatherFunction(torch.autograd.Function):
         # variables = output_res + [weights]
         variables = [weights, offset_graph, cols_graph, vals_graph]
 
+        # TODO Only keep this if you are training. Else don't save it.
         ctx.save_for_backward(*variables)
         return output_res
 
