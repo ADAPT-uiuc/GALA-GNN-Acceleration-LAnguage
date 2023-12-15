@@ -10,8 +10,8 @@ from dgl.utils import expand_as_pair
 from dgl import function as fn
 import dgl
 
-graph = CoraGraphDataset()
-# graph = RedditDataset()
+# graph = CoraGraphDataset()
+graph = RedditDataset()
 graph = graph[0]
 
 # # Source nodes for edges (2, 1), (3, 2), (4, 3)
