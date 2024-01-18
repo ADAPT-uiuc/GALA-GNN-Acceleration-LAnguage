@@ -32,7 +32,7 @@ class GatherFunction(torch.autograd.Function):
         # TODO bias is not passed here since its pretty much the difference
         #  from the result and input (threshold)
         # variables = output_res + [weights]
-        variables = [weights, offset_graph, cols_graph, vals_graph]
+        variables = [offset_graph, cols_graph, vals_graph, weights]
 
         # TODO Only keep this if you are training. Else don't save it.
         ctx.save_for_backward(*variables)
@@ -41,12 +41,12 @@ class GatherFunction(torch.autograd.Function):
     @staticmethod
     def backward(ctx, grad_h):  # Output of the forward function
         # TODO Only get the first element
-        # outputs = gather_cpp.backward(
-        #     grad_h.contiguous(), *ctx.saved_tensors[:1])
+        outputs = gather_cpp.backward(
+            grad_h.contiguous(), *ctx.saved_tensors)
         # d_input_dense, d_offset_graph, d_cols_graph, d_vals_graph, d_weights, d_bias = outputs
         # d_input_dense = torch.zeros()
         # return d_input_dense, d_offset_graph, d_cols_graph, d_vals_graph, d_weights, d_bias  # Inputs to the forward function
-        return torch.zeros((10000, 32)), torch.zeros(1000000), torch.zeros(1000000), torch.zeros((32, 128)), torch.zeros(128)
+        return outputs[0], torch.zeros(1000000), torch.zeros(1000000), torch.zeros((32, 128)), torch.zeros(128)
 
 class GCN(torch.nn.Module):
     def __init__(self, in_feats, out_feats):
@@ -87,10 +87,25 @@ class GCN_DGL(torch.nn.Module):
 
     def forward(self, graph, feat):
         with graph.local_scope():
-            aggregate_fn = fn.u_mul_e("h", "dd", "m")
+            #aggregate_fn = fn.u_mul_e("h0", "dd", "m")
+            #graph.srcdata["h0"] = feat
+            #graph.update_all(aggregate_fn, fn.sum(msg="m", out="h"))
+            #rst = graph.dstdata["h"]
+
+            aggregate_fn = fn.copy_u("h", "m")
             feat_src, feat_dst = expand_as_pair(feat, graph)
+            degs = graph.out_degrees().to(feat_src).clamp(min=1)
+            norm = torch.pow(degs, -0.5)
+            shp = norm.shape + (1,) * (feat_src.dim() - 1)
+            norm = torch.reshape(norm, shp)
+            feat_src = feat_src * norm
             graph.srcdata["h"] = feat_src
             graph.update_all(aggregate_fn, fn.sum(msg="m", out="h"))
             rst = graph.dstdata["h"]
+            degs = graph.in_degrees().to(feat_dst).clamp(min=1)
+            norm = torch.pow(degs, -0.5)
+            shp = norm.shape + (1,) * (feat_dst.dim() - 1)
+            norm = torch.reshape(norm, shp)
+            rst = rst * norm
 
             return rst

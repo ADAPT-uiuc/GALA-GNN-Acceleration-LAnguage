@@ -27,6 +27,58 @@ torch::Tensor d_elu(torch::Tensor z, torch::Scalar alpha = 1.0) {
     return (z > 0).type_as(z) + mask.type_as(z) * (alpha * e);
 }
 
+//std::vector<at::Tensor> gather_forward(
+//        torch::Tensor input_dense,
+//        torch::Tensor offset_graph,
+//        torch::Tensor columns_graph,
+//        torch::Tensor value_graph,
+//        torch::Tensor weights,
+//        torch::Tensor bias) {
+//    // Initial limits of the data
+//    auto nrows = offset_graph.numel() - 1;
+//    auto nvals = value_graph.numel();
+//    auto full_iden = input_dense.numel();
+//    auto dcols = full_iden / nrows;
+//
+//    float *iden_ptr = input_dense.data_ptr<float>();
+////    float* oden_ptr = output_dense.data_ptr<float>();
+////    std::vector<float> oden_array(oden_ptr, oden_ptr + full_iden);
+//
+////    std::vector<float> oden_array(full_iden, 0);
+////    float oden_array[full_iden] = { 0 };
+//    auto options = torch::TensorOptions().dtype(torch::kFloat).requires_grad(true);
+//    auto output_dense = torch::zeros({nrows, dcols} , options);
+//    float *oden_array = output_dense.data_ptr<float>();
+//
+//    int64_t *offset_ptr = offset_graph.data_ptr<int64_t>();
+//
+//    int32_t *col_ptr = columns_graph.data_ptr<int32_t>();
+//
+//    float *val_ptr = value_graph.data_ptr<float>();
+//
+//#pragma omp parallel for schedule(static, 4)
+//    for (int32_t i = 0; i < nrows; i++) {
+//        for (int64_t e = offset_ptr[i]; e < offset_ptr[i + 1]; e++) {
+//            int32_t v = col_ptr[e];
+//            float val = val_ptr[e];
+//
+//            for (int k = 0; k < dcols; k++) {
+//                oden_array[i * dcols + k] += (val * iden_ptr[v * dcols + k]);
+//
+//            }
+//        }
+//    }
+//    // TODO 3 Check the memory consumption of these
+//
+//    // TODO 2 Add the matrix multiplication needed by weight update
+////    auto update_dense = torch::matmul(output_dense, weights);
+//
+//    // TODO 4 need to pass all intermediate results. But fine for now since we are only
+//    //  computing a single thing
+//    return {output_dense};
+//}
+
+
 std::vector<at::Tensor> gather_forward(
         torch::Tensor input_dense,
         torch::Tensor offset_graph,
@@ -46,8 +98,10 @@ std::vector<at::Tensor> gather_forward(
 
 //    std::vector<float> oden_array(full_iden, 0);
 //    float oden_array[full_iden] = { 0 };
-    auto output_dense = torch::zeros({nrows, dcols} ,torch::kFloat);
-    float *oden_array = output_dense.data_ptr<float>();
+    float* oden_array = new float[full_iden] ();
+//    auto options = torch::TensorOptions().dtype(torch::kFloat).requires_grad(true);
+//    auto output_dense = torch::zeros({nrows, dcols} , options);
+//    float *oden_array = output_dense.data_ptr<float>();
 
     int64_t *offset_ptr = offset_graph.data_ptr<int64_t>();
 
@@ -67,46 +121,51 @@ std::vector<at::Tensor> gather_forward(
             }
         }
     }
-    // TODO 3 Check the memory consumption of these
 
-    // TODO 2 Add the matrix multiplication needed by weight update
-//    auto update_dense = torch::matmul(output_dense, weights);
-
-    // TODO 4 need to pass all intermediate results. But fine for now since we are only
-    //  computing a single thing
+//    auto options = torch::TensorOptions().dtype(torch::kFloat).requires_grad(true);
+//    auto output_dense = torch::zeros({nrows, dcols} , options);
+    torch::Tensor output_dense = torch::from_blob(oden_array, {nrows, dcols}, torch::kFloat32);
     return {output_dense};
+
 }
 
 
 
 std::vector<torch::Tensor> gather_backward(
         torch::Tensor grad_h,
+        torch::Tensor offset_graph,
+        torch::Tensor columns_graph,
+        torch::Tensor value_graph,
         torch::Tensor weights) {
-//    auto d_output_gate = torch::tanh(new_cell) * grad_h;
-//    auto d_tanh_new_cell = output_gate * grad_h;
-//    auto d_new_cell = d_tanh(new_cell) * d_tanh_new_cell + grad_cell;
-//
-//    auto d_old_cell = d_new_cell;
-//    auto d_candidate_cell = input_gate * d_new_cell;
-//    auto d_input_gate = candidate_cell * d_new_cell;
-//
-//    auto gates = gate_weights.chunk(3, /*dim=*/1);
-//    d_input_gate *= d_sigmoid(gates[0]);
-//    d_output_gate *= d_sigmoid(gates[1]);
-//    d_candidate_cell *= d_elu(gates[2]);
-//
-//    auto d_gates =
-//            torch::cat({d_input_gate, d_output_gate, d_candidate_cell}, /*dim=*/1);
-//
-//    auto d_weights = d_gates.t().mm(X);
-//    auto d_bias = d_gates.sum(/*dim=*/0, /*keepdim=*/true);
-//
-//    auto d_X = d_gates.mm(weights);
-//    const auto state_size = grad_h.size(1);
-//    auto d_old_h = d_X.slice(/*dim=*/1, 0, state_size);
-//    auto d_input = d_X.slice(/*dim=*/1, state_size);
 
-    return {};
+    auto nrows = offset_graph.numel() - 1;
+    auto nvals = value_graph.numel();
+    auto full_iden = grad_h.numel();
+    auto dcols = full_iden / nrows;
+
+    float *grad_h_ptr = grad_h.data_ptr<float>();
+//    auto options = torch::TensorOptions().dtype(torch::kFloat).requires_grad(true);
+    auto d_input_dense = torch::zeros({nrows, dcols}, torch::kFloat);
+    float *d_input_ptr = d_input_dense.data_ptr<float>();
+
+    int64_t *offset_ptr = offset_graph.data_ptr<int64_t>();
+    int32_t *col_ptr = columns_graph.data_ptr<int32_t>();
+    float *val_ptr = value_graph.data_ptr<float>();
+
+    // TODO Need to add getting the transpose of the graph
+
+#pragma omp parallel for schedule(static, 4)
+    for (int32_t i = 0; i < nrows; i++) {
+        for (int64_t e = offset_ptr[i]; e < offset_ptr[i + 1]; e++) {
+            int32_t v = col_ptr[e];
+            float val = val_ptr[e];
+
+            for (int k = 0; k < dcols; k++) {
+                d_input_ptr[i * dcols + k] += (val * grad_h_ptr[v * dcols + k]);
+            }
+        }
+    }
+    return {d_input_dense};
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
