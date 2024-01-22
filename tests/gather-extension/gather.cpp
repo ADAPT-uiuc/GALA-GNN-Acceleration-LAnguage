@@ -56,21 +56,34 @@ std::vector<at::Tensor> gather_forward(
 
     float *val_ptr = value_graph.data_ptr<float>();
 
+// #pragma omp parallel for schedule(static, 4)
+//     for (int32_t i = 0; i < nrows; i++) {
+//         float* temp = new float[dcols] ();
+
+//         for (int64_t e = offset_ptr[i]; e < offset_ptr[i + 1]; e++) {
+//             int32_t v = col_ptr[e];
+//             float val = val_ptr[e];
+
+//             for (int k = 0; k < dcols; k++) {
+//                 temp[k] += (val * iden_ptr[v * dcols + k]);
+
+//             }
+//         }
+//         for (int k = 0; k < dcols; k++) {
+//             oden_array[i * dcols + k] += temp[k];
+//         }
+//     }
+
 #pragma omp parallel for schedule(static, 4)
     for (int32_t i = 0; i < nrows; i++) {
-        float* temp = new float[dcols] ();
-
         for (int64_t e = offset_ptr[i]; e < offset_ptr[i + 1]; e++) {
             int32_t v = col_ptr[e];
             float val = val_ptr[e];
 
             for (int k = 0; k < dcols; k++) {
-                temp[k] += (val * iden_ptr[v * dcols + k]);
+                oden_array[i * dcols + k] += (val * iden_ptr[v * dcols + k]);
 
             }
-        }
-        for (int k = 0; k < dcols; k++) {
-            oden_array[i * dcols + k] += temp[k];
         }
     }
     // TODO 3 Check the memory consumption of these
