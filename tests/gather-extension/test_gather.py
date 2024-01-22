@@ -110,17 +110,17 @@ print("Is close", close_sum)
 count_err = 0
 tresh_err = 10
 
-for i in range(close_arr.shape[0]):
-    count_err = 0
-    for j in range(close_arr.shape[1]):
-        # Accessing each element
-        value = close_arr[i][j].item()  # Accessing element at position (i, j)
-        if (not(value)):
-            print(i, j, new_h_cpp[i][j].item(),  new_h_dgl[i][j].item())
-            count_err += 1
-        if (count_err == tresh_err):
-            break
-    if (count_err == tresh_err):
-        break
+# for i in range(close_arr.shape[0]):
+#     count_err = 0
+#     for j in range(close_arr.shape[1]):
+#         # Accessing each element
+#         value = close_arr[i][j].item()  # Accessing element at position (i, j)
+#         if (not(value)):
+#             print(i, j, new_h_cpp[i][j].item(),  new_h_dgl[i][j].item())
+#             count_err += 1
+#         if (count_err == tresh_err):
+#             break
+#     if (count_err == tresh_err):
+#         break
 
 
