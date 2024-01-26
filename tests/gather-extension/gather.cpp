@@ -166,7 +166,7 @@ std::vector<at::Tensor> gather_forward(
 //
 ////    std::vector<float> oden_array(full_iden, 0);
 ////    float oden_array[full_iden] = { 0 };
-//    std::vector<float> oden_array(oden_arr);
+//    std::vector<float> oden_array();
 //
 //    int64_t *offset_ptr = offset_graph.data_ptr<int64_t>();
 //
