@@ -10,6 +10,9 @@ import gather_cpp
 
 torch.manual_seed(42)
 
+torch.ops.load_library("build/libgala_gather.so")
+# print(torch.ops.gala_ops.gather_forward)
+
 
 class GatherFunction(torch.autograd.Function):
     @staticmethod
@@ -20,12 +23,13 @@ class GatherFunction(torch.autograd.Function):
                 vals_graph,
                 weights,
                 bias):
-        output_res = gather_cpp.forward(input_dense,
-                                        offset_graph,
-                                        cols_graph,
-                                        vals_graph,
-                                        weights,
-                                        bias)
+        output_res = torch.ops.gala_ops.gather_forward(input_dense,
+                                                       offset_graph,
+                                                       cols_graph,
+                                                       vals_graph,
+                                                       weights,
+                                                       bias)
+
         # TODO Normally you pass the intermediate outputs as well.
         #  but not here since there is no "intermediate" outputs.
         #  just pass in the weights for now.
@@ -41,8 +45,8 @@ class GatherFunction(torch.autograd.Function):
     @staticmethod
     def backward(ctx, grad_h):  # Output of the forward function
         # TODO Only get the first element
-        outputs = gather_cpp.backward(
-            grad_h.contiguous(), *ctx.saved_tensors)
+        # outputs = gather_cpp.backward(
+        #     grad_h.contiguous(), *ctx.saved_tensors)
         # d_input_dense, d_offset_graph, d_cols_graph, d_vals_graph, d_weights, d_bias = outputs
         # d_input_dense = torch.zeros()
         # return d_input_dense, d_offset_graph, d_cols_graph, d_vals_graph, d_weights, d_bias  # Inputs to the forward function
