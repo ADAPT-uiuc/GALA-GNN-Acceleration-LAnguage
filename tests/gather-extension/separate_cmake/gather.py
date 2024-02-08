@@ -81,6 +81,8 @@ class GCN(torch.nn.Module):
 class GatherFunction_Tile(torch.autograd.Function):
     @staticmethod
     def forward(ctx,
+                nrows,
+                nvals,
                 input_dense,
                 tile_offset_graph,
                 offset_graph,
@@ -89,7 +91,9 @@ class GatherFunction_Tile(torch.autograd.Function):
                 vals_graph,
                 weights,
                 bias):
-        output_res = torch.ops.gala_ops.gather_forward_tile(input_dense,
+        output_res = torch.ops.gala_ops.gather_forward_tile(nrows,
+                                                            nvals,
+                                                            input_dense,
                                                             tile_offset_graph,
                                                             offset_graph,
                                                             rows_graph,
@@ -135,8 +139,8 @@ class GCN_Tile(torch.nn.Module):
         torch.nn.init.xavier_uniform_(self.weights)
         torch.nn.init.zeros_(self.bias)
 
-    def forward(self, input_dense, tile_offset_graph, offset_graph, rows_graph, cols_graph, vals_graph):
-        return GatherFunction_Tile.apply(input_dense,
+    def forward(self, nrows, nvals, input_dense, tile_offset_graph, offset_graph, rows_graph, cols_graph, vals_graph):
+        return GatherFunction_Tile.apply(nrows, nvals, input_dense,
                                          tile_offset_graph,
                                          offset_graph,
                                          rows_graph,

@@ -54,6 +54,8 @@ skip_iters = 5
 offsets = graph.adj_tensors('csr')[0].to(torch.int64)
 cols = graph.adj_tensors('csr')[1].to(torch.int32)
 vals = graph.edata['dd']
+nrows = graph.num_nodes()
+nvals = graph.number_of_edges()
 
 tile_size = 65000
 t1_tile_offsets, t1_offsets, t1_rows, t1_cols, t1_vals = torch.ops.gala_ops.tiling_graph(tile_size, offsets, cols, vals)
@@ -88,17 +90,18 @@ for _iter in range(iters):
     backward += time.time() - start
 print('Forward: {:.3f} s (std: {:.3f}) | Backward {:.3f} s'.format(np.mean(iter_times_forward), np.std(iter_times_forward), backward))
 
-gnn = GCN_Tile(in_feats, out_feats)
-optimizer = torch.optim.Adam(gnn.parameters(), lr=0.01, weight_decay=5e-4)
+gnn_tile = GCN_Tile(in_feats, out_feats)
+optimizer = torch.optim.Adam(gnn_tile.parameters(), lr=0.01, weight_decay=5e-4)
 forward = 0
 backward = 0
 iter_times_forward = []
 iter_times_backward = []
 
+
 for _iter in range(iters):
     start = time.time()
-    new_h_cpp = gnn(input_dense, t1_tile_offsets, t1_offsets, t1_rows, t1_cols, t1_vals)
-    new_h_cpp = new_h_cpp[0]
+    new_h_cpp_tile = gnn_tile(nrows, nvals, input_dense, t1_tile_offsets, t1_offsets, t1_rows, t1_cols, t1_vals)
+    new_h_cpp_tile = new_h_cpp_tile[0]
     forward += time.time() - start
 
     forward = time.time() - start

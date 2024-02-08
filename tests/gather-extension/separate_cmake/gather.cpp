@@ -335,6 +335,8 @@ std::vector<at::Tensor> gather_forward(
 
 
 std::vector<at::Tensor> gather_forward_tile(
+        int64_t nrows,
+        int64_t nvals,
         torch::Tensor input_dense,
         torch::Tensor tile_offset_graph,
         torch::Tensor offset_graph,
@@ -345,8 +347,6 @@ std::vector<at::Tensor> gather_forward_tile(
         torch::Tensor bias) {
     // Initial limits of the data
     auto ntiles = tile_offset_graph.numel() - 1;
-    auto nrows = offset_graph.numel() - 1;
-    auto nvals = columns_graph.numel();
     auto full_iden = input_dense.numel();
     auto dcols = full_iden / nrows;
 
