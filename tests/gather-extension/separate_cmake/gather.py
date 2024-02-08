@@ -123,7 +123,7 @@ class GatherFunction_Tile(torch.autograd.Function):
 
 class GCN_Tile(torch.nn.Module):
     def __init__(self, in_feats, out_feats):
-        super(GCN_tile, self).__init__()
+        super(GCN_Tile, self).__init__()
         self._in_feats = in_feats
         self._out_feats = out_feats
 
