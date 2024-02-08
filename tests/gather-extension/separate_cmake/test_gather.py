@@ -149,6 +149,9 @@ print('Forward: {:.3f} s (std: {:.3f}) | Backward {:.3f} s'.format(np.mean(iter_
 print(new_h_cpp.shape)
 # print(new_h_cpp)
 
+print(new_h_cpp_tile.shape)
+# print(new_h_cpp_tile)
+
 print(new_h_dgl.shape)
 # print(new_h_dgl)
 
@@ -158,6 +161,15 @@ close_arr = torch.isclose(new_h_cpp, new_h_dgl, rtol=1e-02, atol=1e-04)
 close_sum = (close_arr.sum() / (in_feats * nrows))
 
 print("Is close", close_sum)
+
+print("***************")
+print(torch.isclose(new_h_cpp_tile, new_h_dgl).sum() / (in_feats * nrows))
+
+close_arr = torch.isclose(new_h_cpp_tile, new_h_dgl, rtol=1e-02, atol=1e-04)
+close_sum = (close_arr.sum() / (in_feats * nrows))
+
+print("Is close", close_sum)
+
 # print(close_arr.shape)
 
 count_err = 0
