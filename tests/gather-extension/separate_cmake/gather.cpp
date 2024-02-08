@@ -147,11 +147,11 @@ std::vector<at::Tensor> tiling_graph(
     }
 
     // Unknown when staring building the output
-    auto output_offset = torch::zeros({}, optionsint64);
+    auto output_offset = torch::zeros({(long)vec_offsets.size()}, optionsint64);
     int64_t *out_offset_array = output_offset.data_ptr<int64_t>();
     std::copy(vec_offsets.begin(), vec_offsets.end(), out_offset_array);
 
-    auto output_rows = torch::zeros({}, optionsint32);
+    auto output_rows = torch::zeros({(long)vec_rows.size()}, optionsint32);
     int32_t *out_rows_array = output_rows.data_ptr<int32_t>();
     std::copy(vec_rows.begin(), vec_rows.end(), out_rows_array);
 

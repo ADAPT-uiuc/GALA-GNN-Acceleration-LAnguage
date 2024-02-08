@@ -4,6 +4,7 @@ import torch
 
 from gather import GCN
 from gather import GCN_DGL
+from gather import GCN_Tile
 
 from dgl.data import CoraGraphDataset, RedditDataset
 from dgl.utils import expand_as_pair
@@ -42,7 +43,7 @@ graph.apply_edges(fn.u_mul_v("di", "do", "dd"))
 edges = graph.number_of_edges()
 
 out_feats = 32
-iters = 100
+iters = 10
 skip_iters = 5
 
 # # TODO eval using a DGL graph and have a method to call DGL functions
@@ -69,6 +70,34 @@ iter_times_backward = []
 for _iter in range(iters):
     start = time.time()
     new_h_cpp = gnn(input_dense, offsets, cols, vals)
+    new_h_cpp = new_h_cpp[0]
+    forward += time.time() - start
+
+    forward = time.time() - start
+    if _iter >= skip_iters or iters <= skip_iters:
+        iter_times_forward.append(forward)
+
+    start = time.time()
+    # (new_h_cpp).backward()
+
+    # loss = criterion(new_h_cpp, input_dense)
+    # loss.requires_grad = True
+    # optimizer.zero_grad()
+    # loss.backward()
+    # optimizer.step()
+    backward += time.time() - start
+print('Forward: {:.3f} s (std: {:.3f}) | Backward {:.3f} s'.format(np.mean(iter_times_forward), np.std(iter_times_forward), backward))
+
+gnn = GCN_Tile(in_feats, out_feats)
+optimizer = torch.optim.Adam(gnn.parameters(), lr=0.01, weight_decay=5e-4)
+forward = 0
+backward = 0
+iter_times_forward = []
+iter_times_backward = []
+
+for _iter in range(iters):
+    start = time.time()
+    new_h_cpp = gnn(input_dense, t1_tile_offsets, t1_offsets, t1_rows, t1_cols, t1_vals)
     new_h_cpp = new_h_cpp[0]
     forward += time.time() - start
 
