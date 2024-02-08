@@ -29,7 +29,7 @@ torch::Tensor d_elu(torch::Tensor z, torch::Scalar alpha = 1.0) {
 }
 
 std::vector<at::Tensor> tiling_graph(
-        int num_cols,
+        int64_t num_cols,
         torch::Tensor offset_graph,
         torch::Tensor columns_graph,
         torch::Tensor value_graph) {
