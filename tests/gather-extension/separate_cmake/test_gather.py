@@ -11,6 +11,7 @@ from dgl import function as fn
 import dgl
 import numpy as np
 
+torch.ops.load_library("build/libgala_gather.so")
 
 # graph = CoraGraphDataset()
 graph = RedditDataset()
@@ -52,6 +53,9 @@ skip_iters = 5
 offsets = graph.adj_tensors('csr')[0].to(torch.int64)
 cols = graph.adj_tensors('csr')[1].to(torch.int32)
 vals = graph.edata['dd']
+
+tile_size = 65000
+t1_tile_offsets, t1_offsets, t1_rows, t1_cols, t1_vals = torch.ops.gala_ops.tiling_graph(tile_size. offsets, cols, vals)
 
 criterion = torch.nn.CrossEntropyLoss()
 gnn = GCN(in_feats, out_feats)
