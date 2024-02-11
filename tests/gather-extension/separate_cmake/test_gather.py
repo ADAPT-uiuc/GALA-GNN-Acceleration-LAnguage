@@ -13,7 +13,7 @@ from dgl import function as fn
 import dgl
 import numpy as np
 
-from ogb.nodeproppred import DglNodePropPredDataset
+# from ogb.nodeproppred import DglNodePropPredDataset
 
 torch.ops.load_library("build/libgala_gather.so")
 

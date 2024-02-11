@@ -6,8 +6,9 @@ declare -a input_Array=(32 \
 256 \
 512 \
 1024)
-declare -a graph_Array=("RedditDataset" \
-"ogbn-products")
+#declare -a graph_Array=("RedditDataset" \
+#"ogbn-products")
+declare -a graph_Array=("RedditDataset")
 
 ##################################
 echo "" > timing_explore
