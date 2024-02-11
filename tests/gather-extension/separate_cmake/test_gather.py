@@ -73,7 +73,8 @@ def main(args):
         in_feats = input_dense.shape[1]
         input_dense = torch.ones((nrows, in_feats))
     else:
-        input_dense = torch.ones((nrows, args.n_input))
+        in_feats = args.n_input
+        input_dense = torch.ones((nrows, in_feats))
     labels = graph.ndata["label"]
 
     feat_src, feat_dst = expand_as_pair(input_dense, graph)
