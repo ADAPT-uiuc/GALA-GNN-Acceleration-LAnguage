@@ -20,7 +20,7 @@ torch.ops.load_library("build/libgala_gather.so")
 
 def main(args):
     dataset_name = getattr(dgl.data, str(args.dataset), False)
-    print(str(args.dataset))
+    # print(str(args.dataset))
     if not dataset_name:
         ogbn_data = ['ogbn-proteins', 'ogbn-products', 'ogbn-arxiv', 'ogbn-mag', 'ogbn-papers100M']
         if (args.dataset in ogbn_data):
@@ -68,7 +68,6 @@ def main(args):
     nrows = graph.num_nodes()
     nvals = graph.number_of_edges()
 
-    print("Input args:", args.n_input)
     if args.n_input == -1:
         input_dense = graph.ndata["feat"]
         in_feats = input_dense.shape[1]
@@ -89,7 +88,7 @@ def main(args):
     # print(graph.adj_tensors('csr')[0], graph.adj_tensors('csr')[0].shape)
     edges = graph.number_of_edges()
 
-    if args.n_input == -1:
+    if args.n_output == -1:
         out_feats = 32
     else:
         out_feats = args.n_output
