@@ -68,6 +68,7 @@ def main(args):
     nrows = graph.num_nodes()
     nvals = graph.number_of_edges()
 
+    print("Input args:", args.n_input)
     if args.n_input == -1:
         input_dense = graph.ndata["feat"]
         in_feats = input_dense.shape[1]
