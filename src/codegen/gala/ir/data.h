@@ -16,13 +16,13 @@
 // Data format used in the data IR
 enum DataFormat {
     // Sparse
-    CSR, // Compressed sparse row
-    CSC, // Compressed sparse column
-    DCSR, // Double compressed sparse row
-    COO, // Coordinate
+    CSR_STYPE, // Compressed sparse row
+    CSC_STYPE, // Compressed sparse column
+    DCSR_STYPE, // Double compressed sparse row
+    COO_STYPE, // Coordinate
     //Dense
-    RM, // Row major
-    CM, // Column major
+    RM_DTYPE, // Row major
+    CM_DTYPE, // Column major
     // High-level - Notify the existence of multiple levels in the IR
     Graph, // Graph/Sparse objects
     Dense // Features/Dense objects
@@ -30,19 +30,20 @@ enum DataFormat {
 
 // Relation between dimensions of the data representations
 enum RelationDim {
-    ROW,
-    COL,
-    ALL // Point-wise relation
+    ROW_RELATION,
+    COL_RELATION,
+    ALL_RELATION // Point-wise relation
 };
 
 enum TransformationTypes {
-    COL_TILE, // Matrix - Can be either column tile or slicing
-    SAMPLE, // Graph - Sample the input graph
-    PARTITION, // Graph - Partition the graph
-    REORDER, // Graph - Reorder the graph
-    BALANCE, // Graph - Load balance the graph
-    FORMAT, // Matrix - Change the data representation format of the matrix
+    COL_TILE_TRNS, // Matrix - Can be either column tile or slicing
+    SAMPLE_TRNS, // Graph - Sample the input graph
+    PARTITION_TRNS, // Graph - Partition the graph
+    REORDER_TRNS, // Graph - Reorder the graph
+    BALANCE_TRNS, // Graph - Load balance the graph
+    FORMAT_TRNS, // Matrix - Change the data representation format of the matrix
 };
+
 /***
  * Design decisions
  *  - Move the meta-data sharing feature to the code generation. Combine based on the relation nodes.
@@ -60,11 +61,10 @@ enum TransformationTypes {
  * TODO - Find a better name for this. dataNode is a sub element of dataList, but the name makes it sound otherwise
  * @tparam dM - data matrix type info (dense or sparse, with different number types (f32, f64, int, long))
  */
-template<class dM>
 class DataList {
-protected:
+private:
     // If there is a next level, if not null
-    DataList<dM> *nextLevel;
+    DataList *nextLevel;
     // TODO moved the sharing meta-data feature to code generation.
     // List all the data formats that are in the data list (multiple to supports things like ASpT)
     std::vector<DataFormat> formats;
@@ -75,6 +75,7 @@ public:
     DataList(DataFormat initialFormat, bool independence) {
         this->independent = independence;
         this->formats.push_back(initialFormat);
+        this->nextLevel = nullptr;
     }
 
     DataList(bool independence) {
@@ -89,7 +90,7 @@ public:
         return true;
     }
 
-    void setNext(DataList<dM> *newLevel) {
+    void setNext(DataList *newLevel) {
         this->nextLevel = newLevel;
     }
 
@@ -109,40 +110,53 @@ public:
     bool getIndependence() {
         return this->independent;
     }
-
     void setIndependence(bool independence) {
         this->independent = independence;
     }
 };
+
+class BaseData {
+};
+//class DataNode: public BaseData
 
 /***
  * Node in the DataIR
  * @tparam dM - data matrix type info (dense or sparse, with different number types (f32, f64, int, long))
  */
 template<class dM>
-class DataNode {
-protected:
+class DataNode: public BaseData{
+private:
     // Name of the matrix
     std::string name;
 
     // Hierarchical data items
-    DataList<dM> *dataList;
+    DataList *dataList;
 
     int startPoint;
     int endPoint;
+
 public:
     // Constructors
-    DataNode(std::string name, int start, int end, DataList<dM>* newData) {
+    DataNode(std::string name, int start, int end, DataList* newData) {
         this->name = name;
         this->startPoint = start;
         this->endPoint = end;
         this->dataList = newData;
     }
-
+    DataNode(std::string name, int start, DataList* newData) {
+        this->name = name;
+        this->startPoint = start;
+        this->dataList = newData;
+    }
     DataNode(std::string name, int start, int end) {
         this->name = name;
         this->startPoint = start;
         this->endPoint = end;
+    }
+
+    DataNode(std::string name, int start) {
+        this->name = name;
+        this->startPoint = start;
     }
 
     DataNode(std::string name) {
@@ -159,11 +173,11 @@ public:
     }
 
     // Data list
-    DataList<dM> getData() {
+    DataList getData() {
         return this->dataList;
     }
 
-    void setData(DataList<dM>* newData) {
+    void setData(DataList* newData) {
         this->dataList = newData;
     }
 
@@ -186,34 +200,32 @@ public:
     }
 };
 
-template<class dM1, class dM2>
 class DataEdge {
-protected:
-    DataNode<dM1> *node1;
-    DataNode<dM2> *node2;
+private:
+    BaseData *node1;
+    BaseData *node2;
 public:
-    DataEdge(DataNode<dM1> *n1, DataNode<dM2> *n2) {
+    DataEdge(BaseData *n1, BaseData *n2) {
         this->node1 = n1;
         this->node2 = n2;
     }
 
     // No need for setters? The relation should not change at any time as time goes not
-    DataNode<dM1> *getNode1() {
+    BaseData *getNode1() {
         return node1;
     }
 
-    DataNode<dM2> *getNode2() {
+    BaseData *getNode2() {
         return node2;
     }
 };
 
-template<class dM1, class dM2>
-class RelationEdge : public DataEdge<dM1, dM2> {
-protected:
+class RelationEdge : public DataEdge {
+private:
     RelationDim rel1;
     RelationDim rel2;
 public:
-    RelationEdge(DataNode<dM1> *n1, RelationDim r1, DataNode<dM2> *n2, RelationDim r2) : DataEdge<dM1, dM2>(n1, n2) {
+    RelationEdge(BaseData *n1, RelationDim r1, BaseData *n2, RelationDim r2) : DataEdge(n1, n2) {
         this->rel1 = r1;
         this->rel2 = r2;
     }
@@ -229,7 +241,7 @@ public:
 
 
 class TransformData{
-protected:
+private:
     TransformationTypes transformation;
     std::vector<std::string> params;
 public:
@@ -249,12 +261,11 @@ public:
     }
 };
 
-template<class dM1>
-class TransformEdge : public DataEdge<dM1, dM1> {
-protected:
+class TransformEdge : public DataEdge{
+private:
     std::vector<TransformData*> transformations;
 public:
-    TransformEdge(DataNode<dM1> *n1, DataNode<dM1> *n2) : DataEdge<dM1, dM1>(n1, n2) {
+    TransformEdge(BaseData *n1, BaseData *n2) : DataEdge(n1, n2) {
     }
 
     // Only have the getters for the relations
@@ -262,6 +273,85 @@ public:
         transformations.push_back(trns);
     }
 };
+
+// ------------------- Pre-base class -------------------------
+//
+//template<class dM1, class dM2>
+//class DataEdge {
+//private:
+//    DataNode<dM1> *node1;
+//    DataNode<dM2> *node2;
+//public:
+//    DataEdge(DataNode<dM1> *n1, DataNode<dM2> *n2) {
+//        this->node1 = n1;
+//        this->node2 = n2;
+//    }
+//
+//    // No need for setters? The relation should not change at any time as time goes not
+//    DataNode<dM1> *getNode1() {
+//        return node1;
+//    }
+//
+//    DataNode<dM2> *getNode2() {
+//        return node2;
+//    }
+//};
+//
+//template<class dM1, class dM2>
+//class RelationEdge : public DataEdge<dM1, dM2> {
+//private:
+//    RelationDim rel1;
+//    RelationDim rel2;
+//public:
+//    RelationEdge(DataNode<dM1> *n1, RelationDim r1, DataNode<dM2> *n2, RelationDim r2) : DataEdge<dM1, dM2>(n1, n2) {
+//        this->rel1 = r1;
+//        this->rel2 = r2;
+//    }
+//
+//    // Only have the getters for the relations
+//    RelationDim getRelation1() {
+//        return rel1;
+//    }
+//    RelationDim getRelation2() {
+//        return rel2;
+//    }
+//};
+//
+//
+//class TransformData{
+//private:
+//    TransformationTypes transformation;
+//    std::vector<std::string> params;
+//public:
+//    TransformData(TransformationTypes trns){
+//        this->transformation = trns;
+//    }
+//
+//    TransformationTypes getTransformation(){
+//        return this->transformation;
+//    }
+//    std::vector<std::string>* getParams(){
+//        return &this->params;
+//    }
+//
+//    void addParam(std::string param){
+//        this->params.push_back(param);
+//    }
+//};
+//
+//template<class dM1>
+//class TransformEdge : public DataEdge<dM1, dM1> {
+//private:
+//    std::vector<TransformData*> transformations;
+//public:
+//    TransformEdge(DataNode<dM1> *n1, DataNode<dM1> *n2) : DataEdge<dM1, dM1>(n1, n2) {
+//    }
+//
+//    // Only have the getters for the relations
+//    void addTransformation(TransformData* trns) {
+//        transformations.push_back(trns);
+//    }
+//};
 
 
 #endif //GNN_ACCELERATION_LANGUAGE_DATA_H

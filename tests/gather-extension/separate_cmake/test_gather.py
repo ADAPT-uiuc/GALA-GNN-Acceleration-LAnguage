@@ -1,12 +1,15 @@
 import time
 
 import torch
+# Don't need because it will be a single program without outputs
 import argparse
 
+# TODO the following is not really needed if you're writing to a single file
 from gather import GCN
 from gather import GCN_DGL
 from gather import GCN_Tile
 
+# Need
 from dgl.data import CoraGraphDataset, RedditDataset
 from dgl.utils import expand_as_pair
 from dgl import function as fn
