@@ -13,8 +13,11 @@ private:
 public:
     GenerateCUDA(GALAContext *context, std::string *outputPath) : CodeGenerator(context, outputPath) {}
 
-    void generateCode(std::vector<ComputeNode *> program) {
+    // TODO Put this in the common codegen? Doesn't seem to have any context specific content yet
+    void generateCode(std::vector<ComputeNode *> &program) {
         auto conxt = this->getContext();
+
+        this->initCode();
 
         if (conxt->getEnv() == SINGLE_NODE_SINGLE) {
             for (int pt = 0; pt < program.size(); pt++) {
@@ -25,6 +28,8 @@ public:
                     auto trainNode = static_cast<TrainingLoopNode *>(current);
                     for (int lpt = 0; lpt < trainNode->getLoopNodeNum(); lpt++) {
                         // TODO Handle each individual op
+                        auto stmntNode = static_cast<StatementNode *>(trainNode->getNode(lpt));
+                        generateStatement(*stmntNode);
                     }
 
                     // TODO Close the loop
@@ -33,20 +38,32 @@ public:
                     std::cout << "Skip for now in code generation" << std::endl;
                 } else {
                     // TODO handle each individual op
+                    auto stmntNode = static_cast<StatementNode *>(current);
+                    generateStatement(*stmntNode);
                 }
             }
         } else {
             std::cout << "Only single node single device is supported for now" << std::endl;
         }
-
     }
 
-    void generateStatement(ComputeNode &node) {
-
+    void generateStatement(StatementNode &node) {
+        if (node.getOp() == LOAD_OP){
+            generateLoad(node);
+        } else {
+            std::cout << "To be supported in the future" << std::endl;
+        }
     }
 
-    void generateLoad(ComputeNode &node) {
-
+    void generateLoad(StatementNode &node) {
+        if (node.getParam(0) == "Reddit"){
+            addImport("from dgl.data import RedditDataset");
+            addCode("dataset_name = getattr(dgl.data, \"RedditDataset\", False)");
+            addCode("dataset = dataset_name()");
+            addCode("graph = dataset[0]");
+        } else {
+            std::cout << "To be supported in the future" << std::endl;
+        }
     }
 };
 

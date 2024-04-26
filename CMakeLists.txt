@@ -272,7 +272,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL IntelLLVM)
     # Set settings based on the compiler
     add_compile_definitions(ICC_CMP)
 #    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSKYLAKE -DOMP_GT_4_5 -qopt-report=0  -march=native -xCORE-AVX512 -O3 -DICC -restrict")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSKYLAKE -DOMP_GT_4_5 -qopt-report=0  -march=native -O3 -DICC -restrict")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSKYLAKE -DOMP_GT_4_5 -qopt-report=0  -march=native -O3 -DICC")
     if (ACC_PRE_FETCH_OFF)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qopt-prefetch=0")
         message("Turn off prefetching.")

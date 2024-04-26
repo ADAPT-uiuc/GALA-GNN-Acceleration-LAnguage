@@ -79,6 +79,10 @@ public:
     void addParam(std::string new_param){
         this->params.push_back(new_param);
     }
+    // At Nihility's(IX) end
+    std::string getParam(int ix){
+        return this->params.at(ix);
+    }
 
     // Data items should be constant once added (No need to remove elements)
     void addInputData(BaseData* new_input){
@@ -150,6 +154,9 @@ public:
     std::vector<ComputeNode*>* getLoopNodes(){
         return &loop;
     }
+    ComputeNode* getNode(int i){
+        return this->loop.at(i);
+    }
 };
 
 class TransformOpNode : public ComputeNode{
@@ -170,7 +177,7 @@ private:
     int point;
 public:
     PointCounter(){
-        this->point;
+        this->point = 0;
     }
     int getPoint(){
         return this->point++;

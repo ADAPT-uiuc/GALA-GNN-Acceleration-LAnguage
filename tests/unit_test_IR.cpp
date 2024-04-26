@@ -230,5 +230,10 @@ int main(int argc, char **argv) {
     // Pass the program along to the IR stages and generate code
     // TODO - Add intermediate transformation stages
     // TODO - Pass to the final code generation
+    auto context = GALAContext(GPU_DEVICE, SINGLE_NODE_SINGLE);
+    std::string outPath = "/home/damitha/GNN-Acceleration-Language/test.py";
 
+    auto gen = GenerateCUDA(&context, &outPath);
+    gen.generateCode(program);
+    gen.closeStream();
 }
