@@ -114,6 +114,12 @@ std::vector <at::Tensor> gather_forward(
                  CUSPARSE_SPMM_CSR_ALG2,
                  dBuffer));
 
+    CUSPARSE_CHECK(cusparseDestroySpMat(matA));
+    CUSPARSE_CHECK(cusparseDestroyDnMat(matB));
+    CUSPARSE_CHECK(cusparseDestroyDnMat(matC));
+    CUSPARSE_CHECK(cusparseDestroy(handle));
+
+
     return {output_dense};
 }
 
