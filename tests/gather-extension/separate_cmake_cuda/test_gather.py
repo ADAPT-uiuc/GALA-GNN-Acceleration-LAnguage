@@ -7,7 +7,6 @@ import argparse
 # TODO the following is not really needed if you're writing to a single file
 from gather import GCN
 from gather import GCN_DGL
-from gather import GCN_Tile
 
 # Need
 from dgl.data import CoraGraphDataset, RedditDataset

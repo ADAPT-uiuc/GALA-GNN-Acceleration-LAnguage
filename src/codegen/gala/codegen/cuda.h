@@ -8,8 +8,6 @@
 #include "common.h"
 
 class GenerateCUDA : public CodeGenerator {
-private:
-
 public:
     GenerateCUDA(GALAContext *context, std::string *outputPath) : CodeGenerator(context, outputPath) {}
 
@@ -20,7 +18,7 @@ public:
                                 "add_library(gala_cuda SHARED gather.cu)\n"
                                 "target_include_directories(gala_cuda PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})\n"
                                 "target_compile_features(gala_cuda PRIVATE cxx_std_14)\n"
-                                "target_link_libraries(gala_cuda \"${TORCH_LIBRARIES}\" cudart cusparse)";
+                                "target_link_libraries(gala_cuda \"${}\" cudart cusparse)";
         this->outStreamCMake << cmakeCuda;
     }
 
@@ -68,6 +66,7 @@ public:
         }
     }
 
+    // Move to Common
     void generateLoad(int inden, StatementNode &node) {
         if (node.getParam(0) == "Reddit"){
             std::string sl1("from dgl.data import RedditDataset");
@@ -85,8 +84,8 @@ public:
         } else {
             std::cout << "To be supported in the future" << std::endl;
         }
-        // Map the loaded data into variables
-
+        // TODO Map the loaded data into variables
+        // TODO Add labels + mask to load as well in diagram / IR
         // Load common components -- Getting the features etc
         addCode("input_dense = graph.ndata[\"feat\"]");
         addCode("labels = graph.ndata[\"label\"]");

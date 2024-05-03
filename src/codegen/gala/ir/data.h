@@ -44,6 +44,20 @@ enum TransformationTypes {
     FORMAT_TRNS, // Matrix - Change the data representation format of the matrix
 };
 
+enum NumTypes {
+    // Ints
+    INT8,
+    INT16,
+    INT32,
+    INT64,
+    // UInts
+    UINT32,
+    UNIT64,
+    // Floats
+    F32,
+    F64
+};;
+
 /***
  * Design decisions
  *  - Move the meta-data sharing feature to the code generation. Combine based on the relation nodes.
@@ -110,6 +124,7 @@ public:
     bool getIndependence() {
         return this->independent;
     }
+
     void setIndependence(bool independence) {
         this->independent = independence;
     }
@@ -123,11 +138,14 @@ class BaseData {
  * Node in the DataIR
  * @tparam dM - data matrix type info (dense or sparse, with different number types (f32, f64, int, long))
  */
-template<class dM>
-class DataNode: public BaseData{
+class DataNode : public BaseData {
 private:
     // Name of the matrix
     std::string name;
+
+    NumTypes indexType;
+    NumTypes edgeType;
+    NumTypes valueType;
 
     // Hierarchical data items
     DataList *dataList;
@@ -137,34 +155,56 @@ private:
 
 public:
     // Constructors
-    DataNode(std::string name, int start, int end, DataList* newData) {
+    DataNode(std::string name, NumTypes iT, NumTypes nT, NumTypes vT, int start, int end, DataList *newData) {
         this->name = name;
         this->startPoint = start;
         this->endPoint = end;
         this->dataList = newData;
+
+        this->indexType = iT;
+        this->edgeType = nT;
+        this->valueType = vT;
     }
-    DataNode(std::string name, int start, DataList* newData) {
+
+    DataNode(std::string name, NumTypes iT, NumTypes nT, NumTypes vT, int start, DataList *newData) {
         this->name = name;
         this->startPoint = start;
         this->dataList = newData;
+
+        this->indexType = iT;
+        this->edgeType = nT;
+        this->valueType = vT;
     }
-    DataNode(std::string name, int start, int end) {
+
+    DataNode(std::string name, NumTypes iT, NumTypes nT, NumTypes vT, int start, int end) {
         this->name = name;
         this->startPoint = start;
         this->endPoint = end;
+
+        this->indexType = iT;
+        this->edgeType = nT;
+        this->valueType = vT;
     }
 
-    DataNode(std::string name, int start) {
+    DataNode(std::string name, NumTypes iT, NumTypes nT, NumTypes vT, int start) {
         this->name = name;
         this->startPoint = start;
+
+        this->indexType = iT;
+        this->edgeType = nT;
+        this->valueType = vT;
     }
 
-    DataNode(std::string name) {
+    DataNode(std::string name, NumTypes iT, NumTypes nT, NumTypes vT) {
         this->name = name;
+        this->indexType = iT;
+        this->edgeType = nT;
+        this->valueType = vT;
     }
 
-    DataNode<dM> cloneData(){
-        return DataNode<dM>(this->name, this->startPoint, this->endPoint, this->dataList);
+    DataNode cloneData() {
+        return DataNode(this->name, this->indexType, this->edgeType, this->valueType,
+                        this->startPoint, this->endPoint, this->dataList);
     }
 
     // getters/setters
@@ -177,7 +217,7 @@ public:
         return this->dataList;
     }
 
-    void setData(DataList* newData) {
+    void setData(DataList *newData) {
         this->dataList = newData;
     }
 
@@ -197,6 +237,18 @@ public:
 
     void setEnd(int newEnd) {
         this->endPoint = newEnd;
+    }
+
+    NumTypes getIType(){
+        return this->indexType;
+    }
+
+    NumTypes getNType(){
+        return this->edgeType;
+    }
+
+    NumTypes getVType(){
+        return this->valueType;
     }
 };
 
@@ -234,42 +286,44 @@ public:
     RelationDim getRelation1() {
         return rel1;
     }
+
     RelationDim getRelation2() {
         return rel2;
     }
 };
 
 
-class TransformData{
+class TransformData {
 private:
     TransformationTypes transformation;
     std::vector<std::string> params;
 public:
-    TransformData(TransformationTypes trns){
+    TransformData(TransformationTypes trns) {
         this->transformation = trns;
     }
 
-    TransformationTypes getTransformation(){
+    TransformationTypes getTransformation() {
         return this->transformation;
     }
-    std::vector<std::string>* getParams(){
+
+    std::vector<std::string> *getParams() {
         return &this->params;
     }
 
-    void addParam(std::string param){
+    void addParam(std::string param) {
         this->params.push_back(param);
     }
 };
 
-class TransformEdge : public DataEdge{
+class TransformEdge : public DataEdge {
 private:
-    std::vector<TransformData*> transformations;
+    std::vector<TransformData *> transformations;
 public:
     TransformEdge(BaseData *n1, BaseData *n2) : DataEdge(n1, n2) {
     }
 
     // Only have the getters for the relations
-    void addTransformation(TransformData* trns) {
+    void addTransformation(TransformData *trns) {
         transformations.push_back(trns);
     }
 };
