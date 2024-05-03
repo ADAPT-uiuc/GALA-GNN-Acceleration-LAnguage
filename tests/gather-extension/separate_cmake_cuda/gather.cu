@@ -54,7 +54,7 @@
 class CUDAThreadEntry {
 public:
     /** @brief The cusparse handler */
-    cusparseHandle_t cusparse_handle{nullptr};
+    static cusparseHandle_t cusparse_handle{nullptr};
 };
 
 
@@ -93,9 +93,8 @@ std::vector <at::Tensor> gather_forward(
     void *dBuffer = NULL;
     size_t bufferSize = 0;
 
-    auto* thr_entry = CUDAThreadEntry();
-    if (!thr_entry->cusparse_handle) {
-        CUSPARSE_CHECK(cusparseCreate(&(thr_entry->cusparse_handle)));
+    if (!CUDAThreadEntry->cusparse_handle) {
+        CUSPARSE_CHECK(cusparseCreate(&(CUDAThreadEntry->cusparse_handle)));
     }
 
 //    CUSPARSE_CHECK(cusparseCreate(&handle));
@@ -112,7 +111,7 @@ std::vector <at::Tensor> gather_forward(
 
     // allocate an external buffer if needed
     CUSPARSE_CHECK(cusparseSpMM_bufferSize(
-            thr_entry->cusparse_handle,
+            CUDAThreadEntry->cusparse_handle,
             CUSPARSE_OPERATION_NON_TRANSPOSE,
             CUSPARSE_OPERATION_NON_TRANSPOSE,
             &alpha, matA, matB, &beta, matC, CUDA_R_32F,
@@ -120,7 +119,7 @@ std::vector <at::Tensor> gather_forward(
             &bufferSize));
     CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));
 
-    CUSPARSE_CHECK(cusparseSpMM(thr_entry->cusparse_handle,
+    CUSPARSE_CHECK(cusparseSpMM(CUDAThreadEntry->cusparse_handle,
                  CUSPARSE_OPERATION_NON_TRANSPOSE,
                  CUSPARSE_OPERATION_NON_TRANSPOSE,
                  &alpha, matA, matB, &beta, matC, CUDA_R_32F,
