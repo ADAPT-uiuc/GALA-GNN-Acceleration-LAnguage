@@ -50,6 +50,21 @@
   } while (0)
 
 
+/** @brief Thread local workspace */
+class CUDAThreadEntry {
+public:
+    /** @brief The cusparse handler */
+    cusparseHandle_t cusparse_handle{nullptr};
+    /** @brief The cublas handler */
+    cublasHandle_t cublas_handle{nullptr};
+    /** @brief thread local pool*/
+    WorkspacePool pool;
+    /** @brief constructor */
+    CUDAThreadEntry();
+    // get the threadlocal workspace
+    static CUDAThreadEntry* ThreadLocal();
+};
+
 
 std::vector <at::Tensor> gather_forward(
         torch::Tensor input_dense,
@@ -86,8 +101,7 @@ std::vector <at::Tensor> gather_forward(
     void *dBuffer = NULL;
     size_t bufferSize = 0;
 
-    auto* thr_entry = runtime::CUDAThreadEntry::ThreadLocal();
-    cudaStream_t stream = runtime::getCurrentCUDAStream();
+    auto* thr_entry = CUDAThreadEntry::ThreadLocal();
     if (!thr_entry->cusparse_handle) {
         CUSPARSE_CHECK(cusparseCreate(&(thr_entry->cusparse_handle)));
     }
@@ -124,7 +138,7 @@ std::vector <at::Tensor> gather_forward(
     CUSPARSE_CHECK(cusparseDestroySpMat(matA));
     CUSPARSE_CHECK(cusparseDestroyDnMat(matB));
     CUSPARSE_CHECK(cusparseDestroyDnMat(matC));
-    CUSPARSE_CHECK(cusparseDestroy(handle));
+//    CUSPARSE_CHECK(cusparseDestroy(handle));
 
     return {output_dense};
 }
