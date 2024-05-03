@@ -55,10 +55,6 @@ class CUDAThreadEntry {
 public:
     /** @brief The cusparse handler */
     cusparseHandle_t cusparse_handle{nullptr};
-    /** @brief constructor */
-    CUDAThreadEntry();
-    // get the threadlocal workspace
-    static CUDAThreadEntry* ThreadLocal();
 };
 
 
@@ -97,7 +93,7 @@ std::vector <at::Tensor> gather_forward(
     void *dBuffer = NULL;
     size_t bufferSize = 0;
 
-    auto* thr_entry = CUDAThreadEntry::ThreadLocal();
+    auto* thr_entry = CUDAThreadEntry();
     if (!thr_entry->cusparse_handle) {
         CUSPARSE_CHECK(cusparseCreate(&(thr_entry->cusparse_handle)));
     }
