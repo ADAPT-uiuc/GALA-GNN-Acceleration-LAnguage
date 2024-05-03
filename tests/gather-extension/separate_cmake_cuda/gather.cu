@@ -29,25 +29,26 @@
 
 // TODO -- Create
 
-#define CHECK_CUDA(func)                                                       \
-{                                                                              \
+#define CUDA_CHECK(func)                                                       \
+  do {                                                                         \
     cudaError_t status = (func);                                               \
     if (status != cudaSuccess) {                                               \
-        printf("CUDA API failed at line %d with error: %s (%d)\n",             \
-               __LINE__, cudaGetErrorString(status), status);                  \
-        return EXIT_FAILURE;                                                   \
+      printf("CUDA API failed at line %d with error: %s (%d)\n", __LINE__,     \
+             cudaGetErrorString(status), status);                              \
+      exit(EXIT_FAILURE);                                                      \
     }                                                                          \
-}
+  } while (0)
 
-#define CHECK_CUSPARSE(func)                                                   \
-{                                                                              \
+#define CUSPARSE_CHECK(func)                                                   \
+  do {                                                                         \
     cusparseStatus_t status = (func);                                          \
     if (status != CUSPARSE_STATUS_SUCCESS) {                                   \
-        printf("CUSPARSE API failed at line %d with error: %s (%d)\n",         \
-               __LINE__, cusparseGetErrorString(status), status);              \
-        return EXIT_FAILURE;                                                   \
+      printf("CUSPARSE API failed at line %d with error: %s (%d)\n", __LINE__, \
+             cusparseGetErrorString(status), status);                          \
+      exit(EXIT_FAILURE);                                                      \
     }                                                                          \
-}
+  } while (0)
+
 
 
 std::vector <at::Tensor> gather_forward(
