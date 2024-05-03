@@ -118,6 +118,8 @@ std::vector <at::Tensor> gather_forward(
     CUSPARSE_CHECK(cusparseDestroyDnMat(matB));
     CUSPARSE_CHECK(cusparseDestroyDnMat(matC));
     CUSPARSE_CHECK(cusparseDestroy(handle));
+    CUDA_CHECK(cudaFree(dBuffer));
+
 
 
     return {output_dense};
