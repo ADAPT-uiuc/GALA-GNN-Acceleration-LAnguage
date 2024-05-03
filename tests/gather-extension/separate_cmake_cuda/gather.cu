@@ -95,3 +95,7 @@ std::vector <at::Tensor> gather_forward(
 
     return {output_dense};
 }
+
+TORCH_LIBRARY(gala_ops, m) {
+m.def("gather_forward", gather_forward);
+}
