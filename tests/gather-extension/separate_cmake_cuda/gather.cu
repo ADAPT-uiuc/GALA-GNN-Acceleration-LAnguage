@@ -85,16 +85,16 @@ std::vector <at::Tensor> gather_forward(
     cusparseDnMatDescr_t matB, matC;
     void *dBuffer = NULL;
     size_t bufferSize = 0;
-    CHECK_CUSPARSE(cusparseCreate(&handle))
-    CHECK_CUSPARSE(cusparseCreateCsr(&matA, nrows, nrows, nvals,
+    CUSPARSE_CHECK(cusparseCreate(&handle))
+    CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
                       offset_ptr, col_ptr, val_ptr,
                       CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
                       CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F))
     // Create dense matrix B
-    CHECK_CUSPARSE(cusparseCreateDnMat(&matB, nrows, dcols, dcols, iden_ptr,
+    CUSPARSE_CHECK(cusparseCreateDnMat(&matB, nrows, dcols, dcols, iden_ptr,
                         CUDA_R_32F, CUSPARSE_ORDER_ROW)) // changed
     // Create dense matrix C
-    CHECK_CUSPARSE(cusparseCreateDnMat(&matC, nrows, dcols, dcols, oden_array,
+    CUSPARSE_CHECK(cusparseCreateDnMat(&matC, nrows, dcols, dcols, oden_array,
                         CUDA_R_32F, CUSPARSE_ORDER_ROW)) // changed
 
     // allocate an external buffer if needed
@@ -105,9 +105,9 @@ std::vector <at::Tensor> gather_forward(
             &alpha, matA, matB, &beta, matC, CUDA_R_32F,
             CUSPARSE_SPMM_CSR_ALG2,
             &bufferSize));
-    CHECK_CUDA(cudaMalloc(&dBuffer, bufferSize));
+    CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));
 
-    CHECK_CUSPARSE(cusparseSpMM(handle,
+    CUSPARSE_CHECK(cusparseSpMM(handle,
                  CUSPARSE_OPERATION_NON_TRANSPOSE,
                  CUSPARSE_OPERATION_NON_TRANSPOSE,
                  &alpha, matA, matB, &beta, matC, CUDA_R_32F,
