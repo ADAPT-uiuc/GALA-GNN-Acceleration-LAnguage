@@ -55,10 +55,6 @@ class CUDAThreadEntry {
 public:
     /** @brief The cusparse handler */
     cusparseHandle_t cusparse_handle{nullptr};
-    /** @brief The cublas handler */
-    cublasHandle_t cublas_handle{nullptr};
-    /** @brief thread local pool*/
-    WorkspacePool pool;
     /** @brief constructor */
     CUDAThreadEntry();
     // get the threadlocal workspace
