@@ -98,7 +98,7 @@ std::vector <at::Tensor> gather_forward(
                         CUDA_R_32F, CUSPARSE_ORDER_ROW)); // changed
 
     // allocate an external buffer if needed
-    CHECK_CUSPARSE(cusparseSpMM_bufferSize(
+    CUSPARSE_CHECK(cusparseSpMM_bufferSize(
             handle,
             CUSPARSE_OPERATION_NON_TRANSPOSE,
             CUSPARSE_OPERATION_NON_TRANSPOSE,
