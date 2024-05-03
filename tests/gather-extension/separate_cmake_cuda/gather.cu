@@ -29,6 +29,26 @@
 
 // TODO -- Create
 
+#define CHECK_CUDA(func)                                                       \
+{                                                                              \
+    cudaError_t status = (func);                                               \
+    if (status != cudaSuccess) {                                               \
+        printf("CUDA API failed at line %d with error: %s (%d)\n",             \
+               __LINE__, cudaGetErrorString(status), status);                  \
+        return EXIT_FAILURE;                                                   \
+    }                                                                          \
+}
+
+#define CHECK_CUSPARSE(func)                                                   \
+{                                                                              \
+    cusparseStatus_t status = (func);                                          \
+    if (status != CUSPARSE_STATUS_SUCCESS) {                                   \
+        printf("CUSPARSE API failed at line %d with error: %s (%d)\n",         \
+               __LINE__, cusparseGetErrorString(status), status);              \
+        return EXIT_FAILURE;                                                   \
+    }                                                                          \
+}
+
 
 std::vector <at::Tensor> gather_forward(
         torch::Tensor input_dense,
@@ -64,34 +84,34 @@ std::vector <at::Tensor> gather_forward(
     cusparseDnMatDescr_t matB, matC;
     void *dBuffer = NULL;
     size_t bufferSize = 0;
-    cusparseCreate(&handle);
-    cusparseCreateCsr(&matA, nrows, nrows, nvals,
+    CHECK_CUSPARSE(cusparseCreate(&handle))
+    CHECK_CUSPARSE(cusparseCreateCsr(&matA, nrows, nrows, nvals,
                       offset_ptr, col_ptr, val_ptr,
                       CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
-                      CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+                      CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F))
     // Create dense matrix B
-    cusparseCreateDnMat(&matB, nrows, dcols, dcols, iden_ptr,
-                        CUDA_R_32F, CUSPARSE_ORDER_ROW); // changed
+    CHECK_CUSPARSE(cusparseCreateDnMat(&matB, nrows, dcols, dcols, iden_ptr,
+                        CUDA_R_32F, CUSPARSE_ORDER_ROW)) // changed
     // Create dense matrix C
-    cusparseCreateDnMat(&matC, nrows, dcols, dcols, oden_array,
-                        CUDA_R_32F, CUSPARSE_ORDER_ROW); // changed
+    CHECK_CUSPARSE(cusparseCreateDnMat(&matC, nrows, dcols, dcols, oden_array,
+                        CUDA_R_32F, CUSPARSE_ORDER_ROW)) // changed
 
     // allocate an external buffer if needed
-    cusparseSpMM_bufferSize(
+    CHECK_CUSPARSE(cusparseSpMM_bufferSize(
             handle,
             CUSPARSE_OPERATION_NON_TRANSPOSE,
             CUSPARSE_OPERATION_NON_TRANSPOSE,
             &alpha, matA, matB, &beta, matC, CUDA_R_32F,
             CUSPARSE_SPMM_CSR_ALG2,
-            &bufferSize);
-    cudaMalloc(&dBuffer, bufferSize);
+            &bufferSize));
+    CHECK_CUDA(cudaMalloc(&dBuffer, bufferSize));
 
-    cusparseSpMM(handle,
+    CHECK_CUSPARSE(cusparseSpMM(handle,
                  CUSPARSE_OPERATION_NON_TRANSPOSE,
                  CUSPARSE_OPERATION_NON_TRANSPOSE,
                  &alpha, matA, matB, &beta, matC, CUDA_R_32F,
                  CUSPARSE_SPMM_CSR_ALG2,
-                 dBuffer);
+                 dBuffer));
 
     return {output_dense};
 }
