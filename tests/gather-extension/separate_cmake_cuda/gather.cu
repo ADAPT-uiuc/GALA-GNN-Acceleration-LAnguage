@@ -85,17 +85,17 @@ std::vector <at::Tensor> gather_forward(
     cusparseDnMatDescr_t matB, matC;
     void *dBuffer = NULL;
     size_t bufferSize = 0;
-    CUSPARSE_CHECK(cusparseCreate(&handle))
+    CUSPARSE_CHECK(cusparseCreate(&handle));
     CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
                       offset_ptr, col_ptr, val_ptr,
                       CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
-                      CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F))
+                      CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
     // Create dense matrix B
     CUSPARSE_CHECK(cusparseCreateDnMat(&matB, nrows, dcols, dcols, iden_ptr,
-                        CUDA_R_32F, CUSPARSE_ORDER_ROW)) // changed
+                        CUDA_R_32F, CUSPARSE_ORDER_ROW)); // changed
     // Create dense matrix C
     CUSPARSE_CHECK(cusparseCreateDnMat(&matC, nrows, dcols, dcols, oden_array,
-                        CUDA_R_32F, CUSPARSE_ORDER_ROW)) // changed
+                        CUDA_R_32F, CUSPARSE_ORDER_ROW)); // changed
 
     // allocate an external buffer if needed
     CHECK_CUSPARSE(cusparseSpMM_bufferSize(
