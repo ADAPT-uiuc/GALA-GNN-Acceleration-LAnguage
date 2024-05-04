@@ -50,13 +50,6 @@
   } while (0)
 
 
-/** @brief Thread local workspace */
-class CUDAThreadEntry {
-public:
-    /** @brief The cusparse handler */
-    static cusparseHandle_t cusparse_handle;
-};
-
 
 std::vector <at::Tensor> gather_forward(
         torch::Tensor input_dense,
@@ -87,17 +80,13 @@ std::vector <at::Tensor> gather_forward(
     float beta = 1.0f;
 
     // Create the sparse / dense objects
-//    cusparseHandle_t handle = NULL;
+    cusparseHandle_t handle = NULL;
     cusparseSpMatDescr_t matA;
     cusparseDnMatDescr_t matB, matC;
     void *dBuffer = NULL;
     size_t bufferSize = 0;
 
-    if (!CUDAThreadEntry::cusparse_handle) {
-        CUSPARSE_CHECK(cusparseCreate(&(CUDAThreadEntry::cusparse_handle)));
-    }
-
-//    CUSPARSE_CHECK(cusparseCreate(&handle));
+    CUSPARSE_CHECK(cusparseCreate(&handle));
     CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
                       offset_ptr, col_ptr, val_ptr,
                       CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
@@ -111,7 +100,7 @@ std::vector <at::Tensor> gather_forward(
 
     // allocate an external buffer if needed
     CUSPARSE_CHECK(cusparseSpMM_bufferSize(
-            CUDAThreadEntry::cusparse_handle,
+            handle,
             CUSPARSE_OPERATION_NON_TRANSPOSE,
             CUSPARSE_OPERATION_NON_TRANSPOSE,
             &alpha, matA, matB, &beta, matC, CUDA_R_32F,
@@ -119,7 +108,7 @@ std::vector <at::Tensor> gather_forward(
             &bufferSize));
     CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));
 
-    CUSPARSE_CHECK(cusparseSpMM(CUDAThreadEntry::cusparse_handle,
+    CUSPARSE_CHECK(cusparseSpMM(handle,
                  CUSPARSE_OPERATION_NON_TRANSPOSE,
                  CUSPARSE_OPERATION_NON_TRANSPOSE,
                  &alpha, matA, matB, &beta, matC, CUDA_R_32F,
@@ -130,6 +119,8 @@ std::vector <at::Tensor> gather_forward(
     CUSPARSE_CHECK(cusparseDestroyDnMat(matB));
     CUSPARSE_CHECK(cusparseDestroyDnMat(matC));
 //    CUSPARSE_CHECK(cusparseDestroy(handle));
+
+    cudaDeviceSynchronize();
 
     return {output_dense};
 }
