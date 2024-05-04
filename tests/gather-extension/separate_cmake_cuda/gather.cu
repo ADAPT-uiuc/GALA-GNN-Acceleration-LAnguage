@@ -120,8 +120,6 @@ std::vector <at::Tensor> gather_forward(
     CUSPARSE_CHECK(cusparseDestroyDnMat(matC));
 //    CUSPARSE_CHECK(cusparseDestroy(handle));
 
-    cudaDeviceSynchronize();
-
     return {output_dense};
 }
 

@@ -125,11 +125,12 @@ def main(args):
 
     # torch.set_grad_enabled(True)
     for _iter in range(iters):
+        torch.cuda.synchronize()
         start = time.time()
         new_h_cpp = gnn(input_dense, offsets, cols, vals)
         new_h_cpp = new_h_cpp[0]
-        forward += time.time() - start
 
+        torch.cuda.synchronize()
         forward = time.time() - start
         if _iter >= skip_iters or iters <= skip_iters:
             iter_times_forward.append(forward)
@@ -146,35 +147,6 @@ def main(args):
     print("GNN - cuSparse")
     print('Forward: {:.3f} s (std: {:.3f}) | Backward {:.3f} s'.format(np.mean(iter_times_forward), np.std(iter_times_forward), backward))
 
-    # gnn_tile = GCN_Tile(in_feats, out_feats)
-    # optimizer = torch.optim.Adam(gnn_tile.parameters(), lr=0.01, weight_decay=5e-4)
-    # forward = 0
-    # backward = 0
-    # iter_times_forward = []
-    # iter_times_backward = []
-    #
-    # for _iter in range(iters):
-    #     start = time.time()
-    #     new_h_cpp_tile = gnn_tile(nrows, nvals, input_dense, t1_tile_offsets, t1_offsets, t1_rows, t1_cols, t1_vals)
-    #     new_h_cpp_tile = new_h_cpp_tile[0]
-    #     forward += time.time() - start
-    #
-    #     forward = time.time() - start
-    #     if _iter >= skip_iters or iters <= skip_iters:
-    #         iter_times_forward.append(forward)
-    #
-    #     start = time.time()
-    #     # (new_h_cpp).backward()
-    #
-    #     # loss = criterion(new_h_cpp, input_dense)
-    #     # loss.requires_grad = True
-    #     # optimizer.zero_grad()
-    #     # loss.backward()
-    #     # optimizer.step()
-    #     backward += time.time() - start
-    # print("GNN Tile- Cpp")
-    # print('Forward: {:.3f} s (std: {:.3f}) | Backward {:.3f} s'.format(np.mean(iter_times_forward), np.std(iter_times_forward), backward))
-
     gnn_dgl = GCN_DGL(in_feats, out_feats)
     gnn_dgl.eval()
     optimizer_dgl = torch.optim.Adam(gnn_dgl.parameters(), lr=0.01, weight_decay=5e-4)
@@ -184,9 +156,11 @@ def main(args):
     iter_times_backward = []
 
     for _iter in range(iters):
+        torch.cuda.synchronize()
         start = time.time()
         new_h_dgl = gnn_dgl(graph, input_dense)
 
+        torch.cuda.synchronize()
         forward = time.time() - start
         if _iter >= skip_iters or iters <= skip_iters:
             iter_times_forward.append(forward)
