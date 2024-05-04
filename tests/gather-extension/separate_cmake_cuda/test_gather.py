@@ -125,12 +125,12 @@ def main(args):
 
     # torch.set_grad_enabled(True)
     for _iter in range(iters):
-        torch.cuda.synchronize()
+        # torch.cuda.synchronize()
         start = time.time()
         new_h_cpp = gnn(input_dense, offsets, cols, vals)
         new_h_cpp = new_h_cpp[0]
 
-        torch.cuda.synchronize()
+        # torch.cuda.synchronize()
         forward = time.time() - start
         if _iter >= skip_iters or iters <= skip_iters:
             iter_times_forward.append(forward)
@@ -156,11 +156,11 @@ def main(args):
     iter_times_backward = []
 
     for _iter in range(iters):
-        # torch.cuda.synchronize()
+        torch.cuda.synchronize()
         start = time.time()
         new_h_dgl = gnn_dgl(graph, input_dense)
 
-        # torch.cuda.synchronize()
+        torch.cuda.synchronize()
         forward = time.time() - start
         if _iter >= skip_iters or iters <= skip_iters:
             iter_times_forward.append(forward)
