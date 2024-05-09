@@ -81,7 +81,7 @@ private:
     DataList *nextLevel;
     // TODO moved the sharing meta-data feature to code generation.
     // List all the data formats that are in the data list (multiple to supports things like ASpT)
-    std::vector<DataFormat> formats;
+    std::vector <DataFormat> formats;
     // If the data items are independent of one another
     bool independent;
 public:
@@ -104,30 +104,20 @@ public:
         return true;
     }
 
-    void setNext(DataList *newLevel) {
-        this->nextLevel = newLevel;
-    }
+    void setNext(DataList *newLevel) { this->nextLevel = newLevel; }
 
     // Formats
-    void addFormat(DataFormat format) {
-        this->formats.push_back(format);
-    }
+    void addFormat(DataFormat format) { this->formats.push_back(format); }
 
     // You don't need to remove a single format unless you're making a mistake.
     //  A ClearFormats is necessary when you are creating a new level in the data list.
-    void clearFormats() {
-        this->formats.clear();
-    }
+    void clearFormats() { this->formats.clear(); }
 
     // Independence
     //  Shows the parallelization independence between data items in the current level.
-    bool getIndependence() {
-        return this->independent;
-    }
+    bool getIndependence() { return this->independent; }
 
-    void setIndependence(bool independence) {
-        this->independent = independence;
-    }
+    void setIndependence(bool independence) { this->independent = independence; }
 };
 
 class BaseData {
@@ -208,48 +198,28 @@ public:
     }
 
     // getters/setters
-    std::string getName() {
-        return this->name;
-    }
+    std::string getName() { return this->name; }
 
     // Data list
-    DataList getData() {
-        return this->dataList;
-    }
+    DataList getData() { return this->dataList; }
 
-    void setData(DataList *newData) {
-        this->dataList = newData;
-    }
+    void setData(DataList *newData) { this->dataList = newData; }
 
     // Get the start and end points
-    int getStart() {
-        return this->startPoint;
-    }
+    int getStart() { return this->startPoint; }
 
-    int getEnd() {
-        return this->endPoint;
-    }
+    int getEnd() { return this->endPoint; }
 
     // Change the start and end points
-    void setStart(int newStart) {
-        this->startPoint = newStart;
-    }
+    void setStart(int newStart) { this->startPoint = newStart; }
 
-    void setEnd(int newEnd) {
-        this->endPoint = newEnd;
-    }
+    void setEnd(int newEnd) { this->endPoint = newEnd; }
 
-    NumTypes getIType(){
-        return this->indexType;
-    }
+    NumTypes getIType() { return this->indexType; }
 
-    NumTypes getNType(){
-        return this->edgeType;
-    }
+    NumTypes getNType() { return this->edgeType; }
 
-    NumTypes getVType(){
-        return this->valueType;
-    }
+    NumTypes getVType() { return this->valueType; }
 };
 
 class DataEdge {
@@ -263,13 +233,9 @@ public:
     }
 
     // No need for setters? The relation should not change at any time as time goes not
-    BaseData *getNode1() {
-        return node1;
-    }
+    BaseData *getNode1() { return node1; }
 
-    BaseData *getNode2() {
-        return node2;
-    }
+    BaseData *getNode2() { return node2; }
 };
 
 class RelationEdge : public DataEdge {
@@ -283,49 +249,36 @@ public:
     }
 
     // Only have the getters for the relations
-    RelationDim getRelation1() {
-        return rel1;
-    }
+    RelationDim getRelation1() { return rel1; }
 
-    RelationDim getRelation2() {
-        return rel2;
-    }
+    RelationDim getRelation2() { return rel2; }
 };
 
 
 class TransformData {
 private:
     TransformationTypes transformation;
-    std::vector<std::string> params;
+    std::vector <std::string> params;
 public:
     TransformData(TransformationTypes trns) {
         this->transformation = trns;
     }
 
-    TransformationTypes getTransformation() {
-        return this->transformation;
-    }
+    TransformationTypes getTransformation() { return this->transformation; }
 
-    std::vector<std::string> *getParams() {
-        return &this->params;
-    }
+    std::vector <std::string> *getParams() { return &this->params; }
 
-    void addParam(std::string param) {
-        this->params.push_back(param);
-    }
+    void addParam(std::string param) { this->params.push_back(param); }
 };
 
 class TransformEdge : public DataEdge {
 private:
     std::vector<TransformData *> transformations;
 public:
-    TransformEdge(BaseData *n1, BaseData *n2) : DataEdge(n1, n2) {
-    }
+    TransformEdge(BaseData *n1, BaseData *n2) : DataEdge(n1, n2) {}
 
     // Only have the getters for the relations
-    void addTransformation(TransformData *trns) {
-        transformations.push_back(trns);
-    }
+    void addTransformation(TransformData *trns) { transformations.push_back(trns); }
 };
 
 // ------------------- Pre-base class -------------------------
