@@ -173,18 +173,18 @@ class GCN_DGL(torch.nn.Module):
 
             aggregate_fn = fn.copy_u("h", "m")
             feat_src, feat_dst = expand_as_pair(feat, graph)
-            degs = graph.out_degrees().to(feat_src).clamp(min=1)
-            norm = torch.pow(degs, -0.5)
-            shp = norm.shape + (1,) * (feat_src.dim() - 1)
-            norm = torch.reshape(norm, shp)
-            feat_src = feat_src * norm
+            # degs = graph.out_degrees().to(feat_src).clamp(min=1)
+            # norm = torch.pow(degs, -0.5)
+            # shp = norm.shape + (1,) * (feat_src.dim() - 1)
+            # norm = torch.reshape(norm, shp)
+            # feat_src = feat_src * norm
             graph.srcdata["h"] = feat_src
             graph.update_all(aggregate_fn, fn.sum(msg="m", out="h"))
             rst = graph.dstdata["h"]
-            degs = graph.in_degrees().to(feat_dst).clamp(min=1)
-            norm = torch.pow(degs, -0.5)
-            shp = norm.shape + (1,) * (feat_dst.dim() - 1)
-            norm = torch.reshape(norm, shp)
-            rst = rst * norm
+            # degs = graph.in_degrees().to(feat_dst).clamp(min=1)
+            # norm = torch.pow(degs, -0.5)
+            # shp = norm.shape + (1,) * (feat_dst.dim() - 1)
+            # norm = torch.reshape(norm, shp)
+            # rst = rst * norm
 
             return rst

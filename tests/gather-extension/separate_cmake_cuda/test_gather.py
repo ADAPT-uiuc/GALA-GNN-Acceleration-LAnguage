@@ -124,28 +124,28 @@ def main(args):
     vals.to('cuda')
 
     # torch.set_grad_enabled(True)
-    for _iter in range(iters):
-        # torch.cuda.synchronize()
-        start = time.time()
-        new_h_cpp = gnn(input_dense, offsets, cols, vals)
-        new_h_cpp = new_h_cpp[0]
-
-        # torch.cuda.synchronize()
-        forward = time.time() - start
-        if _iter >= skip_iters or iters <= skip_iters:
-            iter_times_forward.append(forward)
-
-        start = time.time()
-        # (new_h_cpp).backward()
-
-        # loss = criterion(new_h_cpp, input_dense)
-        # loss.requires_grad = True
-        # optimizer.zero_grad()
-        # loss.backward()
-        # optimizer.step()
-        backward += time.time() - start
-    print("GNN - cuSparse")
-    print('Forward: {:.3f} s (std: {:.3f}) | Backward {:.3f} s'.format(np.mean(iter_times_forward), np.std(iter_times_forward), backward))
+    # for _iter in range(iters):
+    #     # torch.cuda.synchronize()
+    #     start = time.time()
+    #     new_h_cpp = gnn(input_dense, offsets, cols, vals)
+    #     new_h_cpp = new_h_cpp[0]
+    #
+    #     # torch.cuda.synchronize()
+    #     forward = time.time() - start
+    #     if _iter >= skip_iters or iters <= skip_iters:
+    #         iter_times_forward.append(forward)
+    #
+    #     start = time.time()
+    #     # (new_h_cpp).backward()
+    #
+    #     # loss = criterion(new_h_cpp, input_dense)
+    #     # loss.requires_grad = True
+    #     # optimizer.zero_grad()
+    #     # loss.backward()
+    #     # optimizer.step()
+    #     backward += time.time() - start
+    # print("GNN - cuSparse")
+    # print('Forward: {:.3f} s (std: {:.3f}) | Backward {:.3f} s'.format(np.mean(iter_times_forward), np.std(iter_times_forward), backward))
 
     gnn_dgl = GCN_DGL(in_feats, out_feats)
     gnn_dgl.eval()

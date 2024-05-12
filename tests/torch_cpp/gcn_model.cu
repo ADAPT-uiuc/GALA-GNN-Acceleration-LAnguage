@@ -232,8 +232,10 @@ int main(int argc, char **argv) {
         // Reset gradients.
         optimizer.zero_grad();
         // Execute the model on the input data.
+        cudaDeviceSynchronize();
         start = get_time();
-        std::vector<torch::Tensor> prediction = net->forward(t_offsets, t_cols, t_vals, t_iden);
+        std::vector<torch::Tensor> prediction = net->forward(t_iden, t_offsets, t_cols, t_vals);
+        cudaDeviceSynchronize();
         end = get_time();
 
         if (epoch >= skip_cache_warmup) {
