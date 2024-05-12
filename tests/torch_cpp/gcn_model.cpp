@@ -67,14 +67,10 @@ int main(int argc, char **argv) {
     filename = path;
     SM adj;
     std::string suffix;
-#ifdef RNPY
-    suffix = ".npy";
-    readSM_npy32(path, &adj);
-#else
     suffix = ".mtx";
     filename = path + "Adj" + suffix;
     readSM<SM>(filename, &adj);
-#endif
+
     adj.set_all(1);
 
     // Adj info
