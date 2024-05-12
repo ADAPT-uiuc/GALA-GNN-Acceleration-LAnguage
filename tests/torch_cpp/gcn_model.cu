@@ -68,7 +68,7 @@ std::vector <at::Tensor> gather_forward_gcn(
     // Input
     float *iden_ptr = input_dense.data_ptr<float>();
     // Output
-    auto options = torch::TensorOptions().dtype(torch::kFloat).requires_grad(true);
+    auto options = torch::TensorOptions().dtype(torch::kFloat).requires_grad(true).device(torch::kCUDA, 0);
     auto output_dense = torch::zeros({nrows, dcols}, options);
     float *oden_array = output_dense.data_ptr<float>();
 
@@ -217,11 +217,11 @@ int main(int argc, char **argv) {
     CUDA_CHECK(cudaMemcpy(dB, input_emb.vals_ptr(), (nrows * emb_size)  * sizeof(float),
                           cudaMemcpyHostToDevice));
 
-    auto options_cu_int = torch::TensorOptions().dtype(torch::kInt).device(torch::kCUDA, 1);
+    auto options_cu_int = torch::TensorOptions().dtype(torch::kInt).device(torch::kCUDA, 0);
     torch::Tensor t_offsets = torch::from_blob(dA_csrOffsets, {nrows + 1}, options_cu_int);
     torch::Tensor t_cols = torch::from_blob(dA_columns, {nvals}, options_cu_int);
 
-    auto options_cu_float = torch::TensorOptions().dtype(torch::kFloat).device(torch::kCUDA, 1);
+    auto options_cu_float = torch::TensorOptions().dtype(torch::kFloat).device(torch::kCUDA, 0);
     torch::Tensor t_vals = torch::from_blob(dA_values, {nvals}, options_cu_float);
     torch::Tensor t_iden = torch::from_blob(dB, {nrows * emb_size}, options_cu_float);
 
