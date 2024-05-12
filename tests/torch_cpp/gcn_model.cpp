@@ -12,8 +12,9 @@ typedef float val_t;
 #include "../../src/matrix/csrc_matrix.h"
 #include "../../src/matrix/dense_matrix.h"
 #include "../../src/ops/aggregators.h"
-#include "../../src/ops/sparse_matrix_ops.h"
 #include "../common.h"
+
+#include <torch/torch.h>
 
 //Dense matrix with double values.
 typedef DenseMatrix<ind1_t, ind2_t, val_t> DM;
@@ -28,7 +29,7 @@ struct GCN : torch::nn::Module {
     }
 
     // Implement the Net's algorithm.
-    torch::Tensor forward(torch::Tensor input_dense,
+    std::vector<torch::Tensor> forward(torch::Tensor input_dense,
                           torch::Tensor offset_graph,
                           torch::Tensor columns_graph,
                           torch::Tensor value_graph) {
@@ -126,7 +127,6 @@ int main(int argc, char **argv) {
     CUDA_CHECK(cudaMemcpy(dB, input_emb.vals_ptr(), (nrows * emb_size)  * sizeof(float),
                           cudaMemcpyHostToDevice));
 
-    double array[] = { 1, 2, 3, 4, 5};
     auto options_cu_int = torch::TensorOptions().dtype(torch::kInt).device(torch::kCUDA, 1);
     torch::Tensor t_offsets = torch::from_blob(dA_csrOffsets, {nrows + 1}, options_cu_int);
     torch::Tensor t_cols = torch::from_blob(dA_columns, {nvals}, options_cu_int);
@@ -144,7 +144,7 @@ int main(int argc, char **argv) {
         optimizer.zero_grad();
         // Execute the model on the input data.
         start = get_time();
-        torch::Tensor prediction = net->forward(t_offsets, t_cols, t_val, t_iden);
+        std::vector<torch::Tensor> prediction = net->forward(t_offsets, t_cols, t_vals, t_iden);
         end = get_time();
 
         if (epoch >= skip_cache_warmup) {
