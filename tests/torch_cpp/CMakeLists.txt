@@ -3,6 +3,14 @@ project(gala_cuda LANGUAGES CUDA CXX)
 
 find_package(Torch REQUIRED)
 
+find_package(OpenMP)
+if (OPENMP_FOUND)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+else ()
+    message(FATAL_ERROR "Need OpenMP")
+endif ()
+
 # Define our library target
 add_executable(gala_cuda gather.cu gcn_model.cpp)
 target_include_directories(gala_cuda PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
