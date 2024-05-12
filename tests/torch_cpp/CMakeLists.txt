@@ -12,7 +12,7 @@ else ()
 endif ()
 
 # Define our library target
-add_executable(gala_cuda gather.cu gcn_model.cpp)
+add_executable(gala_cuda gcn_model.cu)
 target_include_directories(gala_cuda PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 # Enable C++11
 target_compile_features(gala_cuda PRIVATE cxx_std_14)
