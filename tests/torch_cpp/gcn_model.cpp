@@ -22,11 +22,6 @@ typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;
 
 
 struct GCN : torch::nn::Module {
-    Net() {
-        // TODO no liner nets for now.
-//        fc1 = register_module("fc1", torch::nn::Linear(784, 64));
-//        fc2 = register_module("fc2", torch::nn::Linear(64, 32));
-    }
 
     // Implement the Net's algorithm.
     std::vector<torch::Tensor> forward(torch::Tensor input_dense,
@@ -103,10 +98,6 @@ int main(int argc, char **argv) {
 
     // Instantiate an SGD optimization algorithm to update our Net's parameters.
     torch::optim::SGD optimizer(net->parameters(), /*lr=*/0.01);
-
-    auto options = torch::TensorOptions().dtype(torch::kFloat).requires_grad(true);
-    auto output_dense = torch::zeros({nrows, dcols}, options);
-    float *oden_array = output_dense.data_ptr<float>();
 
     int *dA_csrOffsets, *dA_columns;
     float *dA_values, *dB, *dC;
