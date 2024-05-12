@@ -28,7 +28,7 @@ struct GCN : torch::nn::Module {
                           torch::Tensor offset_graph,
                           torch::Tensor columns_graph,
                           torch::Tensor value_graph) {
-        return gather_forward(input_dense, offset_graph, columns_graph, value_graph);
+        return gather_forward_gcn(input_dense, offset_graph, columns_graph, value_graph);
 
 //        x = torch::relu(fc1->forward(x.reshape({x.size(0), 784})));
 //        x = torch::dropout(x, /*p=*/0.5, /*train=*/is_training());

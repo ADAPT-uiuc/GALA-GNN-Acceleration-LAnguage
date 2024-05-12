@@ -33,7 +33,7 @@
   } while (0)
 
 
-std::vector <at::Tensor> gather_forward(
+std::vector <at::Tensor> gather_forward_gcn(
         torch::Tensor input_dense,
         torch::Tensor offset_graph,
         torch::Tensor columns_graph,
