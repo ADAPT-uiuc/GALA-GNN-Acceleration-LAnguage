@@ -62,8 +62,8 @@ private:
 //    std::vector<std::any*> inputData;
 //    std::vector<std::any*> outputData;
 
-    std::vector<BaseData *> inputData;
-    std::vector<BaseData *> outputData;
+    std::vector<DataNode *> inputData;
+    std::vector<DataNode *> outputData;
 public:
     StatementNode(ComputeOp op, int point) : ComputeNode(op, point) {}
 
@@ -76,9 +76,9 @@ public:
     std::string getParam(int ix) { return this->params.at(ix); }
 
     // Data items should be constant once added (No need to remove elements)
-    void addInputData(BaseData *new_input) { this->inputData.push_back(new_input); }
+    void addInputData(DataNode *new_input) { this->inputData.push_back(new_input); }
 
-    void addOutputData(BaseData *new_output) { this->outputData.push_back(new_output); }
+    void addOutputData(DataNode *new_output) { this->outputData.push_back(new_output); }
 };
 
 // TODO Need to have methods to manage control flow -- Not sure if this node will be used or not. (Archive for now?)

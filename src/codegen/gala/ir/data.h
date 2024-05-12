@@ -52,7 +52,7 @@ enum NumTypes {
     INT64,
     // UInts
     UINT32,
-    UNIT64,
+    UINT64,
     // Floats
     F32,
     F64
@@ -81,7 +81,7 @@ private:
     DataList *nextLevel;
     // TODO moved the sharing meta-data feature to code generation.
     // List all the data formats that are in the data list (multiple to supports things like ASpT)
-    std::vector <DataFormat> formats;
+    std::vector<DataFormat> formats;
     // If the data items are independent of one another
     bool independent;
 public:
@@ -120,15 +120,11 @@ public:
     void setIndependence(bool independence) { this->independent = independence; }
 };
 
-class BaseData {
-};
-//class DataNode: public BaseData
-
 /***
  * Node in the DataIR
  * @tparam dM - data matrix type info (dense or sparse, with different number types (f32, f64, int, long))
  */
-class DataNode : public BaseData {
+class DataNode {
 private:
     // Name of the matrix
     std::string name;
@@ -224,18 +220,18 @@ public:
 
 class DataEdge {
 private:
-    BaseData *node1;
-    BaseData *node2;
+    DataNode *node1;
+    DataNode *node2;
 public:
-    DataEdge(BaseData *n1, BaseData *n2) {
+    DataEdge(DataNode *n1, DataNode *n2) {
         this->node1 = n1;
         this->node2 = n2;
     }
 
     // No need for setters? The relation should not change at any time as time goes not
-    BaseData *getNode1() { return node1; }
+    DataNode *getNode1() { return node1; }
 
-    BaseData *getNode2() { return node2; }
+    DataNode *getNode2() { return node2; }
 };
 
 class RelationEdge : public DataEdge {
@@ -243,7 +239,7 @@ private:
     RelationDim rel1;
     RelationDim rel2;
 public:
-    RelationEdge(BaseData *n1, RelationDim r1, BaseData *n2, RelationDim r2) : DataEdge(n1, n2) {
+    RelationEdge(DataNode *n1, RelationDim r1, DataNode *n2, RelationDim r2) : DataEdge(n1, n2) {
         this->rel1 = r1;
         this->rel2 = r2;
     }
@@ -258,15 +254,13 @@ public:
 class TransformData {
 private:
     TransformationTypes transformation;
-    std::vector <std::string> params;
+    std::vector<std::string> params;
 public:
-    TransformData(TransformationTypes trns) {
-        this->transformation = trns;
-    }
+    TransformData(TransformationTypes trns) { this->transformation = trns; }
 
     TransformationTypes getTransformation() { return this->transformation; }
 
-    std::vector <std::string> *getParams() { return &this->params; }
+    std::vector<std::string> *getParams() { return &this->params; }
 
     void addParam(std::string param) { this->params.push_back(param); }
 };
@@ -275,90 +269,10 @@ class TransformEdge : public DataEdge {
 private:
     std::vector<TransformData *> transformations;
 public:
-    TransformEdge(BaseData *n1, BaseData *n2) : DataEdge(n1, n2) {}
+    TransformEdge(DataNode *n1, DataNode *n2) : DataEdge(n1, n2) {}
 
     // Only have the getters for the relations
     void addTransformation(TransformData *trns) { transformations.push_back(trns); }
 };
-
-// ------------------- Pre-base class -------------------------
-//
-//template<class dM1, class dM2>
-//class DataEdge {
-//private:
-//    DataNode<dM1> *node1;
-//    DataNode<dM2> *node2;
-//public:
-//    DataEdge(DataNode<dM1> *n1, DataNode<dM2> *n2) {
-//        this->node1 = n1;
-//        this->node2 = n2;
-//    }
-//
-//    // No need for setters? The relation should not change at any time as time goes not
-//    DataNode<dM1> *getNode1() {
-//        return node1;
-//    }
-//
-//    DataNode<dM2> *getNode2() {
-//        return node2;
-//    }
-//};
-//
-//template<class dM1, class dM2>
-//class RelationEdge : public DataEdge<dM1, dM2> {
-//private:
-//    RelationDim rel1;
-//    RelationDim rel2;
-//public:
-//    RelationEdge(DataNode<dM1> *n1, RelationDim r1, DataNode<dM2> *n2, RelationDim r2) : DataEdge<dM1, dM2>(n1, n2) {
-//        this->rel1 = r1;
-//        this->rel2 = r2;
-//    }
-//
-//    // Only have the getters for the relations
-//    RelationDim getRelation1() {
-//        return rel1;
-//    }
-//    RelationDim getRelation2() {
-//        return rel2;
-//    }
-//};
-//
-//
-//class TransformData{
-//private:
-//    TransformationTypes transformation;
-//    std::vector<std::string> params;
-//public:
-//    TransformData(TransformationTypes trns){
-//        this->transformation = trns;
-//    }
-//
-//    TransformationTypes getTransformation(){
-//        return this->transformation;
-//    }
-//    std::vector<std::string>* getParams(){
-//        return &this->params;
-//    }
-//
-//    void addParam(std::string param){
-//        this->params.push_back(param);
-//    }
-//};
-//
-//template<class dM1>
-//class TransformEdge : public DataEdge<dM1, dM1> {
-//private:
-//    std::vector<TransformData*> transformations;
-//public:
-//    TransformEdge(DataNode<dM1> *n1, DataNode<dM1> *n2) : DataEdge<dM1, dM1>(n1, n2) {
-//    }
-//
-//    // Only have the getters for the relations
-//    void addTransformation(TransformData* trns) {
-//        transformations.push_back(trns);
-//    }
-//};
-
 
 #endif //GNN_ACCELERATION_LANGUAGE_DATA_H

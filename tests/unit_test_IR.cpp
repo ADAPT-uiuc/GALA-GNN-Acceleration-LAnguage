@@ -84,10 +84,10 @@ int main(int argc, char **argv) {
     loadCompute.addParam("Reddit");
     // Graph
     auto initialGraph = DataList(CSR_STYPE, true);
-    auto graphData = DataNode<SM_t>("gGraph", now, &initialGraph);
+    auto graphData = DataNode("gGraph", UINT32, UINT64, F32, now, &initialGraph);
     // Feat
     auto initialFeat = DataList(RM_DTYPE, true);
-    auto featData = DataNode<DMd_t>("gFeat", now, &initialFeat);
+    auto featData = DataNode("gFeat", UINT32, UINT64, F32, now, &initialFeat);
     // Relation -- TODO Ignore relations for now. Use the visitor class design
 //    auto graphFeatRel = RelationEdge<SM_t, DMd_t>(&graphData, ROW_RELATION, &featData, ROW_RELATION);
     auto graphFeatRel = RelationEdge(&graphData, ROW_RELATION, &featData, ROW_RELATION);
@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
     auto degreesCompute1 = StatementNode(DEGREES_OP, now);
     // TODO also store the matrix data here??
     auto initialDegrees1 = DataList(RM_DTYPE, true);
-    auto degreesData1 = DataNode<DMd_t>("deg", now, &initialDegrees1);
+    auto degreesData1 = DataNode("deg", UINT32, UINT64, INT32, now, &initialDegrees1);
     degreesCompute1.addInputData(&graphData);
     degreesCompute1.addOutputData(&degreesData1);
     // ****** Loop-start ******
@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
     auto powCompute1 = StatementNode(POWER_OP, now);
     powCompute1.addParam("-0.5");
     auto initialPow1 = DataList(RM_DTYPE, true);
-    auto normData1 = DataNode<DMd_t>("norm", now, &initialPow1);
+    auto normData1 = DataNode("norm", UINT32, UINT64, F32, now, &initialPow1);
     powCompute1.addInputData(&degreesData1);
     powCompute1.addOutputData(&normData1);
     trainingLoop.addLoopNode(&powCompute1);
