@@ -193,8 +193,6 @@ int main(int argc, char **argv) {
     DM out_emb2;
     out_emb2.build(adj.nrows(), emb_size, DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
 
-    auto wsum_aggr = wsumAgg<val_t, val_t, ind2_t>;
-
     std::cout << adj.nrows() << " " << adj.ncols() << " " << adj.nvals() << std::endl;
 
     // Create a new Net.
@@ -204,7 +202,7 @@ int main(int argc, char **argv) {
     torch::optim::SGD optimizer(net->parameters(), /*lr=*/0.01);
 
     int *dA_csrOffsets, *dA_columns;
-    float *dA_values, *dB, *dC;
+    float *dA_values, *dB;
 
     CUDA_CHECK(cudaMalloc((void **) &dA_csrOffsets,
                           (nrows + 1) * sizeof(int)));
@@ -234,7 +232,6 @@ int main(int argc, char **argv) {
     double start, end;
     std::vector<double> times_arr;
     for (size_t epoch = 1; epoch <= 10; ++epoch) {
-        size_t batch_index = 0;
         // Reset gradients.
         optimizer.zero_grad();
         // Execute the model on the input data.
