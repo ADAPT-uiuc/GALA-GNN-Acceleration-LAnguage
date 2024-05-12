@@ -164,11 +164,8 @@ int main(int argc, char **argv) {
     int skip_cache_warmup = 5;
 
     std::string filename;
-    filename = path;
     SM adj;
-    std::string suffix;
-    suffix = ".mtx";
-    filename = path + "Adj" + suffix;
+    filename = path;
     readSM<SM>(filename, &adj);
 
     adj.set_all(1);
