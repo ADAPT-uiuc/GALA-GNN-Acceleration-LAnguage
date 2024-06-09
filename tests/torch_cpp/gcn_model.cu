@@ -183,6 +183,7 @@ int main(int argc, char **argv) {
             input_emb.vals_ptr()[i * emb_size + j] = (dvT) (rand() % 100) / 100;
         }
     }
+    input_emb.set_all(1);
 
     DM out_emb;
     out_emb.build(adj.nrows(), emb_size, DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
@@ -228,7 +229,7 @@ int main(int argc, char **argv) {
 
     double start, end;
     std::vector<double> times_arr;
-    for (size_t epoch = 1; epoch <= 10; ++epoch) {
+    for (size_t epoch = 1; epoch <= num_iters; ++epoch) {
         // Reset gradients.
         optimizer.zero_grad();
         // Execute the model on the input data.
@@ -238,9 +239,19 @@ int main(int argc, char **argv) {
         cudaDeviceSynchronize();
         end = get_time();
 
+        for (int x = 0; x < 10; x++){
+            for (int y = 0; y < emb_size; y++){
+                std::cout << prediction[x][y] << ",";
+            }
+            std::cout << std::endl;
+        }
+
         if (epoch >= skip_cache_warmup) {
             times_arr.push_back(end - start);
         }
+
+
+
         // Compute a loss value to judge the prediction of our model.
 //        torch::Tensor loss = torch::nll_loss(prediction, batch.target);
 //        // Compute gradients of the loss w.r.t. the parameters of our model.
@@ -254,6 +265,8 @@ int main(int argc, char **argv) {
 //            // Serialize your model periodically as a checkpoint.
 //            torch::save(net, "net.pt");
 //        }
+
+        // Print the results of the precompute function
 
     }
 
