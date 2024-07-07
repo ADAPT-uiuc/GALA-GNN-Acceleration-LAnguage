@@ -17,9 +17,9 @@ add_executable(gala_cuda gcn_model.cu)
 # Enable C++11
 target_compile_features(gala_cuda PRIVATE cxx_std_14)
 
-include_directories(PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 # Link against LibTorch
-link_libraries(gala_cuda "${TORCH_LIBRARIES}" cudart cusparse)
+link_libraries("${TORCH_LIBRARIES}" cudart cusparse)
 #target_link_libraries(gala_cuda PUBLIC )
 
 message("Compiler: COMILER_ID is ${CMAKE_CXX_COMPILER_ID}")
