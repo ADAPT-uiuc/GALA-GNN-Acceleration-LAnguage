@@ -243,7 +243,9 @@ int main(int argc, char **argv) {
         // Execute the model on the input data.
         cudaDeviceSynchronize();
         start = get_time();
-        std::vector<torch::Tensor> prediction = net->forward(t_iden, t_offsets, t_cols, t_vals)[0];
+//        std::vector<torch::Tensor> prediction = net->forward(t_iden, t_offsets, t_cols, t_vals);
+        torch::Tensor prediction = net->forward(t_iden, t_offsets, t_cols, t_vals)[0];
+
         cudaDeviceSynchronize();
         end = get_time();
 
