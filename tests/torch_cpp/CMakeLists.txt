@@ -17,6 +17,8 @@ link_libraries("${TORCH_LIBRARIES}" cudart cusparse)
 
 # Define our library target
 add_compile_definitions(GN_1)
+add_compile_definitions(PT_0)
+add_compile_definitions(A_ALLOC)
 add_executable(gala_cuda gcn_model.cu)
 # Enable C++11
 target_compile_features(gala_cuda PRIVATE cxx_std_14)
