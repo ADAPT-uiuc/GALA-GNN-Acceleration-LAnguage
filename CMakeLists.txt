@@ -13,6 +13,8 @@ option(GEN_SPADE "Build for code-gen in spade" OFF)
 option(SP_TEST "Build for code for sparse matrix ops and it's dependencies." OFF)
 # GNN DSL
 option(DSL "Build for code for the GNN DSL" ON)
+# Enable Cuda
+option(TORCH_CUDA "Build Torch CUDA code." ON)
 
 ######################### General Build options ###########################
 # Build with debug info or not
@@ -232,6 +234,11 @@ if (DSL)
 #    message("Torch linker flags: ${TORCH_LIBRARIES}")
 #    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${TORCH_LIBRARIES}")
 #    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ltorch -ltorch_cpu -lc10")
+endif ()
+
+if (TORCH_CUDA)
+    include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+    link_libraries("${TORCH_LIBRARIES}" cudart cusparse)
 endif ()
 
 # Check include files

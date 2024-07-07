@@ -20,11 +20,11 @@ typedef int ind1_t;
 typedef int ind2_t;
 typedef float val_t;
 
-#include "../../src/utils/mtx_io.h"
-#include "../../src/matrix/csrc_matrix.h"
-#include "../../src/matrix/dense_matrix.h"
-#include "../../src/ops/aggregators.h"
-#include "../common.h"
+#include "../src/utils/mtx_io.h"
+#include "../src/matrix/csrc_matrix.h"
+#include "../src/matrix/dense_matrix.h"
+#include "../src/ops/aggregators.h"
+#include "common.h"
 
 #include <torch/torch.h>
 
