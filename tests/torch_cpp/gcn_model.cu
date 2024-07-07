@@ -279,12 +279,22 @@ int main(int argc, char **argv) {
 //    std::cout << out_emb2.vals_ptr()[0] << " " << out_emb2.vals_ptr()[0 + input_emb.ncols() * 8] << std::endl;
 //    std::cout << out_emb.vals_ptr()[0] << " " << out_emb.vals_ptr()[0 + out_emb.ncols() * 8] << std::endl;
 
-    for (nT j = 0; j < nvals; j++) {
-        if (out_emb.vals_ptr()[j] != out_emb2.vals_ptr()[j]) {
-            std::cout << "The results don't match at: " << j << ", " << out_emb.vals_ptr()[j] << ", "
-                      << out_emb2.vals_ptr()[j] << std::endl;
-            break;
+    for (int x = 0; x < nrows; x++){
+        for (int y = 0; y < emb_size; y++){
+            if (prediction[x][y] != out_emb2.vals_ptr()[x * emb_size + y]) {
+                std::cout << "The results don't match at: " << x << "," << y << ":  " << prediction[x][y] << ", "
+                          << out_emb2.vals_ptr()[j] << std::endl;
+                break;
+            }
         }
     }
+
+//    for (nT j = 0; j < nvals; j++) {
+//        if (out_emb.vals_ptr()[j] != out_emb2.vals_ptr()[j]) {
+//            std::cout << "The results don't match at: " << j << ", " << out_emb.vals_ptr()[j] << ", "
+//                      << out_emb2.vals_ptr()[j] << std::endl;
+//            break;
+//        }
+//    }
     std::cout << calc_mean(times_arr) << "," << calc_std(times_arr) << std::endl;
 }
