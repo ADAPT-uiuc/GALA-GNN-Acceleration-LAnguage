@@ -283,7 +283,7 @@ int main(int argc, char **argv) {
         for (int y = 0; y < emb_size; y++){
             if (prediction[x][y] != out_emb2.vals_ptr()[x * emb_size + y]) {
                 std::cout << "The results don't match at: " << x << "," << y << ":  " << prediction[x][y] << ", "
-                          << out_emb2.vals_ptr()[j] << std::endl;
+                          << out_emb2.vals_ptr()[x * emb_size + y] << std::endl;
                 break;
             }
         }
