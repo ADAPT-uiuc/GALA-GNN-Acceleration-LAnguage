@@ -190,6 +190,12 @@ int main(int argc, char **argv) {
     DM out_emb2;
     out_emb2.build(adj.nrows(), emb_size, DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
 
+    // Comparison for checking if SpMM works correctlu
+    out_emb.set_all(0);
+    out_emb2.set_all(0);
+
+    gSpMM(&adj, &input_emb, &out_emb2, wsum_aggr);
+
     std::cout << adj.nrows() << " " << adj.ncols() << " " << adj.nvals() << std::endl;
 
     // Create a new Net.
@@ -238,13 +244,6 @@ int main(int argc, char **argv) {
         cudaDeviceSynchronize();
         end = get_time();
 
-        for (int x = 0; x < 10; x++){
-            for (int y = 0; y < emb_size; y++){
-                std::cout << prediction[x][y] << ",";
-            }
-            std::cout << std::endl;
-        }
-
         if (epoch >= skip_cache_warmup) {
             times_arr.push_back(end - start);
         }
@@ -277,12 +276,12 @@ int main(int argc, char **argv) {
 //    std::cout << out_emb2.vals_ptr()[0] << " " << out_emb2.vals_ptr()[0 + input_emb.ncols() * 8] << std::endl;
 //    std::cout << out_emb.vals_ptr()[0] << " " << out_emb.vals_ptr()[0 + out_emb.ncols() * 8] << std::endl;
 
-//    for (nT j = 0; j < nvals; j++) {
-//        if (out_emb.vals_ptr()[j] != out_emb2.vals_ptr()[j]) {
-//            std::cout << "The results don't match at: " << j << ", " << out_emb.vals_ptr()[j] << ", "
-//                      << out_emb2.vals_ptr()[j] << std::endl;
-//            break;
-//        }
-//    }
+    for (nT j = 0; j < nvals; j++) {
+        if (out_emb.vals_ptr()[j] != out_emb2.vals_ptr()[j]) {
+            std::cout << "The results don't match at: " << j << ", " << out_emb.vals_ptr()[j] << ", "
+                      << out_emb2.vals_ptr()[j] << std::endl;
+            break;
+        }
+    }
     std::cout << calc_mean(times_arr) << "," << calc_std(times_arr) << std::endl;
 }
