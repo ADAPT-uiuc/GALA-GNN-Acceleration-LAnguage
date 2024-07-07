@@ -24,6 +24,7 @@ typedef float val_t;
 #include "../../src/matrix/csrc_matrix.h"
 #include "../../src/matrix/dense_matrix.h"
 #include "../../src/ops/aggregators.h"
+#include "../../src/ops/sparse_matrix_ops.h"
 #include "../common.h"
 
 #include <torch/torch.h>
@@ -189,6 +190,8 @@ int main(int argc, char **argv) {
 
     DM out_emb2;
     out_emb2.build(adj.nrows(), emb_size, DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
+
+    auto wsum_aggr = wsumAgg<val_t, val_t, ind2_t>;
 
     // Comparison for checking if SpMM works correctlu
     out_emb.set_all(0);
