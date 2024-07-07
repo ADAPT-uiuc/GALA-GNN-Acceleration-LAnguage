@@ -254,15 +254,13 @@ int main(int argc, char **argv) {
         }
 
 
-        for (int x = 0; x < 10; x++){
+        for (int x = 0; x < nrows; x++){
             for (int y = 0; y < emb_size; y++){
-                std::cout << "The results don't match at: " << x << "," << y << ":  " << prediction[x][y] << ", "
-                          << out_emb2.vals_ptr()[x * emb_size + y] << std::endl;
-//                if (prediction[x][y] != out_emb2.vals_ptr()[x * emb_size + y]) {
-//                    std::cout << "The results don't match at: " << x << "," << y << ":  " << prediction[x][y] << ", "
-//                              << out_emb2.vals_ptr()[x * emb_size + y] << std::endl;
-//                    break;
-//                }
+                if (prediction[x][y].item<val_t>()!= out_emb2.vals_ptr()[x * emb_size + y]) {
+                    std::cout << "The results don't match at: " << x << "," << y << ":  " << prediction[x][y].item<val_t>() << ", "
+                              << out_emb2.vals_ptr()[x * emb_size + y] << std::endl;
+                    break;
+                }
             }
         }
 
