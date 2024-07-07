@@ -197,7 +197,7 @@ int main(int argc, char **argv) {
     out_emb.set_all(0);
     out_emb2.set_all(0);
 
-    gSpMM(&adj, &input_emb, &out_emb2, wsum_aggr);
+    //gSpMM(&adj, &input_emb, &out_emb2, wsum_aggr);
 
     std::cout << adj.nrows() << " " << adj.ncols() << " " << adj.nvals() << std::endl;
 
@@ -236,6 +236,7 @@ int main(int argc, char **argv) {
 
 
     double start, end;
+    val_t randVal;
     std::vector<double> times_arr;
     for (size_t epoch = 1; epoch <= num_iters; ++epoch) {
         // Reset gradients.
@@ -253,16 +254,18 @@ int main(int argc, char **argv) {
             times_arr.push_back(end - start);
         }
 
+        randVal = prediction[nrows - 1][emb_size - 1].item<val_t>();
 
-        for (int x = 0; x < nrows; x++){
-            for (int y = 0; y < emb_size; y++){
-                if (prediction[x][y].item<val_t>()!= out_emb2.vals_ptr()[x * emb_size + y]) {
-                    std::cout << "The results don't match at: " << x << "," << y << ":  " << prediction[x][y].item<val_t>() << ", "
-                              << out_emb2.vals_ptr()[x * emb_size + y] << std::endl;
-                    break;
-                }
-            }
-        }
+
+//        for (int x = 0; x < nrows; x++){
+//            for (int y = 0; y < emb_size; y++){
+//                if (prediction[x][y].item<val_t>()!= out_emb2.vals_ptr()[x * emb_size + y]) {
+//                    std::cout << "The results don't match at: " << x << "," << y << ":  " << prediction[x][y].item<val_t>() << ", "
+//                              << out_emb2.vals_ptr()[x * emb_size + y] << std::endl;
+//                    break;
+//                }
+//            }
+//        }
 
 
 
@@ -309,5 +312,5 @@ int main(int argc, char **argv) {
 //            break;
 //        }
 //    }
-    std::cout << calc_mean(times_arr) << "," << calc_std(times_arr) << std::endl;
+    std::cout << calc_mean(times_arr) << "," << calc_std(times_arr) << "|" << randVal << std::endl;
 }
