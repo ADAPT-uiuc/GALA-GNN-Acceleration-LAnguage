@@ -5,6 +5,8 @@
 #ifndef SPARSE_ACCELERATOR_TILING_H
 #define SPARSE_ACCELERATOR_TILING_H
 
+#include <torch/torch.h>
+
 // TODO -  This WILL work with CSR, but not sure of others at the moment
 // Tiling for Sparse + Dense matrix operations
 template<class SM, class DM>
@@ -212,6 +214,74 @@ std::vector<SM *> tiling_adj_rows(SM *src,
         }
     }
     return res;
+}
+
+// Need to produce this for BOTH input and output
+// TODO could make an unordered version of this? i.e. running parallely and adding as completed
+template<class SM>
+void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
+                          torch::Tensor &t_offsets,
+                          torch::Tensor &t_cols,
+                          torch::Tensor &t_vals,
+                          SM* src) {
+    // Get types
+    typedef typename SM::itype iT;
+    typedef typename SM::ntype nT;
+    typedef typename SM::vtype vT;
+
+    // Get stats from the original matrox
+    iT src_ncols = src->ncols();
+    iT src_nrows = src->nrows();
+    nT src_nvals = src->nvals();
+
+    auto options_int = torch::TensorOptions().dtype(torch::kInt).requires_grad(false).device(torch::kCUDA, 0);
+    auto options_float = torch::TensorOptions().dtype(torch::kFloat).requires_grad(true).device(torch::kCUDA, 0);
+
+    // The first and last value of this should also give the offsets for the columns and vals
+    auto output_offsets = torch::zeros({nrows + 1 * (col_breakpoints.size() - 1)}, options_int);
+    auto output_cols = torch::zeros({src_nvals}, options_int);
+    auto output_vals = torch::zeros({src_nvals}, options_float);
+
+    int *offset_ptr = output_oofsets.data_ptr<int>();
+    int *col_ptr = output_cols.data_ptr<int>();
+    float *val_ptr = output_vals.data_ptr<float>();
+
+    nT *src_offset_ptr = src->offset_ptr();
+    iT *src_ids_ptr = src->ids_ptr();
+    vT *src_vals_ptr = src->vals_ptr();
+
+    auto copy_offsets = (nT *) aligned_alloc(64, (src->nrows() + 1) * sizeof(nT));
+    memcpy(copy_offsets, src->offset_ptr(), (src->nrows() + 1) * sizeof(nT));
+
+    nT new_nvals = 0;
+    for (iT nth_tile = 0; nth_tile < col_breakpoints.size() - 1; nth_tile++) {
+        iT j_start = col_breakpoints.at(nth_tile);
+        iT j_end = col_breakpoints.at(nth_tile + 1);
+
+        // Set the initial offset
+        offset_ptr[nth_tile * (nrows + 1)] = new_nvals;
+
+        new_offset_ptr_vec.push_back(0);
+        for (iT i_i = 0; i_i < src_nrows; i_i += 1) {
+            nT first_node_edge = copy_offsets[i_i];
+            nT last_node_edge = src_offset_ptr[i_i + 1];
+
+            for (nT e = first_node_edge; e < last_node_edge; e++) {
+                int u = src_ids_ptr[e];
+                if (u >= j_start && u < j_end) {
+                    float val = src_vals_ptr[e];
+                    col_ptr[new_vals] = u;
+                    val_ptr[new_vals] = val;
+
+                    new_nvals += 1;
+                } else if (u >= j_end) {
+                    copy_offsets[i_i] = e;
+                    break;
+                }
+            }
+            offset_ptr[i_i + nth_tile * src_nrows] = new_nvals;
+        }
+    }
 }
 
 #ifdef PT_0

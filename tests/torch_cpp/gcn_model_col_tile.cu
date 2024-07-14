@@ -59,9 +59,8 @@ std::vector <at::Tensor> gather_forward_gcn(
         torch::Tensor input_dense,
         torch::Tensor offset_graph,
         torch::Tensor columns_graph,
-        torch::Tensor value_graph) {
-    auto nrows = offset_graph.numel() - 1;
-    auto nvals = columns_graph.numel();
+        torch::Tensor value_graph,
+        int nrows, int segments) {
     auto full_iden = input_dense.numel();
     auto dcols = full_iden / nrows;
 
@@ -89,10 +88,6 @@ std::vector <at::Tensor> gather_forward_gcn(
     size_t bufferSize = 0;
 
     CUSPARSE_CHECK(cusparseCreate(&handle));
-    CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
-                                     offset_ptr, col_ptr, val_ptr,
-                                     CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
-                                     CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
     // Create dense matrix B
     CUSPARSE_CHECK(cusparseCreateDnMat(&matB, nrows, dcols, dcols, iden_ptr,
                                        CUDA_R_32F, CUSPARSE_ORDER_ROW)); // changed
@@ -100,22 +95,34 @@ std::vector <at::Tensor> gather_forward_gcn(
     CUSPARSE_CHECK(cusparseCreateDnMat(&matC, nrows, dcols, dcols, oden_array,
                                        CUDA_R_32F, CUSPARSE_ORDER_ROW)); // changed
 
-    // allocate an external buffer if needed
-    CUSPARSE_CHECK(cusparseSpMM_bufferSize(
-            handle,
-            CUSPARSE_OPERATION_NON_TRANSPOSE,
-            CUSPARSE_OPERATION_NON_TRANSPOSE,
-            &alpha, matA, matB, &beta, matC, CUDA_R_32F,
-            CUSPARSE_SPMM_CSR_ALG2,
-            &bufferSize));
-    CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));
+    for (int i = 0; i < segments; i++){
+        int start_vals = offset_ptr[segments * (nrows + 1)];
+        int end_vals = offset_ptr[segments * (nrows + 1) + nrows];
+        int nvals = end_vals - start_vals;
 
-    CUSPARSE_CHECK(cusparseSpMM(handle,
-                                CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                &alpha, matA, matB, &beta, matC, CUDA_R_32F,
-                                CUSPARSE_SPMM_CSR_ALG2,
-                                dBuffer));
+        CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
+                                         &offset_ptr[segments * (nrows + 1)], &col_ptr[start_vals], &val_ptr[start_vals],
+                                         CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
+                                         CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
+
+        // allocate an external buffer if needed
+        CUSPARSE_CHECK(cusparseSpMM_bufferSize(
+                handle,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                &alpha, matA, matB, &beta, matC, CUDA_R_32F,
+                CUSPARSE_SPMM_CSR_ALG2,
+                &bufferSize));
+        CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));
+
+        CUSPARSE_CHECK(cusparseSpMM(handle,
+                                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                    &alpha, matA, matB, &beta, matC, CUDA_R_32F,
+                                    CUSPARSE_SPMM_CSR_ALG2,
+                                    dBuffer));
+    }
+
 
     CUSPARSE_CHECK(cusparseDestroySpMat(matA));
     CUSPARSE_CHECK(cusparseDestroyDnMat(matB));
@@ -132,8 +139,9 @@ struct GCN : torch::nn::Module {
     std::vector<torch::Tensor> forward(torch::Tensor input_dense,
                           torch::Tensor offset_graph,
                           torch::Tensor columns_graph,
-                          torch::Tensor value_graph) {
-        return gather_forward_gcn(input_dense, offset_graph, columns_graph, value_graph);
+                          torch::Tensor value_graph,
+                          int nrows, int segments) {
+        return gather_forward_gcn(input_dense, offset_graph, columns_graph, value_graph, nrows, segments);
 
 //        x = torch::relu(fc1->forward(x.reshape({x.size(0), 784})));
 //        x = torch::dropout(x, /*p=*/0.5, /*train=*/is_training());
@@ -182,8 +190,11 @@ int main(int argc, char **argv) {
     std::vector<SM *> tiled_adj;
     tiled_adj.push_back(&adj);
 
+    torch::Tensor total_offsets;
+    torch::Tensor total_cols;
+    torch::Tensor total_vals;
     std::vector<iT> tile_offsets = static_ord_col_breakpoints<SM>(&adj, cols_per_tile);
-    ord_col_tiling(tile_offsets, tiled_adj, 0);
+    ord_col_tiling_torch(tile_offsets, total_offsets, total_cols, total_vals, &adj);
 
     // Init input with random numbers
     DM input_emb;
@@ -206,8 +217,6 @@ int main(int argc, char **argv) {
     // Comparison for checking if SpMM works correctlu
     out_emb.set_all(0);
     out_emb2.set_all(0);
-
-    //gSpMM(&adj, &input_emb, &out_emb2, wsum_aggr);
 
     std::cout << adj.nrows() << " " << adj.ncols() << " " << adj.nvals() << std::endl;
 
@@ -236,12 +245,7 @@ int main(int argc, char **argv) {
     CUDA_CHECK(cudaMemcpy(dB, input_emb.vals_ptr(), (nrows * emb_size)  * sizeof(float),
                           cudaMemcpyHostToDevice));
 
-    auto options_cu_int = torch::TensorOptions().dtype(torch::kInt).device(torch::kCUDA, 0);
-    torch::Tensor t_offsets = torch::from_blob(dA_csrOffsets, {nrows + 1}, options_cu_int);
-    torch::Tensor t_cols = torch::from_blob(dA_columns, {nvals}, options_cu_int);
-
     auto options_cu_float = torch::TensorOptions().dtype(torch::kFloat).device(torch::kCUDA, 0);
-    torch::Tensor t_vals = torch::from_blob(dA_values, {nvals}, options_cu_float);
     torch::Tensor t_iden = torch::from_blob(dB, {nrows * emb_size}, options_cu_float);
 
 
@@ -255,7 +259,7 @@ int main(int argc, char **argv) {
         cudaDeviceSynchronize();
         start = get_time();
 //        std::vector<torch::Tensor> prediction = net->forward(t_iden, t_offsets, t_cols, t_vals);
-        torch::Tensor prediction = net->forward(t_iden, t_offsets, t_cols, t_vals)[0];
+        torch::Tensor prediction = net->forward(t_iden, total_offsets, total_cols, total_vals, nrows, tile_offsets.size() - 1)[0];
 
         cudaDeviceSynchronize();
         end = get_time();
