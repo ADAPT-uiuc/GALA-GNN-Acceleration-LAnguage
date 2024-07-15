@@ -132,13 +132,16 @@ std::vector <at::Tensor> gather_forward_gcn(
                                     dBuffer));
         cudaDeviceSynchronize();
         std::cout << "c" << i << std::endl;
+
+        CUSPARSE_CHECK(cusparseDestroySpMat(matA));
     }
 
-
-    CUSPARSE_CHECK(cusparseDestroySpMat(matA));
     CUSPARSE_CHECK(cusparseDestroyDnMat(matB));
     CUSPARSE_CHECK(cusparseDestroyDnMat(matC));
     CUSPARSE_CHECK(cusparseDestroy(handle));
+
+    cudaDeviceSynchronize();
+    std::cout << "d" << std::endl;
 
     return {output_dense};
 }
