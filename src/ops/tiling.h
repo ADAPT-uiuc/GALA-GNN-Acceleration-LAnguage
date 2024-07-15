@@ -269,8 +269,8 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
                 int u = src_ids_ptr[e];
                 if (u >= j_start && u < j_end) {
                     float val = src_vals_ptr[e];
-                    col_ptr[new_vals] = u;
-                    val_ptr[new_vals] = val;
+                    col_ptr[new_nvals] = u;
+                    val_ptr[new_nvals] = val;
 
                     new_nvals += 1;
                 } else if (u >= j_end) {
