@@ -220,9 +220,9 @@ std::vector<SM *> tiling_adj_rows(SM *src,
 // TODO could make an unordered version of this? i.e. running parallely and adding as completed
 template<class SM>
 void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
-                          torch::Tensor &t_offsets,
-                          torch::Tensor &t_cols,
-                          torch::Tensor &t_vals,
+                          torch::Tensor &output_offsets,
+                          torch::Tensor &output_cols,
+                          torch::Tensor &output_vals,
                           SM* src) {
     // Get types
     typedef typename SM::itype iT;
@@ -238,9 +238,9 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
     auto options_float = torch::TensorOptions().dtype(torch::kFloat).requires_grad(true).device(torch::kCUDA, 0);
 
     // The first and last value of this should also give the offsets for the columns and vals
-    auto output_offsets = torch::zeros({src_nrows + 1 * (col_breakpoints.size() - 1)}, options_int);
-    auto output_cols = torch::zeros({src_nvals}, options_int);
-    auto output_vals = torch::zeros({src_nvals}, options_float);
+    output_offsets = torch::zeros({src_nrows + 1 * (col_breakpoints.size() - 1)}, options_int);
+    output_cols = torch::zeros({src_nvals}, options_int);
+    output_vals = torch::zeros({src_nvals}, options_float);
 
     int *offset_ptr = output_offsets.data_ptr<int>();
     int *col_ptr = output_cols.data_ptr<int>();
@@ -259,7 +259,7 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
         iT j_end = col_breakpoints.at(nth_tile + 1);
 
         // Set the initial offset
-        offset_ptr[nth_tile * (nrows + 1)] = new_nvals;
+        offset_ptr[nth_tile * (src_nrows + 1)] = new_nvals;
 
         for (iT i_i = 0; i_i < src_nrows; i_i += 1) {
             nT first_node_edge = copy_offsets[i_i];
