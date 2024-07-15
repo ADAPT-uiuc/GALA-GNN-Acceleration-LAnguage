@@ -95,6 +95,8 @@ std::vector <at::Tensor> gather_forward_gcn(
     CUSPARSE_CHECK(cusparseCreateDnMat(&matC, nrows, dcols, dcols, oden_array,
                                        CUDA_R_32F, CUSPARSE_ORDER_ROW)); // changed
 
+    std::cout << "works" << std::endl;
+
     for (int i = 0; i < segments; i++){
         int start_vals = offset_ptr[segments * (nrows + 1)];
         int end_vals = offset_ptr[segments * (nrows + 1) + nrows];
