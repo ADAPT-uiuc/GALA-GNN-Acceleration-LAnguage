@@ -288,7 +288,7 @@ int main(int argc, char **argv) {
 
         randVal = prediction[nrows - 1][emb_size - 1].item<val_t>();
 
-
+        std::cout << "runs" << std::endl;
         for (int x = 0; x < nrows; x++){
             for (int y = 0; y < emb_size; y++){
                 if (prediction[x][y].item<val_t>()!= out_emb2.vals_ptr()[x * emb_size + y]) {
