@@ -284,7 +284,7 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
                     break;
                 }
             }
-            offset_ptr[i_i + nth_tile * src_nrows] = new_nvals;
+            offset_ptr[i_i + 1 + nth_tile * (src_nrows + 1)] = new_nvals;
         }
         output_bounds[nth_tile * 2 + 1] = new_nvals;
     }
