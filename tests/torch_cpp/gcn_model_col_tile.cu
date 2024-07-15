@@ -306,7 +306,7 @@ int main(int argc, char **argv) {
             times_arr.push_back(end - start);
         }
 
-        randVal = prediction[nrows - 1][emb_size - 1].item<val_t>();
+        //randVal = prediction[nrows - 1][emb_size - 1].item<val_t>();
 
 //        std::cout << "runs" << std::endl;
 //        for (int x = 0; x < nrows; x++){
