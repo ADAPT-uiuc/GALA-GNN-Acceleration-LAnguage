@@ -86,8 +86,6 @@ std::vector <at::Tensor> gather_forward_gcn(
     cusparseHandle_t handle = NULL;
     cusparseSpMatDescr_t matA;
     cusparseDnMatDescr_t matB, matC;
-    void *dBuffer = NULL;
-    size_t bufferSize = 0;
 
     cudaDeviceSynchronize();
 
@@ -108,7 +106,8 @@ std::vector <at::Tensor> gather_forward_gcn(
                                          offset_ptr + (i1 * (nrows + 1)), col_ptr + start_vals, val_ptr + start_vals,
                                          CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
                                          CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
-        cudaDeviceSynchronize();
+        void *dBuffer = NULL;
+        size_t bufferSize = 0;
         // allocate an external buffer if needed
         CUSPARSE_CHECK(cusparseSpMM_bufferSize(
                 handle,
@@ -127,7 +126,6 @@ std::vector <at::Tensor> gather_forward_gcn(
                                     dBuffer));
 
         CUSPARSE_CHECK(cusparseDestroySpMat(matA));
-        CUSPARSE_CHECK(cusparseDestroy(dBuffer));
     }
 
 //    CUSPARSE_CHECK(cusparseDestroySpMat(matA));
