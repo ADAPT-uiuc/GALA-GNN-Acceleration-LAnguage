@@ -21,9 +21,9 @@ add_compile_definitions(GN_1)
 add_compile_definitions(PT_0)
 add_compile_definitions(ST_0)
 add_compile_definitions(A_ALLOC)
-add_executable(gala_cuda gcn_model.cu)
-# Enable C++11
-target_compile_features(gala_cuda PRIVATE cxx_std_14)
+#add_executable(gala_cuda gcn_model.cu)
+## Enable C++11
+#target_compile_features(gala_cuda PRIVATE cxx_std_14)
 
 add_executable(gala_cuda_tile gcn_model_col_tile.cu)
 # Enable C++11
