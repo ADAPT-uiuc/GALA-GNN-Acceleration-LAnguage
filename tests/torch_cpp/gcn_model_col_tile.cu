@@ -87,6 +87,8 @@ std::vector <at::Tensor> gather_forward_gcn(
     void *dBuffer = NULL;
     size_t bufferSize = 0;
 
+    cudaDeviceSynchronize();
+
     CUSPARSE_CHECK(cusparseCreate(&handle));
     // Create dense matrix B
     CUSPARSE_CHECK(cusparseCreateDnMat(&matB, nrows, dcols, dcols, iden_ptr,
@@ -98,12 +100,12 @@ std::vector <at::Tensor> gather_forward_gcn(
     std::cout << "works " << segments <<  std::endl;
 
     for (int i = 0; i < segments; i++){
-        std::cout << "a" << i << std::endl;
+        std::cout << "a " << i << std::endl;
         int start_vals = offset_ptr[i * (nrows + 1)];
-        std::cout << "a1" << i << std::endl;
+        std::cout << "a1 " << i << std::endl;
         int end_vals = offset_ptr[i * (nrows + 1) + nrows];
         int nvals = end_vals - start_vals;
-        std::cout << "a2" << i << std::endl;
+        std::cout << "a2 " << i << std::endl;
         CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
                                          offset_ptr + (i * (nrows + 1)), col_ptr + start_vals, val_ptr + start_vals,
                                          CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
