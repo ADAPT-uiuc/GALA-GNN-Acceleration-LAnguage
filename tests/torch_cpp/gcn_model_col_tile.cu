@@ -265,8 +265,6 @@ int main(int argc, char **argv) {
     torch::Tensor t_vals = torch::from_blob(dA_values, {nvals}, options_cu_float);
     torch::Tensor t_iden = torch::from_blob(dB, {nrows * emb_size}, options_cu_float);
 
-    std::cout << "works" << std::endl;
-
     double start, end;
     val_t randVal;
     std::vector<double> times_arr;
