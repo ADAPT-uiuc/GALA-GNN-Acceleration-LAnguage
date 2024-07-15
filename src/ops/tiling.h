@@ -234,8 +234,8 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
     iT src_nrows = src->nrows();
     nT src_nvals = src->nvals();
 
-    auto options_int = torch::TensorOptions().dtype(torch::kInt).requires_grad(false).device(torch::kCUDA, 0);
-    auto options_float = torch::TensorOptions().dtype(torch::kFloat).requires_grad(true).device(torch::kCUDA, 0);
+    auto options_int = torch::TensorOptions().dtype(torch::kInt).requires_grad(false);
+    auto options_float = torch::TensorOptions().dtype(torch::kFloat).requires_grad(true);
 
     // The first and last value of this should also give the offsets for the columns and vals
     output_offsets = torch::zeros({(src_nrows + 1) * ((iT)col_breakpoints.size() - 1)}, options_int);
