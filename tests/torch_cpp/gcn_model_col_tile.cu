@@ -77,6 +77,7 @@ std::vector <at::Tensor> gather_forward_gcn(
     int *offset_ptr = offset_graph.data_ptr<int>();
     int *col_ptr = columns_graph.data_ptr<int>();
     float *val_ptr = value_graph.data_ptr<float>();
+    int *bounds_ptr = bounds.data_ptr<int>();
 
     float alpha = 1.0f;
     float beta = 1.0f;
@@ -102,9 +103,9 @@ std::vector <at::Tensor> gather_forward_gcn(
 
     for (int i = 0; i < segments; i++){
         std::cout << "a " << i << std::endl;
-        int start_vals = bounds[i * 2];
+        int start_vals = bounds_ptr[i * 2];
         std::cout << "a1 " << i << std::endl;
-        int end_vals = bounds[i * 2 + 1];
+        int end_vals = bounds_ptr[i * 2 + 1];
         int nvals = end_vals - start_vals;
         std::cout << "a2 " << i << std::endl;
         CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
