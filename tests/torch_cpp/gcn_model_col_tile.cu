@@ -135,7 +135,7 @@ std::vector <at::Tensor> gather_forward_gcn(
         cudaDeviceSynchronize();
         std::cout << "a3_4 " << i << std::endl;
 
-        CUSPARSE_CHECK(cudaFree(dBuffer));
+        CUDA_CHECK(cudaFree(dBuffer));
         CUSPARSE_CHECK(cusparseDestroySpMat(matA));
     }
 
