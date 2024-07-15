@@ -134,8 +134,8 @@ std::vector <at::Tensor> gather_forward_gcn(
                                          offset_ptr + (i1 * (nrows + 1)), col_ptr + start_vals, val_ptr + start_vals,
                                          CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
                                          CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
-        cudaDeviceSynchronize();
-        std::cout << "a0 " << i << std::endl;
+        //cudaDeviceSynchronize();
+        //std::cout << "a0 " << i << std::endl;
 
         CUSPARSE_CHECK(cusparseSpMM(handle,
                                     CUSPARSE_OPERATION_NON_TRANSPOSE,
@@ -145,14 +145,15 @@ std::vector <at::Tensor> gather_forward_gcn(
                                     dBuffer));
         CUSPARSE_CHECK(cusparseDestroySpMat(matA));
 
-        cudaDeviceSynchronize();
-        std::cout << "a4 " << i << std::endl;
+        //cudaDeviceSynchronize();
+        //std::cout << "a4 " << i << std::endl;
     }
 
 //    CUSPARSE_CHECK(cusparseDestroySpMat(matA));
     CUSPARSE_CHECK(cusparseDestroyDnMat(matB));
     CUSPARSE_CHECK(cusparseDestroyDnMat(matC));
     CUSPARSE_CHECK(cusparseDestroy(handle));
+    CUDA_CHECK(dBuffer);
 
     return {output_dense};
 }
