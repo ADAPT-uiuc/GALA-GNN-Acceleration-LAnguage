@@ -238,7 +238,7 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
     auto options_float = torch::TensorOptions().dtype(torch::kFloat).requires_grad(true).device(torch::kCUDA, 0);
 
     // The first and last value of this should also give the offsets for the columns and vals
-    output_offsets = torch::zeros({(iT)(src_nrows + 1) * (col_breakpoints.size() - 1)}, options_int);
+    output_offsets = torch::zeros({(src_nrows + 1) * ((iT)col_breakpoints.size() - 1)}, options_int);
     output_cols = torch::zeros({src_nvals}, options_int);
     output_vals = torch::zeros({src_nvals}, options_float);
 
@@ -254,7 +254,7 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
     memcpy(copy_offsets, src->offset_ptr(), (src->nrows() + 1) * sizeof(nT));
 
     nT new_nvals = 0;
-    for (iT nth_tile = 0; nth_tile < col_breakpoints.size() - 1; nth_tile++) {
+    for (iT nth_tile = 0; nth_tile < (iT)col_breakpoints.size() - 1; nth_tile++) {
         iT j_start = col_breakpoints.at(nth_tile);
         iT j_end = col_breakpoints.at(nth_tile + 1);
 
