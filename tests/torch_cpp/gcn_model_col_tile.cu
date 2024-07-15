@@ -365,5 +365,7 @@ int main(int argc, char **argv) {
 //            break;
 //        }
 //    }
-    std::cout << calc_mean(times_arr) << "," << calc_std(times_arr) << "|" << randVal << std::endl;
+//    std::cout << calc_mean(times_arr) << "," << calc_std(times_arr) << "|" << randVal << std::endl;
+    std::cout << calc_mean(times_arr) << "," << calc_std(times_arr) << std::endl;
+
 }
