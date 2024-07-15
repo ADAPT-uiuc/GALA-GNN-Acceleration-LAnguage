@@ -137,17 +137,6 @@ std::vector <at::Tensor> gather_forward_gcn(
         cudaDeviceSynchronize();
         std::cout << "a0 " << i << std::endl;
 
-        // allocate an external buffer if needed
-        CUSPARSE_CHECK(cusparseSpMM_bufferSize(
-                handle,
-                CUSPARSE_OPERATION_NON_TRANSPOSE,
-                CUSPARSE_OPERATION_NON_TRANSPOSE,
-                &alpha, matA, matB, &beta, matC, CUDA_R_32F,
-                CUSPARSE_SPMM_CSR_ALG2,
-                &bufferSize));
-        cudaDeviceSynchronize();
-        std::cout << "a1 " << i << std::endl;
-
         CUSPARSE_CHECK(cusparseSpMM(handle,
                                     CUSPARSE_OPERATION_NON_TRANSPOSE,
                                     CUSPARSE_OPERATION_NON_TRANSPOSE,
