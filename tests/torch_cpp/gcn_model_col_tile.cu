@@ -124,7 +124,7 @@ std::vector <at::Tensor> gather_forward_gcn(
             &bufferSize));
     CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));
 
-    for (int i = 0; i < segments; i++){
+    for (int i = 0; i < 1; i++){
 //        int i1 = 0;
 //        std::cout << "a " << i << std::endl;
 //        int start_vals = bounds_ptr[i1 * 2];
