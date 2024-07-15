@@ -98,16 +98,16 @@ std::vector <at::Tensor> gather_forward_gcn(
     std::cout << "works " << segments <<  std::endl;
 
     for (int i = 0; i < segments; i++){
-        std::cout << i << std::endl;
+        std::cout << "a" << i << std::endl;
         int start_vals = offset_ptr[i * (nrows + 1)];
         int end_vals = offset_ptr[i * (nrows + 1) + nrows];
         int nvals = end_vals - start_vals;
 
         CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
-                                         &offset_ptr[i * (nrows + 1)], &col_ptr[start_vals], &val_ptr[start_vals],
+                                         offset_ptr + (i * (nrows + 1)), col_ptr + start_vals, val_ptr + start_vals,
                                          CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
                                          CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
-
+        std::cout << "b" << i << std::endl;
         // allocate an external buffer if needed
         CUSPARSE_CHECK(cusparseSpMM_bufferSize(
                 handle,
@@ -124,6 +124,7 @@ std::vector <at::Tensor> gather_forward_gcn(
                                     &alpha, matA, matB, &beta, matC, CUDA_R_32F,
                                     CUSPARSE_SPMM_CSR_ALG2,
                                     dBuffer));
+        std::cout << "c" << i << std::endl;
     }
 
 
