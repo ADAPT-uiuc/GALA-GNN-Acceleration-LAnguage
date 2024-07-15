@@ -132,14 +132,12 @@ std::vector <at::Tensor> gather_forward_gcn(
                                     &alpha, matA, matB, &beta, matC, CUDA_R_32F,
                                     CUSPARSE_SPMM_CSR_ALG2,
                                     dBuffer));
+        CUSPARSE_CHECK(cusparseDestroySpMat(matA));
+
         cudaDeviceSynchronize();
         std::cout << "a3 " << i << std::endl;
 
         CUDA_CHECK(cudaFree(dBuffer));
-
-        cudaDeviceSynchronize();
-        std::cout << "a5 " << i << std::endl;
-        CUSPARSE_CHECK(cusparseDestroySpMat(matA));
 
         cudaDeviceSynchronize();
         std::cout << "a4 " << i << std::endl;
