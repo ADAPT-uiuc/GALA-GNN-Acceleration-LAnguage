@@ -312,7 +312,6 @@ int main(int argc, char **argv) {
                           cudaMemcpyHostToDevice));
 //    CUDA_CHECK(cudaMemcpy(dA_columns, adj.ids_ptr(), nvals * sizeof(int),
 //                          cudaMemcpyHostToDevice));
-    auto options_cu_int = torch::TensorOptions().dtype(torch::kInt).device(torch::kCUDA, 0);
     torch::Tensor t_offsets = torch::from_blob(dA_csrOffsets, {nrows + 1}, options_cu_int);
 //    torch::Tensor t_cols = torch::from_blob(dA_columns, {nvals}, options_cu_int);
 
