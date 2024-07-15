@@ -196,7 +196,9 @@ int main(int argc, char **argv) {
     std::vector<iT> tile_offsets = static_ord_col_breakpoints<SM>(&adj, cols_per_tile);
     ord_col_tiling_torch(tile_offsets, total_offsets, total_cols, total_vals, &adj);
 
-    std::cout << "works";
+    int *offset_ptr = total_offsets.data_ptr<int>();
+    int *col_ptr = total_cols.data_ptr<int>();
+    float *val_ptr = total_vals.data_ptr<float>();
 
     // Init input with random numbers
     DM input_emb;
@@ -225,6 +227,8 @@ int main(int argc, char **argv) {
     // Create a new Net.
     auto net = std::make_shared<GCN>();
 
+    int segments = tile_offsets.size() - 1;
+
     // Instantiate an SGD optimization algorithm to update our Net's parameters.
     torch::optim::SGD optimizer(net->parameters(), /*lr=*/0.01);
 
@@ -232,24 +236,31 @@ int main(int argc, char **argv) {
     float *dA_values, *dB;
 
     CUDA_CHECK(cudaMalloc((void **) &dA_csrOffsets,
-                          (nrows + 1) * sizeof(int)));
+               ((nrows + 1) * segments) * sizeof(int)));
     CUDA_CHECK(cudaMalloc((void **) &dA_columns, nvals * sizeof(int)));
     CUDA_CHECK(cudaMalloc((void **) &dA_values, nvals * sizeof(float)));
     CUDA_CHECK(cudaMalloc((void **) &dB, (nrows * emb_size) * sizeof(float)));
 
-    CUDA_CHECK(cudaMemcpy(dA_csrOffsets, adj.offset_ptr(),
-                          (nrows + 1) * sizeof(int),
+    CUDA_CHECK(cudaMemcpy(dA_csrOffsets, offset_ptr,
+                          ((nrows + 1) * segments) * sizeof(int),
                           cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dA_columns, adj.ids_ptr(), nvals * sizeof(int),
+    CUDA_CHECK(cudaMemcpy(dA_columns, col_ptr, nvals * sizeof(int),
                           cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dA_values, adj.vals_ptr(), nvals * sizeof(float),
+    CUDA_CHECK(cudaMemcpy(dA_values, val_ptr, nvals * sizeof(float),
                           cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(dB, input_emb.vals_ptr(), (nrows * emb_size)  * sizeof(float),
                           cudaMemcpyHostToDevice));
 
+    auto options_cu_int = torch::TensorOptions().dtype(torch::kInt).device(torch::kCUDA, 0);
+    torch::Tensor t_offsets = torch::from_blob(dA_csrOffsets, {(nrows + 1) * segments}, options_cu_int);
+    torch::Tensor t_cols = torch::from_blob(dA_columns, {nvals}, options_cu_int);
+
     auto options_cu_float = torch::TensorOptions().dtype(torch::kFloat).device(torch::kCUDA, 0);
+    torch::Tensor t_vals = torch::from_blob(dA_values, {nvals}, options_cu_float);
     torch::Tensor t_iden = torch::from_blob(dB, {nrows * emb_size}, options_cu_float);
 
+
+    std::cout << "works" << std::endl;
 
     double start, end;
     val_t randVal;
@@ -261,7 +272,7 @@ int main(int argc, char **argv) {
         cudaDeviceSynchronize();
         start = get_time();
 //        std::vector<torch::Tensor> prediction = net->forward(t_iden, t_offsets, t_cols, t_vals);
-        torch::Tensor prediction = net->forward(t_iden, total_offsets, total_cols, total_vals, nrows, tile_offsets.size() - 1)[0];
+        torch::Tensor prediction = net->forward(t_iden, t_offsets, t_cols, t_vals, nrows, segments)[0];
 
         cudaDeviceSynchronize();
         end = get_time();
