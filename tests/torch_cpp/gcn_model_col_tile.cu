@@ -283,7 +283,7 @@ int main(int argc, char **argv) {
         cudaDeviceSynchronize();
         start = get_time();
 //        std::vector<torch::Tensor> prediction = net->forward(t_iden, t_offsets, t_cols, t_vals);
-        torch::Tensor prediction = net->forward(t_iden, t_offsets, t_cols, t_vals, nrows, segments, total_bounds)[0];
+        torch::Tensor prediction = net->forward(t_iden, t_offsets, t_cols, t_vals, total_bounds, nrows, segments)[0];
 
         cudaDeviceSynchronize();
         end = get_time();
