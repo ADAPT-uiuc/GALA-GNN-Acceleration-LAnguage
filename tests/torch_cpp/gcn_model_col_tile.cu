@@ -102,14 +102,15 @@ std::vector <at::Tensor> gather_forward_gcn(
     std::cout << "works " << segments <<  std::endl;
 
     for (int i = 0; i < segments; i++){
+        int i1 = 0;
         std::cout << "a " << i << std::endl;
-        int start_vals = bounds_ptr[i * 2];
+        int start_vals = bounds_ptr[i1 * 2];
         std::cout << "a1 " << i << std::endl;
-        int end_vals = bounds_ptr[i * 2 + 1];
+        int end_vals = bounds_ptr[i1 * 2 + 1];
         int nvals = end_vals - start_vals;
         std::cout << "a2 " << i << std::endl;
         CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
-                                         offset_ptr + (i * (nrows + 1)), col_ptr + start_vals, val_ptr + start_vals,
+                                         offset_ptr + (i1 * (nrows + 1)), col_ptr + start_vals, val_ptr + start_vals,
                                          CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
                                          CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
         cudaDeviceSynchronize();
