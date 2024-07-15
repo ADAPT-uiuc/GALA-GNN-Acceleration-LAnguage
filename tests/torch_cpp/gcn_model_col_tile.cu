@@ -101,52 +101,52 @@ std::vector <at::Tensor> gather_forward_gcn(
 
     std::cout << "works " << segments <<  std::endl;
 
-    int i1 = 0;
-    std::cout << "a " << i1 << std::endl;
-    int start_vals = bounds_ptr[i1 * 2];
-    std::cout << "a1 " << i1 << std::endl;
-    int end_vals = bounds_ptr[i1 * 2 + 1];
-    int nvals = end_vals - start_vals;
-    std::cout << "a2 " << i1 << std::endl;
-    CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
-                                     offset_ptr + (i1 * (nrows + 1)), col_ptr + start_vals, val_ptr + start_vals,
-                                     CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
-                                     CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
-    cudaDeviceSynchronize();
-    std::cout << "b" << i1 << std::endl;
-    // allocate an external buffer if needed
-    CUSPARSE_CHECK(cusparseSpMM_bufferSize(
-            handle,
-            CUSPARSE_OPERATION_NON_TRANSPOSE,
-            CUSPARSE_OPERATION_NON_TRANSPOSE,
-            &alpha, matA, matB, &beta, matC, CUDA_R_32F,
-            CUSPARSE_SPMM_CSR_ALG2,
-            &bufferSize));
-    CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));
+//    int i1 = 0;
+//    std::cout << "a " << i1 << std::endl;
+//    int start_vals = bounds_ptr[i1 * 2];
+//    std::cout << "a1 " << i1 << std::endl;
+//    int end_vals = bounds_ptr[i1 * 2 + 1];
+//    int nvals = end_vals - start_vals;
+//    std::cout << "a2 " << i1 << std::endl;
+//    CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
+//                                     offset_ptr + (i1 * (nrows + 1)), col_ptr + start_vals, val_ptr + start_vals,
+//                                     CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
+//                                     CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
+//    cudaDeviceSynchronize();
+//    std::cout << "b" << i1 << std::endl;
+//    // allocate an external buffer if needed
+//    CUSPARSE_CHECK(cusparseSpMM_bufferSize(
+//            handle,
+//            CUSPARSE_OPERATION_NON_TRANSPOSE,
+//            CUSPARSE_OPERATION_NON_TRANSPOSE,
+//            &alpha, matA, matB, &beta, matC, CUDA_R_32F,
+//            CUSPARSE_SPMM_CSR_ALG2,
+//            &bufferSize));
+//    CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));
 
     for (int i = 0; i < segments; i++){
-//        int i1 = 0;
-//        std::cout << "a " << i << std::endl;
-//        int start_vals = bounds_ptr[i1 * 2];
-//        std::cout << "a1 " << i << std::endl;
-//        int end_vals = bounds_ptr[i1 * 2 + 1];
-//        int nvals = end_vals - start_vals;
-//        std::cout << "a2 " << i << std::endl;
-//        CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
-//                                         offset_ptr + (i1 * (nrows + 1)), col_ptr + start_vals, val_ptr + start_vals,
-//                                         CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
-//                                         CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
-//        cudaDeviceSynchronize();
-//        std::cout << "b" << i << std::endl;
-//        // allocate an external buffer if needed
-//        CUSPARSE_CHECK(cusparseSpMM_bufferSize(
-//                handle,
-//                CUSPARSE_OPERATION_NON_TRANSPOSE,
-//                CUSPARSE_OPERATION_NON_TRANSPOSE,
-//                &alpha, matA, matB, &beta, matC, CUDA_R_32F,
-//                CUSPARSE_SPMM_CSR_ALG2,
-//                &bufferSize));
-//        CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));
+        int i1 = 0;
+        std::cout << "a " << i << std::endl;
+        int start_vals = bounds_ptr[i1 * 2];
+        std::cout << "a1 " << i << std::endl;
+        int end_vals = bounds_ptr[i1 * 2 + 1];
+        int nvals = end_vals - start_vals;
+        std::cout << "a2 " << i << std::endl;
+        CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
+                                         offset_ptr + (i1 * (nrows + 1)), col_ptr + start_vals, val_ptr + start_vals,
+                                         CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
+                                         CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
+        cudaDeviceSynchronize();
+        std::cout << "b" << i << std::endl;
+        // allocate an external buffer if needed
+        CUSPARSE_CHECK(cusparseSpMM_bufferSize(
+                handle,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                &alpha, matA, matB, &beta, matC, CUDA_R_32F,
+                CUSPARSE_SPMM_CSR_ALG2,
+                &bufferSize));
+        CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));
 
         cudaDeviceSynchronize();
         std::cout << "b1" << i << std::endl;
@@ -301,14 +301,6 @@ int main(int argc, char **argv) {
     auto options_cu_float = torch::TensorOptions().dtype(torch::kFloat).device(torch::kCUDA, 0);
     torch::Tensor t_vals = torch::from_blob(dA_values, {nvals}, options_cu_float);
     torch::Tensor t_iden = torch::from_blob(dB, {nrows * emb_size}, options_cu_float);
-
-//    CUDA_CHECK(cudaMalloc((void **) &dA_csrOffsets,
-//                          (nrows + 1) * sizeof(int)));
-//    CUDA_CHECK(cudaMemcpy(dA_csrOffsets, adj.offset_ptr(),
-//                          (nrows + 1) * sizeof(int),
-//                          cudaMemcpyHostToDevice));
-//    torch::Tensor t_offsets = torch::from_blob(dA_csrOffsets, {nrows + 1}, options_cu_int);
-
 
     std::cout << "works" << std::endl;
 
