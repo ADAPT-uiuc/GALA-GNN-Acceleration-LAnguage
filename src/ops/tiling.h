@@ -223,6 +223,7 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
                           torch::Tensor &output_offsets,
                           torch::Tensor &output_cols,
                           torch::Tensor &output_vals,
+                          torch::Tensor &output_bounds,
                           SM* src) {
     // Get types
     typedef typename SM::itype iT;
@@ -241,6 +242,8 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
     output_offsets = torch::zeros({(src_nrows + 1) * ((iT)col_breakpoints.size() - 1)}, options_int);
     output_cols = torch::zeros({src_nvals}, options_int);
     output_vals = torch::zeros({src_nvals}, options_float);
+
+    output_bounds = torch::zeros({2 * ((iT)col_breakpoints.size() - 1)}, options_int);
 
     int *offset_ptr = output_offsets.data_ptr<int>();
     int *col_ptr = output_cols.data_ptr<int>();
@@ -263,7 +266,7 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
 
         // Set the initial offset
         offset_ptr[nth_tile * (src_nrows + 1)] = new_nvals;
-
+        output_bounds[nth_tile * 2] = new_nvals
         for (iT i_i = 0; i_i < src_nrows; i_i += 1) {
             nT first_node_edge = copy_offsets[i_i];
             nT last_node_edge = src_offset_ptr[i_i + 1];
@@ -283,6 +286,7 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
             }
             offset_ptr[i_i + nth_tile * src_nrows] = new_nvals;
         }
+        output_bounds[nth_tile * 2 + 1] = new_nvals
     }
 }
 

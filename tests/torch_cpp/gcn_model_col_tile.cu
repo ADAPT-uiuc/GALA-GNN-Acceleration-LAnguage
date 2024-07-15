@@ -60,6 +60,7 @@ std::vector <at::Tensor> gather_forward_gcn(
         torch::Tensor offset_graph,
         torch::Tensor columns_graph,
         torch::Tensor value_graph,
+        torch::Tensor bounds,
         int nrows, int segments) {
     auto full_iden = input_dense.numel();
     auto dcols = full_iden / nrows;
@@ -101,9 +102,9 @@ std::vector <at::Tensor> gather_forward_gcn(
 
     for (int i = 0; i < segments; i++){
         std::cout << "a " << i << std::endl;
-        int start_vals = offset_ptr[i * (nrows + 1)];
+        int start_vals = bounds[i * 2];
         std::cout << "a1 " << i << std::endl;
-        int end_vals = offset_ptr[i * (nrows + 1) + nrows];
+        int end_vals = bounds[i * 2 + 1];
         int nvals = end_vals - start_vals;
         std::cout << "a2 " << i << std::endl;
         CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
@@ -147,8 +148,9 @@ struct GCN : torch::nn::Module {
                           torch::Tensor offset_graph,
                           torch::Tensor columns_graph,
                           torch::Tensor value_graph,
+                          torch::Tensor bounds,
                           int nrows, int segments) {
-        return gather_forward_gcn(input_dense, offset_graph, columns_graph, value_graph, nrows, segments);
+        return gather_forward_gcn(input_dense, offset_graph, columns_graph, value_graph,  bounds, nrows, segments);
 
 //        x = torch::relu(fc1->forward(x.reshape({x.size(0), 784})));
 //        x = torch::dropout(x, /*p=*/0.5, /*train=*/is_training());
@@ -200,8 +202,9 @@ int main(int argc, char **argv) {
     torch::Tensor total_offsets;
     torch::Tensor total_cols;
     torch::Tensor total_vals;
+    torch::Tensor total_bounds;
     std::vector<iT> tile_offsets = static_ord_col_breakpoints<SM>(&adj, cols_per_tile);
-    ord_col_tiling_torch(tile_offsets, total_offsets, total_cols, total_vals, &adj);
+    ord_col_tiling_torch(tile_offsets, total_offsets, total_cols, total_vals, total_bounds, &adj);
 
     int *offset_ptr = total_offsets.data_ptr<int>();
     int *col_ptr = total_cols.data_ptr<int>();
@@ -279,7 +282,7 @@ int main(int argc, char **argv) {
         cudaDeviceSynchronize();
         start = get_time();
 //        std::vector<torch::Tensor> prediction = net->forward(t_iden, t_offsets, t_cols, t_vals);
-        torch::Tensor prediction = net->forward(t_iden, t_offsets, t_cols, t_vals, nrows, segments)[0];
+        torch::Tensor prediction = net->forward(t_iden, t_offsets, t_cols, t_vals, nrows, segments, total_bounds)[0];
 
         cudaDeviceSynchronize();
         end = get_time();
