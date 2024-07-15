@@ -196,7 +196,7 @@ int main(int argc, char **argv) {
     std::vector<iT> tile_offsets = static_ord_col_breakpoints<SM>(&adj, cols_per_tile);
     ord_col_tiling_torch(tile_offsets, total_offsets, total_cols, total_vals, &adj);
 
-    cout << "works";
+    std::cout << "works";
 
     // Init input with random numbers
     DM input_emb;
