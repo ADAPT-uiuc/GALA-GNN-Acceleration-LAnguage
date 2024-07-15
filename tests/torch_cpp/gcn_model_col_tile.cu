@@ -102,7 +102,7 @@ std::vector <at::Tensor> gather_forward_gcn(
         int start_vals = offset_ptr[i * (nrows + 1)];
         int end_vals = offset_ptr[i * (nrows + 1) + nrows];
         int nvals = end_vals - start_vals;
-
+        std::cout << "d" << i << std::endl;
         CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
                                          offset_ptr + (i * (nrows + 1)), col_ptr + start_vals, val_ptr + start_vals,
                                          CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
