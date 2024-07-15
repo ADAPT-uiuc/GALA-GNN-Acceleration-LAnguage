@@ -112,6 +112,7 @@ std::vector <at::Tensor> gather_forward_gcn(
                                          offset_ptr + (i * (nrows + 1)), col_ptr + start_vals, val_ptr + start_vals,
                                          CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
                                          CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
+        cudaDeviceSynchronize();
         std::cout << "b" << i << std::endl;
         // allocate an external buffer if needed
         CUSPARSE_CHECK(cusparseSpMM_bufferSize(
@@ -129,6 +130,7 @@ std::vector <at::Tensor> gather_forward_gcn(
                                     &alpha, matA, matB, &beta, matC, CUDA_R_32F,
                                     CUSPARSE_SPMM_CSR_ALG2,
                                     dBuffer));
+        cudaDeviceSynchronize();
         std::cout << "c" << i << std::endl;
     }
 
