@@ -125,7 +125,6 @@ std::vector <at::Tensor> gather_forward_gcn(
         cudaDeviceSynchronize();
         std::cout << "a2 " << i << std::endl;
 
-
         CUSPARSE_CHECK(cusparseSpMM(handle,
                                     CUSPARSE_OPERATION_NON_TRANSPOSE,
                                     CUSPARSE_OPERATION_NON_TRANSPOSE,
@@ -133,11 +132,6 @@ std::vector <at::Tensor> gather_forward_gcn(
                                     CUSPARSE_SPMM_CSR_ALG2,
                                     dBuffer));
         CUSPARSE_CHECK(cusparseDestroySpMat(matA));
-
-        cudaDeviceSynchronize();
-        std::cout << "a3 " << i << std::endl;
-
-        CUDA_CHECK(cudaFree(dBuffer));
 
         cudaDeviceSynchronize();
         std::cout << "a4 " << i << std::endl;
