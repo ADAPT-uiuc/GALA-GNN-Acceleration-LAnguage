@@ -91,14 +91,6 @@ std::vector <at::Tensor> gather_forward_gcn(
 
     cudaDeviceSynchronize();
 
-    CUSPARSE_CHECK(cusparseCreate(&handle));
-    // Create dense matrix B
-    CUSPARSE_CHECK(cusparseCreateDnMat(&matB, nrows, dcols, dcols, iden_ptr,
-                                       CUDA_R_32F, CUSPARSE_ORDER_ROW)); // changed
-    // Create dense matrix C
-    CUSPARSE_CHECK(cusparseCreateDnMat(&matC, nrows, dcols, dcols, oden_array,
-                                       CUDA_R_32F, CUSPARSE_ORDER_ROW)); // changed
-
     std::cout << "works " << segments <<  std::endl;
 
     for (int i = 0; i < segments; i++){
@@ -108,6 +100,14 @@ std::vector <at::Tensor> gather_forward_gcn(
         int end_vals = bounds_ptr[i * 2 + 1];
         int nvals = end_vals - start_vals;
         std::cout << "a2 " << i << std::endl;
+
+        CUSPARSE_CHECK(cusparseCreate(&handle));
+        // Create dense matrix B
+        CUSPARSE_CHECK(cusparseCreateDnMat(&matB, nrows, dcols, dcols, iden_ptr,
+                                           CUDA_R_32F, CUSPARSE_ORDER_ROW)); // changed
+        // Create dense matrix C
+        CUSPARSE_CHECK(cusparseCreateDnMat(&matC, nrows, dcols, dcols, oden_array,
+                                           CUDA_R_32F, CUSPARSE_ORDER_ROW)); // changed
         CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
                                          offset_ptr + (i * (nrows + 1)), col_ptr + start_vals, val_ptr + start_vals,
                                          CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
@@ -134,12 +134,10 @@ std::vector <at::Tensor> gather_forward_gcn(
         std::cout << "c" << i << std::endl;
 
         CUSPARSE_CHECK(cusparseDestroySpMat(matA));
+        CUSPARSE_CHECK(cusparseDestroyDnMat(matB));
+        CUSPARSE_CHECK(cusparseDestroyDnMat(matC));
+        CUSPARSE_CHECK(cusparseDestroy(handle));
     }
-
-    CUSPARSE_CHECK(cusparseDestroyDnMat(matB));
-    CUSPARSE_CHECK(cusparseDestroyDnMat(matC));
-    CUSPARSE_CHECK(cusparseDestroy(handle));
-
     cudaDeviceSynchronize();
     std::cout << "d" << std::endl;
 
