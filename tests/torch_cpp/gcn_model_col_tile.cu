@@ -124,6 +124,9 @@ std::vector <at::Tensor> gather_forward_gcn(
                 &bufferSize));
         CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));
 
+        cudaDeviceSynchronize();
+        std::cout << "b1" << i << std::endl;
+
         CUSPARSE_CHECK(cusparseSpMM(handle,
                                     CUSPARSE_OPERATION_NON_TRANSPOSE,
                                     CUSPARSE_OPERATION_NON_TRANSPOSE,
