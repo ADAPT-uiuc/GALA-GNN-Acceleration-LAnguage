@@ -106,6 +106,8 @@ std::vector <at::Tensor> gather_forward_gcn(
                                          offset_ptr + (i1 * (nrows + 1)), col_ptr + start_vals, val_ptr + start_vals,
                                          CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
                                          CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
+        cudaDeviceSynchronize();
+        std::cout << "a0 " << i << std::endl;
         void *dBuffer = NULL;
         size_t bufferSize = 0;
         // allocate an external buffer if needed
@@ -116,7 +118,13 @@ std::vector <at::Tensor> gather_forward_gcn(
                 &alpha, matA, matB, &beta, matC, CUDA_R_32F,
                 CUSPARSE_SPMM_CSR_ALG2,
                 &bufferSize));
+        cudaDeviceSynchronize();
+        std::cout << "a1 " << i << std::endl;
+
         CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));
+        cudaDeviceSynchronize();
+        std::cout << "a2 " << i << std::endl;
+
 
         CUSPARSE_CHECK(cusparseSpMM(handle,
                                     CUSPARSE_OPERATION_NON_TRANSPOSE,
@@ -124,6 +132,8 @@ std::vector <at::Tensor> gather_forward_gcn(
                                     &alpha, matA, matB, &beta, matC, CUDA_R_32F,
                                     CUSPARSE_SPMM_CSR_ALG2,
                                     dBuffer));
+        cudaDeviceSynchronize();
+        std::cout << "a3 " << i << std::endl;
 
         CUSPARSE_CHECK(cusparseDestroySpMat(matA));
     }
