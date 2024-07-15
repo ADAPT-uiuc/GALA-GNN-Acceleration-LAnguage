@@ -100,7 +100,7 @@ std::vector <at::Tensor> gather_forward_gcn(
                                        CUDA_R_32F, CUSPARSE_ORDER_ROW)); // changed
 
     for (int i = 0; i < segments; i++){
-        int i1 = 0;
+        int i1 = i;
         int start_vals = bounds_ptr[i1 * 2];
         int end_vals = bounds_ptr[i1 * 2 + 1];
         int nvals = end_vals - start_vals;
