@@ -242,7 +242,7 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
     auto output_cols = torch::zeros({src_nvals}, options_int);
     auto output_vals = torch::zeros({src_nvals}, options_float);
 
-    int *offset_ptr = output_ofsets.data_ptr<int>();
+    int *offset_ptr = output_offsets.data_ptr<int>();
     int *col_ptr = output_cols.data_ptr<int>();
     float *val_ptr = output_vals.data_ptr<float>();
 
