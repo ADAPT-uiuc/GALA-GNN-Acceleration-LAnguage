@@ -254,6 +254,11 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
     memcpy(copy_offsets, src->offset_ptr(), (src->nrows() + 1) * sizeof(nT));
 
     nT new_nvals = 0;
+
+    offset_ptr[0] = new_nvals;
+    std::cout << "works";
+
+
     for (iT nth_tile = 0; nth_tile < (iT)col_breakpoints.size() - 1; nth_tile++) {
         iT j_start = col_breakpoints.at(nth_tile);
         iT j_end = col_breakpoints.at(nth_tile + 1);
