@@ -84,7 +84,6 @@ std::vector <at::Tensor> gather_forward_gcn(
 
     // Create the sparse / dense objects
     cusparseHandle_t handle = NULL;
-    cusparseSpMatDescr_t matA;
     cusparseDnMatDescr_t matB, matC;
 
     cudaDeviceSynchronize();
@@ -100,11 +99,12 @@ std::vector <at::Tensor> gather_forward_gcn(
     void *dBuffer = NULL;
     size_t max_bufferSize = 0;
 
-    for (int i = 0; i < segments; i++) {
+    for (int i = 0; i < segments; i++){
         int i1 = i;
         int start_vals = bounds_ptr[i1 * 2];
         int end_vals = bounds_ptr[i1 * 2 + 1];
         int nvals = end_vals - start_vals;
+        cusparseSpMatDescr_t matA;
         CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
                                          offset_ptr + (i1 * (nrows + 1)), col_ptr + start_vals, val_ptr + start_vals,
                                          CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
@@ -118,24 +118,7 @@ std::vector <at::Tensor> gather_forward_gcn(
                 &alpha, matA, matB, &beta, matC, CUDA_R_32F,
                 CUSPARSE_SPMM_CSR_ALG2,
                 &bufferSize));
-
-        max_bufferSize = max(max_bufferSize, bufferSize);
-        CUSPARSE_CHECK(cusparseDestroySpMat(matA));
-    }
-
-    CUDA_CHECK(cudaMalloc(&dBuffer, max_bufferSize));
-
-    for (int i = 0; i < segments; i++){
-        int i1 = i;
-        int start_vals = bounds_ptr[i1 * 2];
-        int end_vals = bounds_ptr[i1 * 2 + 1];
-        int nvals = end_vals - start_vals;
-        CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
-                                         offset_ptr + (i1 * (nrows + 1)), col_ptr + start_vals, val_ptr + start_vals,
-                                         CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
-                                         CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
-        //cudaDeviceSynchronize();
-        //std::cout << "a0 " << i << std::endl;
+        CUDA_CHECK(cudaMalloc(&dBuffer, max_bufferSize));
 
         CUSPARSE_CHECK(cusparseSpMM(handle,
                                     CUSPARSE_OPERATION_NON_TRANSPOSE,
@@ -144,7 +127,7 @@ std::vector <at::Tensor> gather_forward_gcn(
                                     CUSPARSE_SPMM_CSR_ALG2,
                                     dBuffer));
         CUSPARSE_CHECK(cusparseDestroySpMat(matA));
-
+        CUDA_CHECK(cudaFree(dBuffer));
         //cudaDeviceSynchronize();
         //std::cout << "a4 " << i << std::endl;
     }
@@ -153,7 +136,7 @@ std::vector <at::Tensor> gather_forward_gcn(
     CUSPARSE_CHECK(cusparseDestroyDnMat(matB));
     CUSPARSE_CHECK(cusparseDestroyDnMat(matC));
     CUSPARSE_CHECK(cusparseDestroy(handle));
-    //CUDA_CHECK(cudaFree(dBuffer));
+    CUDA_CHECK(cudaFree(dBuffer));
 
     return {output_dense};
 }
@@ -169,12 +152,6 @@ struct GCN : torch::nn::Module {
                           torch::Tensor bounds,
                           int nrows, int segments) {
         return gather_forward_gcn(input_dense, offset_graph, columns_graph, value_graph,  bounds, nrows, segments);
-
-//        x = torch::relu(fc1->forward(x.reshape({x.size(0), 784})));
-//        x = torch::dropout(x, /*p=*/0.5, /*train=*/is_training());
-//        x = torch::relu(fc2->forward(x));
-//        x = torch::log_softmax(fc3->forward(x), /*dim=*/1);
-//        return x;
     }
 
     // Use one of many "standard library" modules.
@@ -297,7 +274,6 @@ int main(int argc, char **argv) {
         // Execute the model on the input data.
         cudaDeviceSynchronize();
         start = get_time();
-//        std::vector<torch::Tensor> prediction = net->forward(t_iden, t_offsets, t_cols, t_vals);
         torch::Tensor prediction = net->forward(t_iden, t_offsets, t_cols, t_vals, total_bounds, nrows, segments)[0];
 
         cudaDeviceSynchronize();
@@ -307,65 +283,13 @@ int main(int argc, char **argv) {
             times_arr.push_back(end - start);
         }
 
-        //randVal = prediction[nrows - 1][emb_size - 1].item<val_t>();
-
-//        std::cout << "runs" << std::endl;
-//        for (int x = 0; x < nrows; x++){
-//            for (int y = 0; y < emb_size; y++){
-//                if (prediction[x][y].item<val_t>()!= out_emb2.vals_ptr()[x * emb_size + y]) {
-//                    std::cout << "The results don't match at: " << x << "," << y << ":  " << prediction[x][y].item<val_t>() << ", "
-//                              << out_emb2.vals_ptr()[x * emb_size + y] << std::endl;
-//                    break;
-//                }
-//            }
-//        }
-
-
-
-        // Compute a loss value to judge the prediction of our model.
-//        torch::Tensor loss = torch::nll_loss(prediction, batch.target);
-//        // Compute gradients of the loss w.r.t. the parameters of our model.
-//        loss.backward();
-//        // Update the parameters based on the calculated gradients.
-//        optimizer.step();
-//        // Output the loss and checkpoint every 100 batches.
-//        if (++batch_index % 100 == 0) {
-//            std::cout << "Epoch: " << epoch << " | Batch: " << batch_index
-//                      << " | Loss: " << loss.item<float>() << std::endl;
-//            // Serialize your model periodically as a checkpoint.
-//            torch::save(net, "net.pt");
-//        }
-
-        // Print the results of the precompute function
-
     }
 
+    CUDA_CHECK(cudaFree(dA_csrOffsets));
+    CUDA_CHECK(cudaFree(dA_values));
+    CUDA_CHECK(cudaFree(dA_columns));
+    CUDA_CHECK(cudaFree(dB));
 
-//    std::cout << adj.offset_ptr()[1] << " " << adj.offset_ptr()[2] << " " << adj.offset_ptr()[3] << " "
-//              << adj.offset_ptr()[4] << " " << adj.offset_ptr()[5] << std::endl;
-//    std::cout << adj.ids_ptr()[1] << " " << adj.ids_ptr()[2] << " " << adj.ids_ptr()[3] << " "
-//              << adj.ids_ptr()[4] << " " << adj.ids_ptr()[5] << std::endl;
-//    std::cout << out_emb2.vals_ptr()[0] << " " << out_emb2.vals_ptr()[0 + input_emb.ncols() * 8] << std::endl;
-//    std::cout << out_emb.vals_ptr()[0] << " " << out_emb.vals_ptr()[0 + out_emb.ncols() * 8] << std::endl;
-
-//    for (int x = 0; x < nrows; x++){
-//        for (int y = 0; y < emb_size; y++){
-//            if (prediction[x][y] != out_emb2.vals_ptr()[x * emb_size + y]) {
-//                std::cout << "The results don't match at: " << x << "," << y << ":  " << prediction[x][y] << ", "
-//                          << out_emb2.vals_ptr()[x * emb_size + y] << std::endl;
-//                break;
-//            }
-//        }
-//    }
-
-//    for (nT j = 0; j < nvals; j++) {
-//        if (out_emb.vals_ptr()[j] != out_emb2.vals_ptr()[j]) {
-//            std::cout << "The results don't match at: " << j << ", " << out_emb.vals_ptr()[j] << ", "
-//                      << out_emb2.vals_ptr()[j] << std::endl;
-//            break;
-//        }
-//    }
-//    std::cout << calc_mean(times_arr) << "," << calc_std(times_arr) << "|" << randVal << std::endl;
     std::cout << calc_mean(times_arr) << "," << calc_std(times_arr) << std::endl;
 
 }

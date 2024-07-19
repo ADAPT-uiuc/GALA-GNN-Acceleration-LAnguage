@@ -149,8 +149,8 @@ public:
     build(I_ nrows, I_ ncols, N_ nvals, I_ *&row_ids, I_ *&col_ids, V_ *&vals, CSRC_TYPE type, int8_t is_sorted = -1,
           bool has_dup = true, MatrixProperties mtx_prop = MatrixProperties()) {
         CSR_MTX_DBG_MSG << "CSR build nr: " << nrows << " nc: " << ncols << " nnz: " << nvals << std::endl;
-        double s, e;
-        s = get_time();
+//        double s, e;
+//        s = get_time();
         type_ = type;
         nrows_ = nrows;
         ncols_ = ncols;
@@ -369,7 +369,7 @@ public:
 //     }
 // #endif
 
-        e = get_time();
+        //e = get_time();
         //std::cout << "TimeCSRbuild: " << (e - s) << std::endl;
         return INFO::SUCCESS;
     }
