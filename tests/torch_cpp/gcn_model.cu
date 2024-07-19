@@ -120,6 +120,7 @@ std::vector <at::Tensor> gather_forward_gcn(
     CUSPARSE_CHECK(cusparseDestroyDnMat(matB));
     CUSPARSE_CHECK(cusparseDestroyDnMat(matC));
     CUSPARSE_CHECK(cusparseDestroy(handle));
+    CUDA_CHECK(cudaFree(dBuffer));
 
     return {output_dense};
 }
@@ -267,9 +268,7 @@ int main(int argc, char **argv) {
 //            }
 //        }
 
-
-
-        // Compute a loss value to judge the prediction of our model.
+// Compute a loss value to judge the prediction of our model.
 //        torch::Tensor loss = torch::nll_loss(prediction, batch.target);
 //        // Compute gradients of the loss w.r.t. the parameters of our model.
 //        loss.backward();
@@ -287,30 +286,10 @@ int main(int argc, char **argv) {
 
     }
 
+    CUDA_CHECK(cudaFree(dA_csrOffsets));
+    CUDA_CHECK(cudaFree(dA_values));
+    CUDA_CHECK(cudaFree(dA_columns));
+    CUDA_CHECK(cudaFree(dB));
 
-//    std::cout << adj.offset_ptr()[1] << " " << adj.offset_ptr()[2] << " " << adj.offset_ptr()[3] << " "
-//              << adj.offset_ptr()[4] << " " << adj.offset_ptr()[5] << std::endl;
-//    std::cout << adj.ids_ptr()[1] << " " << adj.ids_ptr()[2] << " " << adj.ids_ptr()[3] << " "
-//              << adj.ids_ptr()[4] << " " << adj.ids_ptr()[5] << std::endl;
-//    std::cout << out_emb2.vals_ptr()[0] << " " << out_emb2.vals_ptr()[0 + input_emb.ncols() * 8] << std::endl;
-//    std::cout << out_emb.vals_ptr()[0] << " " << out_emb.vals_ptr()[0 + out_emb.ncols() * 8] << std::endl;
-
-//    for (int x = 0; x < nrows; x++){
-//        for (int y = 0; y < emb_size; y++){
-//            if (prediction[x][y] != out_emb2.vals_ptr()[x * emb_size + y]) {
-//                std::cout << "The results don't match at: " << x << "," << y << ":  " << prediction[x][y] << ", "
-//                          << out_emb2.vals_ptr()[x * emb_size + y] << std::endl;
-//                break;
-//            }
-//        }
-//    }
-
-//    for (nT j = 0; j < nvals; j++) {
-//        if (out_emb.vals_ptr()[j] != out_emb2.vals_ptr()[j]) {
-//            std::cout << "The results don't match at: " << j << ", " << out_emb.vals_ptr()[j] << ", "
-//                      << out_emb2.vals_ptr()[j] << std::endl;
-//            break;
-//        }
-//    }
     std::cout << calc_mean(times_arr) << "," << calc_std(times_arr) << "|" << randVal << std::endl;
 }
