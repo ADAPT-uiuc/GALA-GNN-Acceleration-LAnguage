@@ -236,19 +236,9 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
     nT src_nvals = src->nvals();
     iT segments = (iT)col_breakpoints.size() - 1;
 
-    auto options_int = torch::TensorOptions().dtype(torch::kInt).requires_grad(false);
-    auto options_float = torch::TensorOptions().dtype(torch::kFloat).requires_grad(true);
-
-    // The first and last value of this should also give the offsets for the columns and vals
-    output_offsets = torch::zeros({(src_nrows + 1) * (segments)}, options_int);
-    output_cols = torch::zeros({src_nvals}, options_int);
-    output_vals = torch::zeros({src_nvals}, options_float);
-
-    output_bounds = torch::zeros({2 * ((iT)col_breakpoints.size() - 1)}, options_int);
-
-    int *offset_ptr = output_offsets.data_ptr<int>();
-    int *col_ptr = output_cols.data_ptr<int>();
-    float *val_ptr = output_vals.data_ptr<float>();
+    iT *offset_ptr = output_offsets.data_ptr<iT>();
+    iT *col_ptr = output_cols.data_ptr<iT>();
+    vT *val_ptr = output_vals.data_ptr<vT>();
 
     nT *src_offset_ptr = src->offset_ptr();
     iT *src_ids_ptr = src->ids_ptr();
@@ -258,8 +248,6 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
     memcpy(copy_offsets, src->offset_ptr(), (src->nrows() + 1) * sizeof(nT));
 
     nT new_nvals = 0;
-
-    offset_ptr[0] = new_nvals;
 
     for (iT nth_tile = 0; nth_tile < (iT)col_breakpoints.size() - 1; nth_tile++) {
         iT j_start = col_breakpoints.at(nth_tile);
@@ -273,9 +261,9 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
             nT last_node_edge = src_offset_ptr[i_i + 1];
 
             for (nT e = first_node_edge; e < last_node_edge; e++) {
-                int u = src_ids_ptr[e];
+                iT u = src_ids_ptr[e];
                 if (u >= j_start && u < j_end) {
-                    float val = src_vals_ptr[e];
+                    vT val = src_vals_ptr[e];
                     col_ptr[new_nvals] = u;
                     val_ptr[new_nvals] = val;
 
@@ -1195,7 +1183,7 @@ void ord_col_tiling_AU(std::vector<typename SM::itype> &col_breakpoints,
                 iT u = src_ids_ptr[e];
                 if (u >= j_start && u < j_end) {
 #ifdef REV_JJ
-#ifndef LAST_GEMM
+                    #ifndef LAST_GEMM
                     if (e == first_node_edge){
                         new_work[i_i] = true;
                     }

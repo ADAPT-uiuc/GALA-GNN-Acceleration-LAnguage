@@ -95,20 +95,28 @@ std::vector <at::Tensor> gather_forward_gcn(
     // Create dense matrix C
     CUSPARSE_CHECK(cusparseCreateDnMat(&matC, nrows, dcols, dcols, oden_array,
                                        CUDA_R_32F, CUSPARSE_ORDER_ROW)); // changed
-
-    void *dBuffer = NULL;
-    size_t max_bufferSize = 0;
+    cudaDeviceSynchronize();
+    std::cout << "segments: " << segments << ", nrows: " << nrows << std::endl;
 
     for (int i = 0; i < segments; i++){
         int i1 = i;
         int start_vals = bounds_ptr[i1 * 2];
         int end_vals = bounds_ptr[i1 * 2 + 1];
         int nvals = end_vals - start_vals;
+
+        cudaDeviceSynchronize();
+        std::cout << "nvals: " << start_vals << " " << end_vals << " " << nvals << std::endl;
+
         cusparseSpMatDescr_t matA;
         CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
-                                         offset_ptr + (i1 * (nrows + 1)), col_ptr + start_vals, val_ptr + start_vals,
+                                         &offset_ptr[i1 * (nrows + 1)], &col_ptr[start_vals], &val_ptr[start_vals],
                                          CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
                                          CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
+
+        cudaDeviceSynchronize();
+        std::cout << "create CSR works." << std::endl;
+
+        void *dBuffer = NULL;
         size_t bufferSize = 0;
         // allocate an external buffer if needed
         CUSPARSE_CHECK(cusparseSpMM_bufferSize(
@@ -118,7 +126,10 @@ std::vector <at::Tensor> gather_forward_gcn(
                 &alpha, matA, matB, &beta, matC, CUDA_R_32F,
                 CUSPARSE_SPMM_CSR_ALG2,
                 &bufferSize));
-        CUDA_CHECK(cudaMalloc(&dBuffer, max_bufferSize));
+        CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));
+
+        cudaDeviceSynchronize();
+        std::cout << "Buffer size:" << bufferSize << std::endl;
 
         CUSPARSE_CHECK(cusparseSpMM(handle,
                                     CUSPARSE_OPERATION_NON_TRANSPOSE,
@@ -126,8 +137,19 @@ std::vector <at::Tensor> gather_forward_gcn(
                                     &alpha, matA, matB, &beta, matC, CUDA_R_32F,
                                     CUSPARSE_SPMM_CSR_ALG2,
                                     dBuffer));
+
+        cudaDeviceSynchronize();
+        std::cout << "Works till SpMM." << std::endl;
+
         CUSPARSE_CHECK(cusparseDestroySpMat(matA));
+
+        cudaDeviceSynchronize();
+        std::cout << "Cleans1." << std::endl;
+
         CUDA_CHECK(cudaFree(dBuffer));
+
+        cudaDeviceSynchronize();
+        std::cout << "Cleans2." << std::endl;
         //cudaDeviceSynchronize();
         //std::cout << "a4 " << i << std::endl;
     }
@@ -136,7 +158,6 @@ std::vector <at::Tensor> gather_forward_gcn(
     CUSPARSE_CHECK(cusparseDestroyDnMat(matB));
     CUSPARSE_CHECK(cusparseDestroyDnMat(matC));
     CUSPARSE_CHECK(cusparseDestroy(handle));
-    CUDA_CHECK(cudaFree(dBuffer));
 
     return {output_dense};
 }
@@ -146,11 +167,11 @@ struct GCN : torch::nn::Module {
 
     // Implement the Net's algorithm.
     std::vector<torch::Tensor> forward(torch::Tensor input_dense,
-                          torch::Tensor offset_graph,
-                          torch::Tensor columns_graph,
-                          torch::Tensor value_graph,
-                          torch::Tensor bounds,
-                          int nrows, int segments) {
+                                       torch::Tensor offset_graph,
+                                       torch::Tensor columns_graph,
+                                       torch::Tensor value_graph,
+                                       torch::Tensor bounds,
+                                       int nrows, int segments) {
         return gather_forward_gcn(input_dense, offset_graph, columns_graph, value_graph,  bounds, nrows, segments);
     }
 
@@ -198,12 +219,26 @@ int main(int argc, char **argv) {
     torch::Tensor total_cols;
     torch::Tensor total_vals;
     torch::Tensor total_bounds;
+
     std::vector<iT> tile_offsets = static_ord_col_breakpoints<SM>(&adj, cols_per_tile);
+
+    iT segments = tile_offsets.size() - 1;
+
+    auto options_int = torch::TensorOptions().dtype(torch::kInt).requires_grad(false);
+    auto options_float = torch::TensorOptions().dtype(torch::kFloat).requires_grad(true);
+
+    // The first and last value of this should also give the offsets for the columns and vals
+    total_offsets = torch::zeros({(adj.nrows() + 1) * (segments)}, options_int);
+    total_cols = torch::zeros({adj.nvals()}, options_int);
+    total_vals = torch::zeros({adj.nvals()}, options_float);
+
+    total_bounds = torch::zeros({2 * (segments)}, options_int);
+
     ord_col_tiling_torch(tile_offsets, total_offsets, total_cols, total_vals, total_bounds, &adj);
 
-    int *offset_ptr = total_offsets.data_ptr<int>();
-    int *col_ptr = total_cols.data_ptr<int>();
-    float *val_ptr = total_vals.data_ptr<float>();
+    iT *offset_ptr = total_offsets.data_ptr<iT>();
+    iT *col_ptr = total_cols.data_ptr<iT>();
+    vT *val_ptr = total_vals.data_ptr<vT>();
 
     // Init input with random numbers
     DM input_emb;
@@ -234,37 +269,51 @@ int main(int argc, char **argv) {
     // Create a new Net.
     auto net = std::make_shared<GCN>();
 
-    int segments = tile_offsets.size() - 1;
-
     // Instantiate an SGD optimization algorithm to update our Net's parameters.
     torch::optim::SGD optimizer(net->parameters(), /*lr=*/0.01);
 
-    int *dA_csrOffsets, *dA_columns;
+    iT *dA_csrOffsets, *dA_columns;
     float *dA_values, *dB;
 
     CUDA_CHECK(cudaMalloc((void **) &dA_csrOffsets,
-               ((nrows + 1) * segments) * sizeof(int)));
-    CUDA_CHECK(cudaMalloc((void **) &dA_columns, nvals * sizeof(int)));
-    CUDA_CHECK(cudaMalloc((void **) &dA_values, nvals * sizeof(float)));
-    CUDA_CHECK(cudaMalloc((void **) &dB, (nrows * emb_size) * sizeof(float)));
+                          ((nrows + 1) * segments) * sizeof(iT)));
+    CUDA_CHECK(cudaMalloc((void **) &dA_columns, nvals * sizeof(iT)));
+    CUDA_CHECK(cudaMalloc((void **) &dA_values, nvals * sizeof(vT)));
+    CUDA_CHECK(cudaMalloc((void **) &dB, (nrows * emb_size) * sizeof(vT)));
 
-//    CUDA_CHECK(cudaMemcpy(dA_csrOffsets, offset_ptr,
-//                          ((nrows + 1) * segments) * sizeof(int),
-//                          cudaMemcpyHostToDevice));
-//    CUDA_CHECK(cudaMemcpy(dA_columns, col_ptr, nvals * sizeof(int),
-//                          cudaMemcpyHostToDevice));
-//    CUDA_CHECK(cudaMemcpy(dA_values, val_ptr, nvals * sizeof(float),
-//                          cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(dA_csrOffsets, offset_ptr,
+                          ((nrows + 1) * segments) * sizeof(iT),
+                          cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(dA_columns, col_ptr, nvals * sizeof(iT),
+                          cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(dA_values, val_ptr, nvals * sizeof(float),
+                          cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(dB, input_emb.vals_ptr(), (nrows * emb_size)  * sizeof(float),
                           cudaMemcpyHostToDevice));
 
-    CUDA_CHECK(cudaMemcpy(dA_csrOffsets, adj.offset_ptr(),
-                          (nrows + 1) * sizeof(int),
-                          cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dA_columns, adj.ids_ptr(), nvals * sizeof(int),
-                          cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dA_values, adj.vals_ptr(), nvals * sizeof(float),
-                          cudaMemcpyHostToDevice));
+    // CUDA_CHECK(cudaMemcpy(dA_csrOffsets, adj.offset_ptr(),
+    //                       (nrows + 1) * sizeof(iT),
+    //                       cudaMemcpyHostToDevice));
+
+    // for (iT i = 0; i < segments; i++){
+    //   std::cout << "segment:" << i << std::endl;
+    //   for (iT j = 0; j < nrows; j++){
+    //     if (!(offset_ptr[j + (nrows + 1) * i] <= offset_ptr[j + 1 + (nrows + 1) * i])){
+    //       std::cout << "Issue with offset: " << i << " " << j << std::endl;
+    //       for (nT e = offset_ptr[j + (nrows + 1) * i]; e < offset_ptr[j + 1 + (nrows + 1) * i]; e++){
+    //         if (!(col_ptr[e] == 1 && val_ptr[e] == 1)){
+    //           std::cout << "Val / Col: " << e << std::endl;
+    //         }
+    //       }
+    //     }
+    //     //std::cout << offset_ptr[j + (nrows + 1) * i] << std::endl;
+    //   }
+    //   // std::cout << offset_ptr[nrows + (nrows + 1) * i] << std::endl;
+    // }
+    // CUDA_CHECK(cudaMemcpy(dA_columns, adj.ids_ptr(), nvals * sizeof(iT),
+    //                       cudaMemcpyHostToDevice));
+    // CUDA_CHECK(cudaMemcpy(dA_values, adj.vals_ptr(), nvals * sizeof(float),
+    //                       cudaMemcpyHostToDevice));
 
 
     auto options_cu_int = torch::TensorOptions().dtype(torch::kInt).device(torch::kCUDA, 0);
