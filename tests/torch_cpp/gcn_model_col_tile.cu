@@ -248,15 +248,25 @@ int main(int argc, char **argv) {
     CUDA_CHECK(cudaMalloc((void **) &dA_values, nvals * sizeof(float)));
     CUDA_CHECK(cudaMalloc((void **) &dB, (nrows * emb_size) * sizeof(float)));
 
-    CUDA_CHECK(cudaMemcpy(dA_csrOffsets, offset_ptr,
-                          ((nrows + 1) * segments) * sizeof(int),
-                          cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dA_columns, col_ptr, nvals * sizeof(int),
-                          cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dA_values, val_ptr, nvals * sizeof(float),
-                          cudaMemcpyHostToDevice));
+//    CUDA_CHECK(cudaMemcpy(dA_csrOffsets, offset_ptr,
+//                          ((nrows + 1) * segments) * sizeof(int),
+//                          cudaMemcpyHostToDevice));
+//    CUDA_CHECK(cudaMemcpy(dA_columns, col_ptr, nvals * sizeof(int),
+//                          cudaMemcpyHostToDevice));
+//    CUDA_CHECK(cudaMemcpy(dA_values, val_ptr, nvals * sizeof(float),
+//                          cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(dB, input_emb.vals_ptr(), (nrows * emb_size)  * sizeof(float),
                           cudaMemcpyHostToDevice));
+
+    CUDA_CHECK(cudaMemcpy(dA_csrOffsets, adj.offset_ptr(),
+                          (nrows + 1) * sizeof(int),
+                          cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(dA_columns, adj.ids_ptr(), nvals * sizeof(int),
+                          cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(dA_values, adj.vals_ptr(), nvals * sizeof(float),
+                          cudaMemcpyHostToDevice));
+
+
     auto options_cu_int = torch::TensorOptions().dtype(torch::kInt).device(torch::kCUDA, 0);
     torch::Tensor t_offsets = torch::from_blob(dA_csrOffsets, {(nrows + 1) * segments}, options_cu_int);
     torch::Tensor t_cols = torch::from_blob(dA_columns, {nvals}, options_cu_int);

@@ -234,12 +234,13 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
     iT src_ncols = src->ncols();
     iT src_nrows = src->nrows();
     nT src_nvals = src->nvals();
+    iT segments = (iT)col_breakpoints.size() - 1;
 
     auto options_int = torch::TensorOptions().dtype(torch::kInt).requires_grad(false);
     auto options_float = torch::TensorOptions().dtype(torch::kFloat).requires_grad(true);
 
     // The first and last value of this should also give the offsets for the columns and vals
-    output_offsets = torch::zeros({(src_nrows + 1) * ((iT)col_breakpoints.size() - 1)}, options_int);
+    output_offsets = torch::zeros({(src_nrows + 1) * (segments)}, options_int);
     output_cols = torch::zeros({src_nvals}, options_int);
     output_vals = torch::zeros({src_nvals}, options_float);
 
