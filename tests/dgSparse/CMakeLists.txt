@@ -11,7 +11,7 @@ else ()
     message(FATAL_ERROR "Need OpenMP")
 endif ()
 
-include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} util)
 # Link against LibTorch
 link_libraries("${TORCH_LIBRARIES}" cudart cusparse)
 
@@ -24,11 +24,6 @@ add_compile_definitions(A_ALLOC)
 add_executable(gala_cuda gcn_model.cu)
 # Enable C++11
 target_compile_features(gala_cuda PRIVATE cxx_std_14)
-
-add_executable(gala_cuda_tile gcn_model_col_tile.cu)
-target_compile_features(gala_cuda_tile PRIVATE cxx_std_14)
-
-#target_link_libraries(gala_cuda PUBLIC )
 
 message("Compiler: COMILER_ID is ${CMAKE_CXX_COMPILER_ID}")
 
