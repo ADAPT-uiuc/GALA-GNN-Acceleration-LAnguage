@@ -25,6 +25,9 @@ add_executable(gala_cuda gcn_model.cu)
 # Enable C++11
 target_compile_features(gala_cuda PRIVATE cxx_std_14)
 
+add_executable(gala_cuda_tile gcn_model_col_tile.cu)
+target_compile_features(gala_cuda_tile PRIVATE cxx_std_14)
+
 message("Compiler: COMILER_ID is ${CMAKE_CXX_COMPILER_ID}")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qopt-report=0  -march=native -xCORE-AVX512 -O3 -DICC -restrict")
