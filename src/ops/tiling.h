@@ -248,15 +248,15 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
     memcpy(copy_offsets, src->offset_ptr(), (src->nrows() + 1) * sizeof(nT));
 
     nT new_nvals = 0;
-    nT prev_vals = 0;
+    nT prev_nvals = 0;
 
     for (iT nth_tile = 0; nth_tile < (iT)col_breakpoints.size() - 1; nth_tile++) {
         iT j_start = col_breakpoints.at(nth_tile);
         iT j_end = col_breakpoints.at(nth_tile + 1);
 
         // Set the initial offset
-        offset_ptr[nth_tile * (src_nrows + 1)] = new_nvals - prev_vals;
-        output_bounds[nth_tile * 2] = new_nvals  - prev_vals;
+        offset_ptr[nth_tile * (src_nrows + 1)] = new_nvals - prev_nvals;
+        output_bounds[nth_tile * 2] = new_nvals  - prev_nvals;
         for (iT i_i = 0; i_i < src_nrows; i_i += 1) {
             nT first_node_edge = copy_offsets[i_i];
             nT last_node_edge = src_offset_ptr[i_i + 1];
@@ -276,8 +276,8 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
             }
             offset_ptr[i_i + 1 + nth_tile * (src_nrows + 1)] = new_nvals;
         }
-        output_bounds[nth_tile * 2 + 1] = new_nvals - prev_vals;
-        prev_vals = new_vals;
+        output_bounds[nth_tile * 2 + 1] = new_nvals - prev_nvals;
+        prev_vals = new_nvals;
     }
 }
 
