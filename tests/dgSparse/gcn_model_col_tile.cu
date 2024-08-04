@@ -375,6 +375,45 @@ std::vector <at::Tensor> gather_forward_gcn(
         int end_vals = bounds_ptr[i1 * 2 + 1];
         int nvals = end_vals - start_vals;
 
+//        // factor of thread coarsening
+//        int coarsen_factor = (dcols >= 128) ? 4 : (dcols >= 64) ? 2 : 1;
+//        // number of parallel warps along M-dimension
+//        int Mdim_worker = nrows;
+//        // partition large-N and map to blockdim.y to help cache performance
+//        int Ndim_threadblock = CEIL(dcols, coarsen_factor);
+//
+//        int ref_warp_per_tb = RefThreadPerBlock / 32;
+//        int Mdim_warp_per_tb = ref_warp_per_tb;
+//
+//        // total number of warps
+//        int gridDimX = CEIL(Mdim_worker, Mdim_warp_per_tb);
+//        int gridDimY = Ndim_threadblock;
+//        dim3 gridDim(gridDimX, gridDimY, 1);
+//        dim3 blockDim(32, Mdim_warp_per_tb, 1);
+//
+//        if (coarsen_factor == 4) {
+//            csrspmm_rowcaching_rowbalance_kernel<4>
+//            <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
+//                                    col_ptr, val_ptr, iden_ptr, oden_array);
+//    //        csrspmm_non_transpose_parreduce_rowbalance_kernel<4>
+//    //        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
+//    //                                col_ptr, val_ptr, iden_ptr, oden_array);
+//        } else if (coarsen_factor == 2) {
+//            csrspmm_rowcaching_rowbalance_kernel<2>
+//            <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
+//                                    col_ptr, val_ptr, iden_ptr, oden_array);
+//    //        csrspmm_non_transpose_parreduce_rowbalance_kernel<2>
+//    //        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
+//    //                                col_ptr, val_ptr, iden_ptr, oden_array);
+//        } else {
+//            csrspmm_rowcaching_rowbalance_kernel<1>
+//            <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
+//                                    col_ptr, val_ptr, iden_ptr, oden_array);
+//    //        csrspmm_non_transpose_parreduce_rowbalance_kernel<1>
+//    //        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
+//    //                                col_ptr, val_ptr, iden_ptr, oden_array);
+//        }
+
         int coarsen_factor = (dcols >= 512) ? 4 : (dcols >= 128) ? 2 : 1;
         int Ndim_threadblock = CEIL(dcols, (32 * coarsen_factor));
 
@@ -546,8 +585,6 @@ int main(int argc, char **argv) {
     // Comparison for checking if SpMM works correctlu
     out_emb.set_all(0);
     out_emb2.set_all(0);
-
-    gSpMM(&adj, &input_emb, &out_emb2, wsum_aggr);
 
     std::cout << adj.nrows() << " " << adj.ncols() << " " << adj.nvals() << std::endl;
 
