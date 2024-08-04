@@ -286,6 +286,182 @@ __global__ void csrspmm_non_transpose_parreduce_rowbalance_kernel(
     }
 }
 
+template <int CoarsenFactor, int ThreadNz>
+__global__ void csrspmm_rowcaching_nnzbalance_kernel(
+        const int M, const int N, const int K, const int nnz_,
+        const int csr_indptr[], const int csr_indices[], const float csr_data[],
+        const float B[], float C[]) {
+    int nnz = nnz_;
+    if (nnz < 0)
+        nnz = csr_indptr[M];
+
+    int warp_id = threadIdx.x >> 5;
+    int lane_id = threadIdx.x & 31;
+
+    extern __shared__ int shared_mem[];
+    int *workspace_rowid = &shared_mem[(warp_id << 5)];
+    int *workspace_colid = workspace_rowid + blockDim.x;
+    float *workspace_data =
+            (float *)(workspace_colid +
+                      blockDim.x); // float and int has the same size
+
+    // get the sparse-value range of this row
+    int global_warp_id = blockIdx.x * (blockDim.x >> 5) + warp_id;
+    int nz_start = global_warp_id * (ThreadNz * 32);
+
+    // get the dense column offset
+    int col_offset = blockIdx.y * 32 * CoarsenFactor;
+    const float *B_lanes[CoarsenFactor];
+    float *C_lanes[CoarsenFactor];
+#pragma unroll
+    for (int i = 0; i < CoarsenFactor; i++) {
+        B_lanes[i] = B + col_offset + lane_id + i * 32;
+        C_lanes[i] = C + col_offset + lane_id + i * 32;
+    }
+    int ldB = N;
+
+    // declare accumulators
+    float c[CoarsenFactor] = {0.0f};
+    int ldC = N;
+
+    int stride = gridDim.x * (blockDim.x >> 5) * ThreadNz * 32;
+
+    if (blockIdx.y == gridDim.y - 1)
+        goto Ndim_Residue;
+
+    for (; nz_start < nnz; nz_start += stride) {
+        // iterate over the segment of this warp
+        for (int tile_base = nz_start;
+             tile_base < min(nz_start + ThreadNz * 32, nnz); tile_base += 32) {
+            int thread_nz_id = tile_base + lane_id;
+            if (thread_nz_id < nnz) {
+                workspace_colid[lane_id] = csr_indices[thread_nz_id];
+                workspace_data[lane_id] =
+                        __guard_load_default_one<float>(csr_data, thread_nz_id);
+            } else {
+                workspace_colid[lane_id] = 0;
+                workspace_data[lane_id] = 0.0f;
+            }
+            workspace_rowid[lane_id] =
+                    binary_search_segment_number<int>(csr_indptr, M, nnz, thread_nz_id);
+            __syncwarp();
+
+            // initialize with first value
+            int k = workspace_colid[0];
+            float v = workspace_data[0];
+#pragma unroll
+            for (int i = 0; i < CoarsenFactor; i++) {
+                c[i] = v * B_lanes[i][k * ldB];
+            }
+            int row_curr = workspace_rowid[0], next_row;
+
+// scan
+#pragma unroll
+            for (int pp = 1; pp < 32; pp++) {
+                next_row = workspace_rowid[pp];
+                if (next_row != row_curr) {
+#pragma unroll
+                    for (int i = 0; i < CoarsenFactor; i++) {
+                        atomicAdd(C_lanes[i] + row_curr * ldC, c[i]);
+                    }
+                    row_curr = next_row;
+                    k = workspace_colid[pp];
+                    v = workspace_data[pp];
+#pragma unroll
+                    for (int i = 0; i < CoarsenFactor; i++) {
+                        c[i] = v * B_lanes[i][k * ldB];
+                    }
+                } else {
+                    k = workspace_colid[pp];
+                    v = workspace_data[pp];
+#pragma unroll
+                    for (int i = 0; i < CoarsenFactor; i++) {
+                        c[i] = c[i] + v * B_lanes[i][k * ldB];
+                    }
+                }
+            }
+#pragma unroll
+            for (int i = 0; i < CoarsenFactor; i++) {
+                atomicAdd(C_lanes[i] + row_curr * ldC, c[i]);
+            }
+        }
+    }
+    return;
+
+    Ndim_Residue:
+
+    int valid_lane_num = CEIL(N - col_offset - lane_id, 32);
+
+    for (; nz_start < nnz; nz_start += stride) {
+        // iterate over the segment of this warp
+        for (int tile_base = nz_start;
+             tile_base < min(nz_start + ThreadNz * 32, nnz); tile_base += 32) {
+            int thread_nz_id = tile_base + lane_id;
+            if (thread_nz_id < nnz) {
+                workspace_colid[lane_id] = csr_indices[thread_nz_id];
+                workspace_data[lane_id] =
+                        __guard_load_default_one<float>(csr_data, thread_nz_id);
+            } else {
+                workspace_colid[lane_id] = 0;
+                workspace_data[lane_id] = 0.0f;
+            }
+            workspace_rowid[lane_id] =
+                    binary_search_segment_number<int>(csr_indptr, M, nnz, thread_nz_id);
+            __syncwarp();
+
+            // initialize with first value
+            int k = workspace_colid[0];
+            float v = workspace_data[0];
+#pragma unroll
+            for (int i = 0; i < CoarsenFactor; i++) {
+                if (i < valid_lane_num) {
+                    c[i] = v * B_lanes[i][k * ldB];
+                }
+            }
+            int row_curr = workspace_rowid[0], next_row;
+
+// scan
+#pragma unroll
+            for (int pp = 1; pp < 32; pp++) {
+                next_row = workspace_rowid[pp];
+                if (next_row != row_curr) {
+#pragma unroll
+                    for (int i = 0; i < CoarsenFactor; i++) {
+                        if (i < valid_lane_num) {
+                            atomicAdd(C_lanes[i] + row_curr * ldC, c[i]);
+                        }
+                    }
+                    row_curr = next_row;
+                    k = workspace_colid[pp];
+                    v = workspace_data[pp];
+#pragma unroll
+                    for (int i = 0; i < CoarsenFactor; i++) {
+                        if (i < valid_lane_num) {
+                            c[i] = v * B_lanes[i][k * ldB];
+                        }
+                    }
+                } else {
+                    k = workspace_colid[pp];
+                    v = workspace_data[pp];
+#pragma unroll
+                    for (int i = 0; i < CoarsenFactor; i++) {
+                        if (i < valid_lane_num) {
+                            c[i] = c[i] + v * B_lanes[i][k * ldB];
+                        }
+                    }
+                }
+            }
+#pragma unroll
+            for (int i = 0; i < CoarsenFactor; i++) {
+                if (i < valid_lane_num) {
+                    atomicAdd(C_lanes[i] + row_curr * ldC, c[i]);
+                }
+            }
+        }
+    }
+}
+
+
 std::vector <at::Tensor> gather_forward_gcn(
         torch::Tensor input_dense,
         torch::Tensor offset_graph,
@@ -312,43 +488,111 @@ std::vector <at::Tensor> gather_forward_gcn(
     float alpha = 1.0f;
     float beta = 1.0f;
 
-    // factor of thread coarsening
-    int coarsen_factor = (dcols >= 128) ? 4 : (dcols >= 64) ? 2 : 1;
-    // number of parallel warps along M-dimension
-    int Mdim_worker = nrows;
-    // partition large-N and map to blockdim.y to help cache performance
-    int Ndim_threadblock = CEIL(dcols, coarsen_factor);
+//    // factor of thread coarsening
+//    int coarsen_factor = (dcols >= 128) ? 4 : (dcols >= 64) ? 2 : 1;
+//    // number of parallel warps along M-dimension
+//    int Mdim_worker = nrows;
+//    // partition large-N and map to blockdim.y to help cache performance
+//    int Ndim_threadblock = CEIL(dcols, coarsen_factor);
+//
+//    int ref_warp_per_tb = RefThreadPerBlock / 32;
+//    int Mdim_warp_per_tb = ref_warp_per_tb;
+//
+//    // total number of warps
+//    int gridDimX = CEIL(Mdim_worker, Mdim_warp_per_tb);
+//    int gridDimY = Ndim_threadblock;
+//    dim3 gridDim(gridDimX, gridDimY, 1);
+//    dim3 blockDim(32, Mdim_warp_per_tb, 1);
+//
+//    if (coarsen_factor == 4) {
+//        csrspmm_rowcaching_rowbalance_kernel<4>
+//        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
+//                                col_ptr, val_ptr, iden_ptr, oden_array);
+////        csrspmm_non_transpose_parreduce_rowbalance_kernel<4>
+////        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
+////                                col_ptr, val_ptr, iden_ptr, oden_array);
+//    } else if (coarsen_factor == 2) {
+//        csrspmm_rowcaching_rowbalance_kernel<2>
+//        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
+//                                col_ptr, val_ptr, iden_ptr, oden_array);
+////        csrspmm_non_transpose_parreduce_rowbalance_kernel<2>
+////        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
+////                                col_ptr, val_ptr, iden_ptr, oden_array);
+//    } else {
+//        csrspmm_rowcaching_rowbalance_kernel<1>
+//        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
+//                                col_ptr, val_ptr, iden_ptr, oden_array);
+////        csrspmm_non_transpose_parreduce_rowbalance_kernel<1>
+////        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
+////                                col_ptr, val_ptr, iden_ptr, oden_array);
+//    }
 
-    int ref_warp_per_tb = RefThreadPerBlock / 32;
-    int Mdim_warp_per_tb = ref_warp_per_tb;
+    int coarsen_factor = (dcols >= 512) ? 4 : (dcols >= 128) ? 2 : 1;
+    int Ndim_threadblock = CEIL(dcols, (32 * coarsen_factor));
 
-    // total number of warps
-    int gridDimX = CEIL(Mdim_worker, Mdim_warp_per_tb);
-    int gridDimY = Ndim_threadblock;
-    dim3 gridDim(gridDimX, gridDimY, 1);
-    dim3 blockDim(32, Mdim_warp_per_tb, 1);
+    // int thread_nz = (spmatA.nnz > 8000 * 128 * 2) ? 2 : 1;
+    int thread_nz = 1;
+    int Nnzdim_warp_per_tb = RefThreadPerBlock / 32;
+    int Nnzdim_threadblock = CEIL(
+            nrows,
+            Nnzdim_warp_per_tb * thread_nz); // CEIL(spmatA.nnz, Nnzdim_warp_per_tb *
+    // 32 * thread_nz );
+
+    dim3 gridDim(Nnzdim_threadblock, Ndim_threadblock, 1);
+    dim3 blockDim(RefThreadPerBlock, 1, 1);
+
+    size_t smem_size = (2 * sizeof(int) + sizeof(float)) * RefThreadPerBlock;
+
+    // simple heuristic
 
     if (coarsen_factor == 4) {
-        csrspmm_rowcaching_rowbalance_kernel<4>
-        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
-                                col_ptr, val_ptr, iden_ptr, oden_array);
-//        csrspmm_non_transpose_parreduce_rowbalance_kernel<4>
-//        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
-//                                col_ptr, val_ptr, iden_ptr, oden_array);
+        if (thread_nz == 1)
+            csrspmm_rowcaching_nnzbalance_kernel<4, 1>
+            <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
+                                               nvals, offset_ptr,
+                                               col_ptr, val_ptr, iden_ptr, oden_array);
+        if (thread_nz == 2)
+            csrspmm_rowcaching_nnzbalance_kernel<4, 2>
+            <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
+                                               nvals, offset_ptr,
+                                               col_ptr, val_ptr, iden_ptr, oden_array);
+        if (thread_nz == 4)
+            csrspmm_rowcaching_nnzbalance_kernel<4, 4>
+            <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
+                                               nvals, offset_ptr,
+                                               col_ptr, val_ptr, iden_ptr, oden_array);
     } else if (coarsen_factor == 2) {
-        csrspmm_rowcaching_rowbalance_kernel<2>
-        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
-                                col_ptr, val_ptr, iden_ptr, oden_array);
-//        csrspmm_non_transpose_parreduce_rowbalance_kernel<2>
-//        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
-//                                col_ptr, val_ptr, iden_ptr, oden_array);
+        if (thread_nz == 1)
+            csrspmm_rowcaching_nnzbalance_kernel<2, 1>
+            <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
+                                               nvals, offset_ptr,
+                                               col_ptr, val_ptr, iden_ptr, oden_array);
+        if (thread_nz == 2)
+            csrspmm_rowcaching_nnzbalance_kernel<2, 2>
+            <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
+                                               nvals, offset_ptr,
+                                               col_ptr, val_ptr, iden_ptr, oden_array);
+        if (thread_nz == 4)
+            csrspmm_rowcaching_nnzbalance_kernel<2, 4>
+            <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
+                                               nvals, offset_ptr,
+                                               col_ptr, val_ptr, iden_ptr, oden_array);
     } else {
-        csrspmm_rowcaching_rowbalance_kernel<1>
-        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
-                                col_ptr, val_ptr, iden_ptr, oden_array);
-//        csrspmm_non_transpose_parreduce_rowbalance_kernel<1>
-//        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
-//                                col_ptr, val_ptr, iden_ptr, oden_array);
+        if (thread_nz == 1)
+            csrspmm_rowcaching_nnzbalance_kernel<1, 1>
+            <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
+                                               nvals, offset_ptr,
+                                               col_ptr, val_ptr, iden_ptr, oden_array);
+        if (thread_nz == 2)
+            csrspmm_rowcaching_nnzbalance_kernel<1, 2>
+            <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
+                                               nvals, offset_ptr,
+                                               col_ptr, val_ptr, iden_ptr, oden_array);
+        if (thread_nz == 4)
+            csrspmm_rowcaching_nnzbalance_kernel<1, 4>
+            <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
+                                               nvals, offset_ptr,
+                                               col_ptr, val_ptr, iden_ptr, oden_array);
     }
 
     return {output_dense};
