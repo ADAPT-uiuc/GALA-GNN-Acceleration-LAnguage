@@ -375,112 +375,112 @@ std::vector <at::Tensor> gather_forward_gcn(
         int end_vals = bounds_ptr[i1 * 2 + 1];
         int nvals = end_vals - start_vals;
 
-//        // factor of thread coarsening
-//        int coarsen_factor = (dcols >= 128) ? 4 : (dcols >= 64) ? 2 : 1;
-//        // number of parallel warps along M-dimension
-//        int Mdim_worker = nrows;
-//        // partition large-N and map to blockdim.y to help cache performance
-//        int Ndim_threadblock = CEIL(dcols, coarsen_factor);
-//
-//        int ref_warp_per_tb = RefThreadPerBlock / 32;
-//        int Mdim_warp_per_tb = ref_warp_per_tb;
-//
-//        // total number of warps
-//        int gridDimX = CEIL(Mdim_worker, Mdim_warp_per_tb);
-//        int gridDimY = Ndim_threadblock;
-//        dim3 gridDim(gridDimX, gridDimY, 1);
-//        dim3 blockDim(32, Mdim_warp_per_tb, 1);
-//
-//        if (coarsen_factor == 4) {
-//            csrspmm_rowcaching_rowbalance_kernel<4>
-//            <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr + (i1 * (nrows + 1)),
-//                                    col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
-//    //        csrspmm_non_transpose_parreduce_rowbalance_kernel<4>
-//    //        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
-//    //                                col_ptr, val_ptr, iden_ptr, oden_array);
-//        } else if (coarsen_factor == 2) {
-//            csrspmm_rowcaching_rowbalance_kernel<2>
-//            <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr + (i1 * (nrows + 1)),
-//                                    col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
-//    //        csrspmm_non_transpose_parreduce_rowbalance_kernel<2>
-//    //        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
-//    //                                col_ptr, val_ptr, iden_ptr, oden_array);
-//        } else {
-//            csrspmm_rowcaching_rowbalance_kernel<1>
-//            <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr + (i1 * (nrows + 1)),
-//                                    col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
-//    //        csrspmm_non_transpose_parreduce_rowbalance_kernel<1>
-//    //        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
-//    //                                col_ptr, val_ptr, iden_ptr, oden_array);
-//        }
+        // factor of thread coarsening
+        int coarsen_factor = (dcols >= 128) ? 4 : (dcols >= 64) ? 2 : 1;
+        // number of parallel warps along M-dimension
+        int Mdim_worker = nrows;
+        // partition large-N and map to blockdim.y to help cache performance
+        int Ndim_threadblock = CEIL(dcols, coarsen_factor);
 
-        int coarsen_factor = (dcols >= 512) ? 4 : (dcols >= 128) ? 2 : 1;
-        int Ndim_threadblock = CEIL(dcols, (32 * coarsen_factor));
+        int ref_warp_per_tb = RefThreadPerBlock / 32;
+        int Mdim_warp_per_tb = ref_warp_per_tb;
 
-        // int thread_nz = (spmatA.nnz > 8000 * 128 * 2) ? 2 : 1;
-        int thread_nz = 1;
-        int Nnzdim_warp_per_tb = RefThreadPerBlock / 32;
-        int Nnzdim_threadblock = CEIL(
-                nrows,
-                Nnzdim_warp_per_tb * thread_nz); // CEIL(spmatA.nnz, Nnzdim_warp_per_tb *
-        // 32 * thread_nz );
-
-        dim3 gridDim(Nnzdim_threadblock, Ndim_threadblock, 1);
-        dim3 blockDim(RefThreadPerBlock, 1, 1);
-
-        size_t smem_size = (2 * sizeof(int) + sizeof(float)) * RefThreadPerBlock;
-
-        // simple heuristic
+        // total number of warps
+        int gridDimX = CEIL(Mdim_worker, Mdim_warp_per_tb);
+        int gridDimY = Ndim_threadblock;
+        dim3 gridDim(gridDimX, gridDimY, 1);
+        dim3 blockDim(32, Mdim_warp_per_tb, 1);
 
         if (coarsen_factor == 4) {
-            if (thread_nz == 1)
-                csrspmm_rowcaching_nnzbalance_kernel<4, 1>
-                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
-                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
-                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
-            if (thread_nz == 2)
-                csrspmm_rowcaching_nnzbalance_kernel<4, 2>
-                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
-                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
-                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
-            if (thread_nz == 4)
-                csrspmm_rowcaching_nnzbalance_kernel<4, 4>
-                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
-                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
-                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
+            csrspmm_rowcaching_rowbalance_kernel<4>
+            <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr + (i1 * (nrows + 1)),
+                                    col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
+    //        csrspmm_non_transpose_parreduce_rowbalance_kernel<4>
+    //        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
+    //                                col_ptr, val_ptr, iden_ptr, oden_array);
         } else if (coarsen_factor == 2) {
-            if (thread_nz == 1)
-                csrspmm_rowcaching_nnzbalance_kernel<2, 1>
-                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
-                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
-                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
-            if (thread_nz == 2)
-                csrspmm_rowcaching_nnzbalance_kernel<2, 2>
-                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
-                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
-                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
-            if (thread_nz == 4)
-                csrspmm_rowcaching_nnzbalance_kernel<2, 4>
-                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
-                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
-                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
+            csrspmm_rowcaching_rowbalance_kernel<2>
+            <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr + (i1 * (nrows + 1)),
+                                    col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
+    //        csrspmm_non_transpose_parreduce_rowbalance_kernel<2>
+    //        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
+    //                                col_ptr, val_ptr, iden_ptr, oden_array);
         } else {
-            if (thread_nz == 1)
-                csrspmm_rowcaching_nnzbalance_kernel<1, 1>
-                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
-                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
-                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
-            if (thread_nz == 2)
-                csrspmm_rowcaching_nnzbalance_kernel<1, 2>
-                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
-                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
-                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
-            if (thread_nz == 4)
-                csrspmm_rowcaching_nnzbalance_kernel<1, 4>
-                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
-                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
-                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
+            csrspmm_rowcaching_rowbalance_kernel<1>
+            <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr + (i1 * (nrows + 1)),
+                                    col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
+    //        csrspmm_non_transpose_parreduce_rowbalance_kernel<1>
+    //        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
+    //                                col_ptr, val_ptr, iden_ptr, oden_array);
         }
+
+//        int coarsen_factor = (dcols >= 512) ? 4 : (dcols >= 128) ? 2 : 1;
+//        int Ndim_threadblock = CEIL(dcols, (32 * coarsen_factor));
+//
+//        // int thread_nz = (spmatA.nnz > 8000 * 128 * 2) ? 2 : 1;
+//        int thread_nz = 1;
+//        int Nnzdim_warp_per_tb = RefThreadPerBlock / 32;
+//        int Nnzdim_threadblock = CEIL(
+//                nrows,
+//                Nnzdim_warp_per_tb * thread_nz); // CEIL(spmatA.nnz, Nnzdim_warp_per_tb *
+//        // 32 * thread_nz );
+//
+//        dim3 gridDim(Nnzdim_threadblock, Ndim_threadblock, 1);
+//        dim3 blockDim(RefThreadPerBlock, 1, 1);
+//
+//        size_t smem_size = (2 * sizeof(int) + sizeof(float)) * RefThreadPerBlock;
+//
+//        // simple heuristic
+//
+//        if (coarsen_factor == 4) {
+//            if (thread_nz == 1)
+//                csrspmm_rowcaching_nnzbalance_kernel<4, 1>
+//                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
+//                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
+//                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
+//            if (thread_nz == 2)
+//                csrspmm_rowcaching_nnzbalance_kernel<4, 2>
+//                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
+//                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
+//                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
+//            if (thread_nz == 4)
+//                csrspmm_rowcaching_nnzbalance_kernel<4, 4>
+//                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
+//                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
+//                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
+//        } else if (coarsen_factor == 2) {
+//            if (thread_nz == 1)
+//                csrspmm_rowcaching_nnzbalance_kernel<2, 1>
+//                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
+//                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
+//                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
+//            if (thread_nz == 2)
+//                csrspmm_rowcaching_nnzbalance_kernel<2, 2>
+//                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
+//                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
+//                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
+//            if (thread_nz == 4)
+//                csrspmm_rowcaching_nnzbalance_kernel<2, 4>
+//                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
+//                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
+//                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
+//        } else {
+//            if (thread_nz == 1)
+//                csrspmm_rowcaching_nnzbalance_kernel<1, 1>
+//                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
+//                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
+//                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
+//            if (thread_nz == 2)
+//                csrspmm_rowcaching_nnzbalance_kernel<1, 2>
+//                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
+//                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
+//                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
+//            if (thread_nz == 4)
+//                csrspmm_rowcaching_nnzbalance_kernel<1, 4>
+//                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
+//                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
+//                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
+//        }
     }
 
     return {output_dense};
