@@ -113,8 +113,8 @@ std::vector <at::Tensor> gather_forward_gcn(
                                          CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, // Need to change these
                                          CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
 
-        cudaDeviceSynchronize();
-        std::cout << "create CSR works." << std::endl;
+//        cudaDeviceSynchronize();
+//        std::cout << "create CSR works." << std::endl;
 
         void *dBuffer = NULL;
         size_t bufferSize = 0;
