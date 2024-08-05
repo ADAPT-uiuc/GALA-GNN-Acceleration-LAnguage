@@ -588,6 +588,9 @@ int main(int argc, char **argv) {
 
     std::cout << adj.nrows() << " " << adj.ncols() << " " << adj.nvals() << std::endl;
 
+    //    gSpMM(&adj, &input_emb, &out_emb2, wsum_aggr);
+
+
     // Create a new Net.
     auto net = std::make_shared<GCN>();
 
