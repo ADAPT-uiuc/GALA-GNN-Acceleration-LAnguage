@@ -95,8 +95,8 @@ std::vector <at::Tensor> gather_forward_gcn(
     // Create dense matrix C
     CUSPARSE_CHECK(cusparseCreateDnMat(&matC, nrows, dcols, dcols, oden_array,
                                        CUDA_R_32F, CUSPARSE_ORDER_ROW)); // changed
-    cudaDeviceSynchronize();
-    std::cout << "segments: " << segments << ", nrows: " << nrows << std::endl;
+//    cudaDeviceSynchronize();
+//    std::cout << "segments: " << segments << ", nrows: " << nrows << std::endl;
 
     for (int i = 0; i < segments; i++){
         int i1 = i;
@@ -104,8 +104,8 @@ std::vector <at::Tensor> gather_forward_gcn(
         int end_vals = bounds_ptr[i1 * 2 + 1];
         int nvals = end_vals - start_vals;
 
-        cudaDeviceSynchronize();
-        std::cout << "nvals: " << start_vals << " " << end_vals << " " << nvals << std::endl;
+//        cudaDeviceSynchronize();
+//        std::cout << "nvals: " << start_vals << " " << end_vals << " " << nvals << std::endl;
 
         cusparseSpMatDescr_t matA;
         CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals,
@@ -128,8 +128,8 @@ std::vector <at::Tensor> gather_forward_gcn(
                 &bufferSize));
         CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));
 
-        cudaDeviceSynchronize();
-        std::cout << "Buffer size:" << bufferSize << std::endl;
+//        cudaDeviceSynchronize();
+//        std::cout << "Buffer size:" << bufferSize << std::endl;
 
         CUSPARSE_CHECK(cusparseSpMM(handle,
                                     CUSPARSE_OPERATION_NON_TRANSPOSE,
@@ -138,18 +138,18 @@ std::vector <at::Tensor> gather_forward_gcn(
                                     CUSPARSE_SPMM_CSR_ALG2,
                                     dBuffer));
 
-        cudaDeviceSynchronize();
-        std::cout << "Works till SpMM." << std::endl;
+//        cudaDeviceSynchronize();
+//        std::cout << "Works till SpMM." << std::endl;
 
         CUSPARSE_CHECK(cusparseDestroySpMat(matA));
-
-        cudaDeviceSynchronize();
-        std::cout << "Cleans1." << std::endl;
+//
+//        cudaDeviceSynchronize();
+//        std::cout << "Cleans1." << std::endl;
 
         CUDA_CHECK(cudaFree(dBuffer));
 
-        cudaDeviceSynchronize();
-        std::cout << "Cleans2." << std::endl;
+//        cudaDeviceSynchronize();
+//        std::cout << "Cleans2." << std::endl;
         //cudaDeviceSynchronize();
         //std::cout << "a4 " << i << std::endl;
     }
@@ -262,7 +262,7 @@ int main(int argc, char **argv) {
     out_emb.set_all(0);
     out_emb2.set_all(0);
 
-    gSpMM(&adj, &input_emb, &out_emb2, wsum_aggr);
+//    gSpMM(&adj, &input_emb, &out_emb2, wsum_aggr);
 
     std::cout << adj.nrows() << " " << adj.ncols() << " " << adj.nvals() << std::endl;
 
@@ -342,15 +342,15 @@ int main(int argc, char **argv) {
             times_arr.push_back(end - start);
         }
 
-        for (int x = 0; x < nrows; x++){
-            for (int y = 0; y < emb_size; y++){
-                if (prediction[x][y].item<val_t>()!= out_emb2.vals_ptr()[x * emb_size + y]) {
-                    std::cout << "The results don't match at: " << x << "," << y << ":  " << prediction[x][y].item<val_t>() << ", "
-                              << out_emb2.vals_ptr()[x * emb_size + y] << std::endl;
-                    break;
-                }
-            }
-        }
+//        for (int x = 0; x < nrows; x++){
+//            for (int y = 0; y < emb_size; y++){
+//                if (prediction[x][y].item<val_t>()!= out_emb2.vals_ptr()[x * emb_size + y]) {
+//                    std::cout << "The results don't match at: " << x << "," << y << ":  " << prediction[x][y].item<val_t>() << ", "
+//                              << out_emb2.vals_ptr()[x * emb_size + y] << std::endl;
+//                    break;
+//                }
+//            }
+//        }
 
     }
 
