@@ -61,7 +61,7 @@ void check_equal_tile(SM *adj1, SM *adj2) {
             }
         }
     }
-    if (is_diff) {
+    if (is_diff) {src
         std::cout << "The offsets are different." << std::endl;
     }
 
@@ -279,6 +279,104 @@ void ord_col_tiling_torch(std::vector<typename SM::itype> &col_breakpoints,
         output_bounds[nth_tile * 2 + 1] = new_nvals;
         prev_nvals = new_nvals;
     }
+}
+
+template<class SM>
+void ord_col_tiling_torch_dcsr(std::vector<typename SM::itype> &col_breakpoints,
+                               torch::Tensor &output_row_range, // alloc: (#segs) * 2
+                               torch::Tensor &output_rows, // alloc: Dynamic
+                               torch::Tensor &output_offsets, // alloc: Dynamic
+                               torch::Tensor &output_cols, // alloc: nvals
+                               torch::Tensor &output_vals, // alloc: nvals
+                               SM* src) {
+    // Get types
+    typedef typename SM::itype iT;
+    typedef typename SM::ntype nT;
+    typedef typename SM::vtype vT;
+
+    // Get stats from the original matrox
+    iT src_ncols = src->ncols();
+    iT src_nrows = src->nrows();
+    nT src_nvals = src->nvals();
+    iT segments = (iT)col_breakpoints.size() - 1;
+
+    auto options_int = torch::TensorOptions().dtype(torch::kInt).requires_grad(false);
+    auto options_float = torch::TensorOptions().dtype(torch::kFloat).requires_grad(true);
+
+//    total_offsets = torch::zeros({(adj.nrows() + 1) * (segments)}, options_int);
+    output_cols = torch::zeros({adj.nvals()}, options_int);
+    output_vals = torch::zeros({adj.nvals()}, options_float);
+    output_row_range = torch::zeros({2 * (segments)}, options_int);
+
+    iT *row_bounds = output_row_range.data_ptr<iT>();
+    iT *col_ptr = output_cols.data_ptr<iT>();
+    vT *val_ptr = output_vals.data_ptr<vT>();
+
+    // Have a vector to add the new rows.
+    // This cannot be pre-determined like the other tensors.
+    // Thus, you need a dynamic allocation.
+    std::vector<iT> new_rows_vec;
+    // Need a similar vector to capture the offsets
+    std::vector<iT> new_offset_ptr_vec;
+
+    nT *src_offset_ptr = src->offset_ptr();
+    iT *src_ids_ptr = src->ids_ptr();
+    vT *src_vals_ptr = src->vals_ptr();
+
+    auto copy_offsets = (nT *) aligned_alloc(64, (src->nrows() + 1) * sizeof(nT));
+    memcpy(copy_offsets, src->offset_ptr(), (src->nrows() + 1) * sizeof(nT));
+
+    nT new_nvals = 0;
+    nT prev_nvals = 0;
+    iT new_nrows = 0;
+
+    new_offset_ptr_vec.push_back(new_nvals);
+
+    for (iT nth_tile = 0; nth_tile < (iT)col_breakpoints.size() - 1; nth_tile++) {
+        iT j_start = col_breakpoints.at(nth_tile);
+        iT j_end = col_breakpoints.at(nth_tile + 1);
+
+        bool found_nnz = false;
+
+        // Set the initial offset
+        row_bounds[nth_tile * 2] = new_nvals;
+        for (iT i_i = 0; i_i < src_nrows; i_i += 1) {
+            nT first_node_edge = copy_offsets[i_i];
+            nT last_node_edge = src_offset_ptr[i_i + 1];
+
+            for (nT e = first_node_edge; e < last_node_edge; e++) {
+                iT u = src_ids_ptr[e];
+                if (u >= j_start && u < j_end) {
+                    vT val = src_vals_ptr[e];
+
+                    found_nnz = true;
+                    col_ptr[new_nvals] = u;
+                    val_ptr[new_nvals] = val;
+
+                    new_nvals += 1;
+                } else if (u >= j_end) {
+                    copy_offsets[i_i] = e;
+                    break;
+                }
+            }
+
+            if (found_nnz){
+                new_offset_ptr_vec.push_back(new_nvals);
+                new_rows_vec.push_back(i_i);
+                new_nrows += 1;
+            }
+        }
+        row_bounds[nth_tile * 2 + 1] = new_nvals;
+    }
+
+    output_rows = torch::zeros({new_rows_vec.size()}, options_int);
+    output_offsets = torch::zeros({new_offset_ptr_vec.size()}, options_int);
+
+    iT *rows_ptr = output_row_range.data_ptr<iT>();
+    iT *offsets_ptr = output_offsets.data_ptr<iT>();
+
+    std::copy(new_rows_vec.begin(), new_rows_vec.end(), rows_ptr);
+    std::copy(new_offset_ptr_vec.begin(), new_offset_ptr_vec.end(), offsets_ptr);
 }
 
 #ifdef PT_0
