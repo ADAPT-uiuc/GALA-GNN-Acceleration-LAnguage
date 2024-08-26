@@ -338,6 +338,8 @@ void ord_col_tiling_torch_dcsr(std::vector<typename SM::itype> &col_breakpoints,
 
         bool found_nnz = false;
 
+        std::cout << "Works starting at tile: " << nth_tile << std::endl;
+
         // Set the initial offset
         row_bounds[nth_tile * 2] = new_nvals;
         for (iT i_i = 0; i_i < src_nrows; i_i += 1) {
@@ -368,6 +370,8 @@ void ord_col_tiling_torch_dcsr(std::vector<typename SM::itype> &col_breakpoints,
         }
         row_bounds[nth_tile * 2 + 1] = new_nvals;
     }
+
+    std::cout << "Works after loops" << std::endl;
 
     output_rows = torch::zeros({(long)new_rows_vec.size()}, options_int);
     output_offsets = torch::zeros({(long)new_offset_ptr_vec.size()}, options_int);

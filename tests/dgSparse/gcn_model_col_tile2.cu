@@ -522,115 +522,115 @@ int main(int argc, char **argv) {
                               total_vals,
                               &adj); // Except this.
 
-    int dcsr_nrows =  total_rows.sizes()[0];
-    int dcsr_noffsets = total_offsets.sizes()[0];
-
-    iT *row_ptr = total_rows.data_ptr<iT>();
-    iT *offset_ptr = total_offsets.data_ptr<iT>();
-    iT *col_ptr = total_cols.data_ptr<iT>();
-    vT *val_ptr = total_vals.data_ptr<vT>();
-
-    // Init input with random numbers
-    DM input_emb;
-    input_emb.build(adj.ncols(), emb_size, DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
-    for (diT i = 0; i < adj.nrows(); i++) {
-        for (dnT j = 0; j < emb_size; j++) {
-            input_emb.vals_ptr()[i * emb_size + j] = (dvT) (rand() % 100) / 100;
-        }
-    }
-    input_emb.set_all(1);
-
-    DM out_emb;
-    out_emb.build(adj.nrows(), emb_size, DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
-
-    DM out_emb2;
-    out_emb2.build(adj.nrows(), emb_size, DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
-
-    auto wsum_aggr = wsumAgg<val_t, val_t, ind2_t>;
-
-    // Comparison for checking if SpMM works correctlu
-    out_emb.set_all(0);
-    out_emb2.set_all(0);
-
-    std::cout << adj.nrows() << " " << adj.ncols() << " " << adj.nvals() << std::endl;
-
-    //    gSpMM(&adj, &input_emb, &out_emb2, wsum_aggr);
-
-
-    // Create a new Net.
-    auto net = std::make_shared<GCN>();
-
-    // Instantiate an SGD optimization algorithm to update our Net's parameters.
-    torch::optim::SGD optimizer(net->parameters(), /*lr=*/0.01);
-
-    iT *dA_dcsrOffsets, *dA_columns, *dA_rows;
-    float *dA_values, *dB;
-
-    // Malloc on GPU
-    CUDA_CHECK(cudaMalloc((void **) &dA_dcsrOffsets,
-                          (dcsr_noffsets) * sizeof(iT)));
-    CUDA_CHECK(cudaMalloc((void **) &dA_rows,
-                          (dcsr_nrows) * sizeof(iT)));
-    CUDA_CHECK(cudaMalloc((void **) &dA_columns, nvals * sizeof(iT)));
-    CUDA_CHECK(cudaMalloc((void **) &dA_values, nvals * sizeof(vT)));
-    CUDA_CHECK(cudaMalloc((void **) &dB, (nrows * emb_size) * sizeof(vT)));
-
-    // Copy to GPU
-    CUDA_CHECK(cudaMemcpy(dA_dcsrOffsets, offset_ptr, (dcsr_noffsets) * sizeof(iT),
-                          cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dA_rows, row_ptr, (dcsr_nrows) * sizeof(iT),
-                          cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dA_columns, col_ptr, nvals * sizeof(iT),
-                          cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dA_values, val_ptr, nvals * sizeof(float),
-                          cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dB, input_emb.vals_ptr(), (nrows * emb_size)  * sizeof(float),
-                          cudaMemcpyHostToDevice));
-
-    // Create Torch tensors
-    // The graph inputs
-    auto options_cu_int = torch::TensorOptions().dtype(torch::kInt).device(torch::kCUDA, 0);
-    torch::Tensor t_offsets = torch::from_blob(dA_dcsrOffsets, {dcsr_noffsets}, options_cu_int);
-    torch::Tensor t_rows = torch::from_blob(dA_rows, {dcsr_nrows}, options_cu_int);
-    torch::Tensor t_cols = torch::from_blob(dA_columns, {nvals}, options_cu_int);
-
-    auto options_cu_float = torch::TensorOptions().dtype(torch::kFloat).device(torch::kCUDA, 0);
-    torch::Tensor t_vals = torch::from_blob(dA_values, {nvals}, options_cu_float);
-    // The dense input
-    torch::Tensor t_iden = torch::from_blob(dB, {nrows * emb_size}, options_cu_float);
-
-    double start, end;
-    val_t randVal;
-    std::vector<double> times_arr;
-    for (size_t epoch = 1; epoch <= num_iters; ++epoch) {
-        // Reset gradients.
-        optimizer.zero_grad();
-        // Execute the model on the input data.
-        cudaDeviceSynchronize();
-        start = get_time();
-        torch::Tensor prediction = net->forward(t_iden,
-                                                t_offsets,
-                                                t_rows,
-                                                t_cols,
-                                                t_vals,
-                                                total_row_range,
-                                                nrows,
-                                                segments)[0];
-
-        cudaDeviceSynchronize();
-        end = get_time();
-
-        if (epoch >= skip_cache_warmup) {
-            times_arr.push_back(end - start);
-        }
-    }
-
-    CUDA_CHECK(cudaFree(dA_dcsrOffsets));
-    CUDA_CHECK(cudaFree(dA_rows));
-    CUDA_CHECK(cudaFree(dA_values));
-    CUDA_CHECK(cudaFree(dA_columns));
-    CUDA_CHECK(cudaFree(dB));
-
-    std::cout << calc_mean(times_arr) << "," << calc_std(times_arr) << std::endl;
+//    int dcsr_nrows =  total_rows.sizes()[0];
+//    int dcsr_noffsets = total_offsets.sizes()[0];
+//
+//    iT *row_ptr = total_rows.data_ptr<iT>();
+//    iT *offset_ptr = total_offsets.data_ptr<iT>();
+//    iT *col_ptr = total_cols.data_ptr<iT>();
+//    vT *val_ptr = total_vals.data_ptr<vT>();
+//
+//    // Init input with random numbers
+//    DM input_emb;
+//    input_emb.build(adj.ncols(), emb_size, DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
+//    for (diT i = 0; i < adj.nrows(); i++) {
+//        for (dnT j = 0; j < emb_size; j++) {
+//            input_emb.vals_ptr()[i * emb_size + j] = (dvT) (rand() % 100) / 100;
+//        }
+//    }
+//    input_emb.set_all(1);
+//
+//    DM out_emb;
+//    out_emb.build(adj.nrows(), emb_size, DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
+//
+//    DM out_emb2;
+//    out_emb2.build(adj.nrows(), emb_size, DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
+//
+//    auto wsum_aggr = wsumAgg<val_t, val_t, ind2_t>;
+//
+//    // Comparison for checking if SpMM works correctlu
+//    out_emb.set_all(0);
+//    out_emb2.set_all(0);
+//
+//    std::cout << adj.nrows() << " " << adj.ncols() << " " << adj.nvals() << std::endl;
+//
+//    //    gSpMM(&adj, &input_emb, &out_emb2, wsum_aggr);
+//
+//
+//    // Create a new Net.
+//    auto net = std::make_shared<GCN>();
+//
+//    // Instantiate an SGD optimization algorithm to update our Net's parameters.
+//    torch::optim::SGD optimizer(net->parameters(), /*lr=*/0.01);
+//
+//    iT *dA_dcsrOffsets, *dA_columns, *dA_rows;
+//    float *dA_values, *dB;
+//
+//    // Malloc on GPU
+//    CUDA_CHECK(cudaMalloc((void **) &dA_dcsrOffsets,
+//                          (dcsr_noffsets) * sizeof(iT)));
+//    CUDA_CHECK(cudaMalloc((void **) &dA_rows,
+//                          (dcsr_nrows) * sizeof(iT)));
+//    CUDA_CHECK(cudaMalloc((void **) &dA_columns, nvals * sizeof(iT)));
+//    CUDA_CHECK(cudaMalloc((void **) &dA_values, nvals * sizeof(vT)));
+//    CUDA_CHECK(cudaMalloc((void **) &dB, (nrows * emb_size) * sizeof(vT)));
+//
+//    // Copy to GPU
+//    CUDA_CHECK(cudaMemcpy(dA_dcsrOffsets, offset_ptr, (dcsr_noffsets) * sizeof(iT),
+//                          cudaMemcpyHostToDevice));
+//    CUDA_CHECK(cudaMemcpy(dA_rows, row_ptr, (dcsr_nrows) * sizeof(iT),
+//                          cudaMemcpyHostToDevice));
+//    CUDA_CHECK(cudaMemcpy(dA_columns, col_ptr, nvals * sizeof(iT),
+//                          cudaMemcpyHostToDevice));
+//    CUDA_CHECK(cudaMemcpy(dA_values, val_ptr, nvals * sizeof(float),
+//                          cudaMemcpyHostToDevice));
+//    CUDA_CHECK(cudaMemcpy(dB, input_emb.vals_ptr(), (nrows * emb_size)  * sizeof(float),
+//                          cudaMemcpyHostToDevice));
+//
+//    // Create Torch tensors
+//    // The graph inputs
+//    auto options_cu_int = torch::TensorOptions().dtype(torch::kInt).device(torch::kCUDA, 0);
+//    torch::Tensor t_offsets = torch::from_blob(dA_dcsrOffsets, {dcsr_noffsets}, options_cu_int);
+//    torch::Tensor t_rows = torch::from_blob(dA_rows, {dcsr_nrows}, options_cu_int);
+//    torch::Tensor t_cols = torch::from_blob(dA_columns, {nvals}, options_cu_int);
+//
+//    auto options_cu_float = torch::TensorOptions().dtype(torch::kFloat).device(torch::kCUDA, 0);
+//    torch::Tensor t_vals = torch::from_blob(dA_values, {nvals}, options_cu_float);
+//    // The dense input
+//    torch::Tensor t_iden = torch::from_blob(dB, {nrows * emb_size}, options_cu_float);
+//
+//    double start, end;
+//    val_t randVal;
+//    std::vector<double> times_arr;
+//    for (size_t epoch = 1; epoch <= num_iters; ++epoch) {
+//        // Reset gradients.
+//        optimizer.zero_grad();
+//        // Execute the model on the input data.
+//        cudaDeviceSynchronize();
+//        start = get_time();
+//        torch::Tensor prediction = net->forward(t_iden,
+//                                                t_offsets,
+//                                                t_rows,
+//                                                t_cols,
+//                                                t_vals,
+//                                                total_row_range,
+//                                                nrows,
+//                                                segments)[0];
+//
+//        cudaDeviceSynchronize();
+//        end = get_time();
+//
+//        if (epoch >= skip_cache_warmup) {
+//            times_arr.push_back(end - start);
+//        }
+//    }
+//
+//    CUDA_CHECK(cudaFree(dA_dcsrOffsets));
+//    CUDA_CHECK(cudaFree(dA_rows));
+//    CUDA_CHECK(cudaFree(dA_values));
+//    CUDA_CHECK(cudaFree(dA_columns));
+//    CUDA_CHECK(cudaFree(dB));
+//
+//    std::cout << calc_mean(times_arr) << "," << calc_std(times_arr) << std::endl;
 
 }
