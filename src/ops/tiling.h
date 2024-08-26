@@ -61,7 +61,7 @@ void check_equal_tile(SM *adj1, SM *adj2) {
             }
         }
     }
-    if (is_diff) {src
+    if (is_diff) {
         std::cout << "The offsets are different." << std::endl;
     }
 
@@ -304,8 +304,8 @@ void ord_col_tiling_torch_dcsr(std::vector<typename SM::itype> &col_breakpoints,
     auto options_float = torch::TensorOptions().dtype(torch::kFloat).requires_grad(true);
 
 //    total_offsets = torch::zeros({(adj.nrows() + 1) * (segments)}, options_int);
-    output_cols = torch::zeros({adj.nvals()}, options_int);
-    output_vals = torch::zeros({adj.nvals()}, options_float);
+    output_cols = torch::zeros({src->nvals()}, options_int);
+    output_vals = torch::zeros({src->nvals()}, options_float);
     output_row_range = torch::zeros({2 * (segments)}, options_int);
 
     iT *row_bounds = output_row_range.data_ptr<iT>();
@@ -369,8 +369,8 @@ void ord_col_tiling_torch_dcsr(std::vector<typename SM::itype> &col_breakpoints,
         row_bounds[nth_tile * 2 + 1] = new_nvals;
     }
 
-    output_rows = torch::zeros({new_rows_vec.size()}, options_int);
-    output_offsets = torch::zeros({new_offset_ptr_vec.size()}, options_int);
+    output_rows = torch::zeros({(long)new_rows_vec.size()}, options_int);
+    output_offsets = torch::zeros({(long)new_offset_ptr_vec.size()}, options_int);
 
     iT *rows_ptr = output_row_range.data_ptr<iT>();
     iT *offsets_ptr = output_offsets.data_ptr<iT>();

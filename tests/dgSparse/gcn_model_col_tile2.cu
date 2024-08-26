@@ -57,8 +57,14 @@ typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;
 
 template <int CoarsenFactor>
 __global__ void csrspmm_rowcaching_rowbalance_kernel(
-        const int M, const int N, const int K, const int csr_indptr[],
-        const int csr_indices[], const float csr_data[], const float B[],
+        const int M, // rows 
+        const int N, // 
+        const int K, //
+        const int dcsr_indptr[], // offsets
+        const int dcsr_rows[], // cols
+        const int dcsr_indices[], // cols
+        const float dcsr_data[], // vals
+        const float B[],
         float C[]) {
     int warp_id = threadIdx.x >> 5;
     int lane_id = threadIdx.x & 31;
@@ -70,12 +76,13 @@ __global__ void csrspmm_rowcaching_rowbalance_kernel(
                       blockDim.x); // float and int has the same size
 
     // get the sparse-value range of this row
-    //
-    int row_id = blockIdx.x * (blockDim.x >> 5) + warp_id;
-    if (row_id >= M)
+    int row_id_point = blockIdx.x * (blockDim.x >> 5) + warp_id;
+    if (row_id_point >= M)
         return;
-    int start = csr_indptr[row_id];
-    int end = csr_indptr[row_id + 1];
+    // Get the working row
+    int row_id = dcsr_rows[row_id_point];
+    int start = dcsr_indptr[row_id];
+    int end = dcsr_indptr[row_id + 1];
 
     // get the dense column offset
     int col_offset = blockIdx.y * 32 * CoarsenFactor;
@@ -99,8 +106,8 @@ __global__ void csrspmm_rowcaching_rowbalance_kernel(
         // copy a bucket of sparse row elements into shared memory
         if (p + lane_id < end) {
             workspace_data[lane_id] =
-                    __guard_load_default_one<float>(csr_data, (p + lane_id));
-            workspace_indices[lane_id] = csr_indices[p + lane_id];
+                    __guard_load_default_one<float>(dcsr_data, (p + lane_id));
+            workspace_indices[lane_id] = dcsr_indices[p + lane_id];
         } else {
             workspace_data[lane_id] = 0.0f;
             workspace_indices[lane_id] = 0;
@@ -134,8 +141,8 @@ __global__ void csrspmm_rowcaching_rowbalance_kernel(
         // copy a bucket of sparse row elements into shared memory
         if (p + lane_id < end) {
             workspace_data[lane_id] =
-                    __guard_load_default_one<float>(csr_data, (p + lane_id));
-            workspace_indices[lane_id] = csr_indices[p + lane_id];
+                    __guard_load_default_one<float>(dcsr_data, (p + lane_id));
+            workspace_indices[lane_id] = dcsr_indices[p + lane_id];
         } else {
             workspace_data[lane_id] = 0.0f;
             workspace_indices[lane_id] = 0;
@@ -346,9 +353,10 @@ __global__ void csrspmm_rowcaching_rowbalance_kernel(
 std::vector <at::Tensor> gather_forward_gcn(
         torch::Tensor input_dense,
         torch::Tensor offset_graph,
+        torch::Tensor rows_graph,
         torch::Tensor columns_graph,
         torch::Tensor value_graph,
-        torch::Tensor bounds,
+        torch::Tensor ranges,
         int nrows, int segments) {
     auto full_iden = input_dense.numel();
     auto dcols = full_iden / nrows;
@@ -363,18 +371,19 @@ std::vector <at::Tensor> gather_forward_gcn(
 
     // Sparse
     int *offset_ptr = offset_graph.data_ptr<int>();
+    int *row_ptr = rows_graph.data_ptr<int>(); 
     int *col_ptr = columns_graph.data_ptr<int>();
     float *val_ptr = value_graph.data_ptr<float>();
-    int *bounds_ptr = bounds.data_ptr<int>();
+    int *ranges_ptr = ranges.data_ptr<int>();
 
     float alpha = 1.0f;
     float beta = 1.0f;
 
     for (int i = 0; i < segments; i++){
         int i1 = i;
-        int start_vals = bounds_ptr[i1 * 2];
-        int end_vals = bounds_ptr[i1 * 2 + 1];
-        int nvals = end_vals - start_vals;
+        int start_rows = ranges_ptr[i1 * 2];
+        int end_rows = ranges_ptr[i1 * 2 + 1];
+        int nrows_seg = end_rows - start_rows;
 
         // factor of thread coarsening
         int coarsen_factor = (dcols >= 128) ? 4 : (dcols >= 64) ? 2 : 1;
@@ -395,94 +404,47 @@ std::vector <at::Tensor> gather_forward_gcn(
         // TODO: Need to change the offset start points etc. col and vals do not need + start_vals.
         if (coarsen_factor == 4) {
             csrspmm_rowcaching_rowbalance_kernel<4>
-            <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr + (i1 * (nrows + 1)),
-                                    col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
+            <<<gridDim, blockDim>>>(nrows_seg, 
+                                    dcols, 
+                                    nrows, 
+                                    offset_ptr + start_rows,
+                                    row_ptr + start_rows,
+                                    col_ptr,
+                                    val_ptr, 
+                                    iden_ptr,
+                                    oden_array);
     //        csrspmm_non_transpose_parreduce_rowbalance_kernel<4>
     //        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
     //                                col_ptr, val_ptr, iden_ptr, oden_array);
         } else if (coarsen_factor == 2) {
             csrspmm_rowcaching_rowbalance_kernel<2>
-            <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr + (i1 * (nrows + 1)),
-                                    col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
+            <<<gridDim, blockDim>>>(nrows_seg, 
+                                    dcols, 
+                                    nrows, 
+                                    offset_ptr + start_rows,
+                                    row_ptr + start_rows,
+                                    col_ptr,
+                                    val_ptr, 
+                                    iden_ptr,
+                                    oden_array);
     //        csrspmm_non_transpose_parreduce_rowbalance_kernel<2>
     //        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
     //                                col_ptr, val_ptr, iden_ptr, oden_array);
         } else {
             csrspmm_rowcaching_rowbalance_kernel<1>
-            <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr + (i1 * (nrows + 1)),
-                                    col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
+            <<<gridDim, blockDim>>>(nrows_seg, 
+                                    dcols, 
+                                    nrows, 
+                                    offset_ptr + start_rows,
+                                    row_ptr + start_rows,
+                                    col_ptr,
+                                    val_ptr, 
+                                    iden_ptr,
+                                    oden_array);
     //        csrspmm_non_transpose_parreduce_rowbalance_kernel<1>
     //        <<<gridDim, blockDim>>>(nrows, dcols, nrows, offset_ptr,
     //                                col_ptr, val_ptr, iden_ptr, oden_array);
         }
-
-//        int coarsen_factor = (dcols >= 512) ? 4 : (dcols >= 128) ? 2 : 1;
-//        int Ndim_threadblock = CEIL(dcols, (32 * coarsen_factor));
-//
-//        // int thread_nz = (spmatA.nnz > 8000 * 128 * 2) ? 2 : 1;
-//        int thread_nz = 1;
-//        int Nnzdim_warp_per_tb = RefThreadPerBlock / 32;
-//        int Nnzdim_threadblock = CEIL(
-//                nrows,
-//                Nnzdim_warp_per_tb * thread_nz); // CEIL(spmatA.nnz, Nnzdim_warp_per_tb *
-//        // 32 * thread_nz );
-//
-//        dim3 gridDim(Nnzdim_threadblock, Ndim_threadblock, 1);
-//        dim3 blockDim(RefThreadPerBlock, 1, 1);
-//
-//        size_t smem_size = (2 * sizeof(int) + sizeof(float)) * RefThreadPerBlock;
-//
-//        // simple heuristic
-//
-//        if (coarsen_factor == 4) {
-//            if (thread_nz == 1)
-//                csrspmm_rowcaching_nnzbalance_kernel<4, 1>
-//                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
-//                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
-//                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
-//            if (thread_nz == 2)
-//                csrspmm_rowcaching_nnzbalance_kernel<4, 2>
-//                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
-//                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
-//                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
-//            if (thread_nz == 4)
-//                csrspmm_rowcaching_nnzbalance_kernel<4, 4>
-//                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
-//                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
-//                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
-//        } else if (coarsen_factor == 2) {
-//            if (thread_nz == 1)
-//                csrspmm_rowcaching_nnzbalance_kernel<2, 1>
-//                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
-//                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
-//                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
-//            if (thread_nz == 2)
-//                csrspmm_rowcaching_nnzbalance_kernel<2, 2>
-//                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
-//                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
-//                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
-//            if (thread_nz == 4)
-//                csrspmm_rowcaching_nnzbalance_kernel<2, 4>
-//                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
-//                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
-//                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
-//        } else {
-//            if (thread_nz == 1)
-//                csrspmm_rowcaching_nnzbalance_kernel<1, 1>
-//                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
-//                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
-//                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
-//            if (thread_nz == 2)
-//                csrspmm_rowcaching_nnzbalance_kernel<1, 2>
-//                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
-//                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
-//                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
-//            if (thread_nz == 4)
-//                csrspmm_rowcaching_nnzbalance_kernel<1, 4>
-//                <<<gridDim, blockDim, smem_size>>>(nrows, dcols, nrows,
-//                                                   nvals, offset_ptr + (i1 * (nrows + 1)),
-//                                                   col_ptr + start_vals, val_ptr + start_vals, iden_ptr, oden_array);
-//        }
     }
 
     return {output_dense};
@@ -494,11 +456,12 @@ struct GCN : torch::nn::Module {
     // Implement the Net's algorithm.
     std::vector<torch::Tensor> forward(torch::Tensor input_dense,
                                        torch::Tensor offset_graph,
+                                       torch::Tensor rows_graph,
                                        torch::Tensor columns_graph,
                                        torch::Tensor value_graph,
-                                       torch::Tensor bounds,
+                                       torch::Tensor ranges,
                                        int nrows, int segments) {
-        return gather_forward_gcn(input_dense, offset_graph, columns_graph, value_graph,  bounds, nrows, segments);
+        return gather_forward_gcn(input_dense, offset_graph, rows_graph, columns_graph, value_graph, ranges, nrows, segments);
     }
 
     // Use one of many "standard library" modules.
@@ -627,8 +590,8 @@ int main(int argc, char **argv) {
     // Create Torch tensors
     // The graph inputs
     auto options_cu_int = torch::TensorOptions().dtype(torch::kInt).device(torch::kCUDA, 0);
-    torch::Tensor t_offsets = torch::from_blob(dA_csrOffsets, {dcsr_noffsets}, options_cu_int);
-    torch::Tensor t_rows = torch::from_blob(dA_columns, {dcsr_nrows}, options_cu_int);
+    torch::Tensor t_offsets = torch::from_blob(dA_dcsrOffsets, {dcsr_noffsets}, options_cu_int);
+    torch::Tensor t_rows = torch::from_blob(dA_rows, {dcsr_nrows}, options_cu_int);
     torch::Tensor t_cols = torch::from_blob(dA_columns, {nvals}, options_cu_int);
 
     auto options_cu_float = torch::TensorOptions().dtype(torch::kFloat).device(torch::kCUDA, 0);
@@ -647,9 +610,10 @@ int main(int argc, char **argv) {
         start = get_time();
         torch::Tensor prediction = net->forward(t_iden,
                                                 t_offsets,
+                                                t_rows,
                                                 t_cols,
                                                 t_vals,
-                                                total_bounds,
+                                                total_row_range,
                                                 nrows,
                                                 segments)[0];
 
@@ -661,7 +625,8 @@ int main(int argc, char **argv) {
         }
     }
 
-    CUDA_CHECK(cudaFree(dA_csrOffsets));
+    CUDA_CHECK(cudaFree(dA_dcsrOffsets));
+    CUDA_CHECK(cudaFree(dA_rows));
     CUDA_CHECK(cudaFree(dA_values));
     CUDA_CHECK(cudaFree(dA_columns));
     CUDA_CHECK(cudaFree(dB));
