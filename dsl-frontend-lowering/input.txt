@@ -1,0 +1,17 @@
+// Init Data
+G = dsl.load("Reddit");
+
+// Preprocessing
+
+L1 = layer(DSL_Dataset G, int output_feat, int col_tile_size, int slice_size, NonLn non_ln) {}
+L2 = layer(DSL_Dataset G2, int output_feat2, int col_tile_size2, int slice_size, NonLn non_ln) {}
+
+M1 = model(NonLn non_ln) {
+    l1 = L1(G, 256, 65000, 0, non_ln);
+    l2 = L1(l1, 32, 65000, 32, null);
+}
+M2 = model() {
+    l2 = L2(G, 128, 95000, 0, non_ln);
+}
+m1 = M1(G, dsl.nln.ReLU);
+

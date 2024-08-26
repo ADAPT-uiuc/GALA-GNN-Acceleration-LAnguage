@@ -1,0 +1,10 @@
+dgl/__pycache__/
+dgl/dataset/
+dataset/
+pyg/
+pygDatasets/
+pyg/__pycache__/
+notes.txt
+__pycache__/
+.vscode/
+fullTests.txt
