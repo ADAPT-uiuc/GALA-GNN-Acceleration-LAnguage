@@ -22,8 +22,8 @@ DSL_Dataset { cout << "DATASET "; }
 NonLn { cout << "NONLN "; }
 model { cout << "MODEL "; }
 layer { cout << "LAYER "; }
-graphs { cout << "GRAPH_ATTR "; }
-feats { cout << "FEAT_ATTR "; }
+graph { cout << "GRAPH_ATTR "; }
+feat { cout << "FEAT_ATTR "; }
 eval { cout << "EVAL "; }
 train { cout << "TRAIN "; }
 loss { cout << "LOSS "; }

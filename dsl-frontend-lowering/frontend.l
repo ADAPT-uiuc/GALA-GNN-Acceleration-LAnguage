@@ -21,12 +21,15 @@ dsl.reorder.rabbit { return RABBIT_REORDER_OP; }
 dsl.sample.random  { return SAMPLE_RANDOM_OP; }
 dsl.nn.ffn { return FFN; }
 dsl.nln.ReLU { return RELU; }
+dsl.nn.loss.RMSE { return RMSE_LOSS; }
+dsl.nn.optmz.ADAM { return ADAM; }
 DSL_Dataset { return DATASET; }
 NonLn { return NONLN; }
+aggregate { return AGGR; }
 model { return MODEL; }
 layer { return LAYER; }
-graphs { return GRAPH_ATTR; }
-feats { return FEAT_ATTR; }
+graph { return GRAPH_ATTR; }
+feat { return FEAT_ATTR; }
 eval { return EVAL; }
 train { return TRAIN; }
 loss { return LOSS; }

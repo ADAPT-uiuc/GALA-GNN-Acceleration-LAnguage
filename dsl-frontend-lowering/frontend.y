@@ -24,10 +24,10 @@ FrontendIRNode *root;
 
 %token<sval> IDENTIFIER ASSIGN LOAD;
 %token<sval> LPAREN RPAREN SEMICOLON QUOTE COMMENT;
-%token<sval> MODEL EVAL TRAIN LAYER LOSS OPTIMIZER ITERS VAL_STEP
+%token<sval> MODEL EVAL TRAIN LAYER LOSS OPTIMIZER ITERS VAL_STEP RMSE_LOSS ADAM;
 %token<sval> RELAXNLN QUANT GRAPH_ATTR FEAT_ATTR RELU
 %token<sval> RABBIT_REORDER_OP SAMPLE_RANDOM_OP
-%token<sval> COLTILE
+%token<sval> COLTILE AGGR
 %token<sval> INTEGER;
 %token<sval> FLOAT;
 %token<sval> LBRACE RBRACE LSQBRA RSQBRA DOT COMMA;
@@ -37,11 +37,13 @@ FrontendIRNode *root;
 %token<sval> PLUS MINUS MULTIPLY DIVIDE;
 %token<sval> FFN DATASET NONLN SENSEI_OP INT NEW NULL_KEY
 
-%type <sval> type param arg
+%type <sval> type param arg model_transform
 %type <irNode> params args 
 %type <irNode> dsl_prog dsl_stmnts dsl_stmnt data_stmnt 
 %type <irNode> layer_defs layer_def layer_stmnts layer_stmnt
 %type <irNode> model_defs model_def model_stmnts model_stmnt 
+%type <irNode> model_uses model_use model_train_args model_train_arg
+%type <irNode> graph_ds.graph graph_ds.feat
 /* TODO:
 */
 %%      
@@ -52,19 +54,17 @@ dsl_prog : { $$ = NULL; }
         $$->addChild($1);
         root = $$;
     }
-    | dsl_stmnts layer_defs model_defs model_stmnts dsl_prog // removing model_use and model_stmnt for now
+    | dsl_stmnts layer_defs model_defs model_stmnts model_uses dsl_stmnts
     {
         $$ = new FrontendIRNode("dsl_prog");
         $$->addChild($1);
         $$->addChild($2);
         $$->addChild($3);
         $$->addChild($4);
-        // $$ -> addChild($5) probably not using extra dsl_stmnts so avoid memory bugs 
+        if ($5) $$->addChild($5);
+        if ($6) $$->addChild($6);
         root = $$;
     }
-    /*
-    | layer_defs model_defs model_uses { sprintf("HERE"); }
-    */
 ;
 dsl_stmnts : { $$ = NULL; }
     | dsl_stmnts dsl_stmnt
@@ -74,8 +74,6 @@ dsl_stmnts : { $$ = NULL; }
             for (auto child : $1->children){
                 $$->addChild(child);
             }
-            // issue is when deleting node, it deletes all children, meaning the child just 
-            // added above is also deleted, so invalid read and invalid delete?
             free($1);
         }
         $$->addChild($2);
@@ -88,13 +86,30 @@ dsl_stmnt : IDENTIFIER ASSIGN data_stmnt
         $$->addChild($3);
         free($1); // using free instead of delete b/c don't want to delete children nodes
     }
-    | COMMENT { $$ = new FrontendIRNode("comment"); $$->addParam($1); free($1); }
+    | COMMENT 
+    { 
+        $$ = new FrontendIRNode("comment"); 
+        $$->addParam($1); 
+        free($1); 
+    }
+    | IDENTIFIER ASSIGN graph_ds.graph SEMICOLON
+    {
+        $$ = new FrontendIRNode("graph_access");
+        $$->addParam($1);
+        $$->addChild($3);
+        free($1);
+    }
+    | IDENTIFIER ASSIGN graph_ds.feat SEMICOLON
+    {
+        $$ = new FrontendIRNode("feat_access");
+        $$->addParam($1);
+        $$->addChild($3);
+        free($1);
+    }
     /*
     | IDENTIFIER ASSIGN gnn_op
     | IDENTIFIER ASSIGN fuse_ops
     | IDENTIFIER ASSIGN new_op
-    | IDENTIFIER ASSIGN graph_ds.graph
-    | IDENTIFIER ASSIGN graph_ds.feat
     | IDENTIFIER ASSIGN var
     */
 ;
@@ -110,6 +125,19 @@ data_stmnt : LOAD LPAREN QUOTE IDENTIFIER QUOTE RPAREN SEMICOLON
     | graph_ds.data_transform
     */
 ;
+graph_ds.graph : IDENTIFIER DOT GRAPH_ATTR
+{
+    $$ = new FrontendIRNode("graph_attr");
+    $$->addParam($1);
+    free($1);
+}
+;
+graph_ds.feat : IDENTIFIER DOT FEAT_ATTR
+{
+    $$ = new FrontendIRNode("feat_attr");
+    $$->addParam($1);
+    free($1);
+}
 layer_defs : layer_def 
     { 
         $$ = new FrontendIRNode("layer_defs");
@@ -196,7 +224,7 @@ model_stmnts : model_stmnt
         $$ = new FrontendIRNode("model_stmnts");
         $$->addChild($1);
     }
-    | model_stmnt model_stmnt
+    | model_stmnts model_stmnt
     {
         $$ = new FrontendIRNode("model_stmnts");
         if ($1){
@@ -208,7 +236,7 @@ model_stmnts : model_stmnt
         $$->addChild($2);
     }
 ;
-            // first identifier is layer_var, second is layer_spec
+// first identifier is model_var, second is model_spec
 model_stmnt : IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON
     {
         $$ = new FrontendIRNode("model_stmnt");
@@ -219,13 +247,12 @@ model_stmnt : IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON
         free($1);
     }
 ;
-/*
 model_uses : model_use 
     {
         $$ = new FrontendIRNode("model_uses");
         $$->addChild($1);
     }
-    | model_use model_use
+    | model_uses model_use
     {
         $$ = new FrontendIRNode("model_uses");
         if ($1){
@@ -237,21 +264,114 @@ model_uses : model_use
         $$->addChild($2);
     }
 ;
+ //example doesn't use graph_ds parameter but grammar needs?
+  // example has variable assigned but grammar doesn't have?
 
-model_use : IDENTIFIER DOT TRAIN LPAREN model_train_args RPAREN
-    | IDENTIFER DOT EVAL LPAREN RPAREN <-- example doesn't use graph_ds parameter but grammar needs?
-                                           example has variable assigned but grammar doesn't have?   
-    | IDENTIFIER DOT model_transform
+model_use : IDENTIFIER DOT TRAIN LPAREN model_train_args RPAREN SEMICOLON
+    {
+        $$ = new FrontendIRNode("model_use_train");
+        $$->addParam($1);
+        if ($5) $$->addChild($5);
+        free($1);
+    }
+    /* no graph_ds param in eval because already passed in the model creation
+    going to have the eval method return a variable (maybe an array of embeddings) instead of just being void
+    */
+    | IDENTIFIER ASSIGN IDENTIFIER DOT EVAL LPAREN RPAREN SEMICOLON
+    {
+        $$ = new FrontendIRNode("model_use_eval");
+        $$->addParam($1);
+        $$->addParam($3);
+    }
+    | IDENTIFIER DOT model_transform SEMICOLON
+    {
+        $$ = new FrontendIRNode("model_use_transform");
+        $$->addParam($3);
+    }
 ;
-do model_train_args need to be in order?
-model_train_args :
-;
-is this variable assigned (probably not)?
-model_transform : RELAXNLN LPAREN RPAREN
-    | QUANT LPAREN RPAREN 
-    | SENSEI_OP LPAREN RPAREN
-;
+
+/* explicity assigning variables is necessary for now
+ based on grammar, need one or more model_train_arg 
+ it is not specified which one though, so any one model_train_arg will make code pass without syntax error
 */
+model_train_args : model_train_arg
+    { 
+        $$ = new FrontendIRNode("model_train_args");
+        $$->addChild($1);
+    }
+    | model_train_args model_train_arg
+    {
+        $$ = new FrontendIRNode("model_train_args");
+        if ($1){
+            for (auto child : $1->children){
+                $$->addChild(child);
+            }
+            free($1);
+        }
+        $$->addChild($2);
+    }
+;
+model_train_arg : ITERS ASSIGN INTEGER
+    {
+        $$ = new FrontendIRNode("iters");
+        $$->addParam($3);
+    }
+    | ITERS ASSIGN INTEGER COMMA
+    {
+        $$ = new FrontendIRNode("iters");
+        $$->addParam($3);
+    }
+    | LOSS ASSIGN RMSE_LOSS
+    {
+        $$ = new FrontendIRNode("loss");
+        $$->addParam("rmse");
+    }
+    | LOSS ASSIGN RMSE_LOSS COMMA
+    {
+        $$ = new FrontendIRNode("loss");
+        $$->addParam("rmse");
+
+    }
+    | OPTIMIZER ASSIGN ADAM
+    {
+        $$ = new FrontendIRNode("optimizer");
+        $$->addParam("adam");
+    }
+    | OPTIMIZER ASSIGN ADAM COMMA
+    {
+        $$ = new FrontendIRNode("optimizer");
+        $$->addParam("adam");
+    }
+    | VAL_STEP ASSIGN INTEGER
+    {
+        $$ = new FrontendIRNode("validation_step");
+        $$->addParam($3);
+    }
+    | VAL_STEP ASSIGN INTEGER COMMA
+    {
+        $$ = new FrontendIRNode("validation_step");
+        $$->addParam($3);
+    }
+;
+/*
+is this variable assigned (probably not)?
+*/
+model_transform : RELAXNLN LPAREN RPAREN
+    {
+        $$ = (char*) malloc(strlen("relax_nln")+1);
+        sprintf($$, "relax_nln");
+    }
+    | QUANT LPAREN RPAREN 
+    {
+        $$ = (char*) malloc(strlen("quant")+1);
+        sprintf($$, "quant");
+    }
+    | SENSEI_OP LPAREN RPAREN
+    {
+        $$ = (char*) malloc(strlen("sensei_op")+1);
+        sprintf($$, "sensei_op");
+    }
+;
 params : { $$ = NULL; } 
     | params param 
     {
@@ -358,9 +478,14 @@ type : DATASET { $$ = strdup("DSL_Dataset"); }
 %%
 
 /* C Code */
-int main(int, char**) {
+int main(int argc, char** argv) {
     /* read from file instead of stdin */
-    FILE *myfile = fopen("input.txt", "r");
+    if (argc < 2){
+        cout << "no filename provided";
+        return 1;
+    }
+    const char* fileName= argv[1];
+    FILE *myfile = fopen(fileName, "r");
     if (!myfile) {
         cout << "Invalid File" << endl;
         return -1;

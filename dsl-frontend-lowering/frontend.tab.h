@@ -70,48 +70,51 @@ extern int yydebug;
     OPTIMIZER = 271,               /* OPTIMIZER  */
     ITERS = 272,                   /* ITERS  */
     VAL_STEP = 273,                /* VAL_STEP  */
-    RELAXNLN = 274,                /* RELAXNLN  */
-    QUANT = 275,                   /* QUANT  */
-    GRAPH_ATTR = 276,              /* GRAPH_ATTR  */
-    FEAT_ATTR = 277,               /* FEAT_ATTR  */
-    RELU = 278,                    /* RELU  */
-    RABBIT_REORDER_OP = 279,       /* RABBIT_REORDER_OP  */
-    SAMPLE_RANDOM_OP = 280,        /* SAMPLE_RANDOM_OP  */
-    COLTILE = 281,                 /* COLTILE  */
-    INTEGER = 282,                 /* INTEGER  */
-    FLOAT = 283,                   /* FLOAT  */
-    LBRACE = 284,                  /* LBRACE  */
-    RBRACE = 285,                  /* RBRACE  */
-    LSQBRA = 286,                  /* LSQBRA  */
-    RSQBRA = 287,                  /* RSQBRA  */
-    DOT = 288,                     /* DOT  */
-    COMMA = 289,                   /* COMMA  */
-    IF = 290,                      /* IF  */
-    ELSE = 291,                    /* ELSE  */
-    DO = 292,                      /* DO  */
-    WHILE = 293,                   /* WHILE  */
-    TRUE = 294,                    /* TRUE  */
-    FALSE = 295,                   /* FALSE  */
-    NOT = 296,                     /* NOT  */
-    AND = 297,                     /* AND  */
-    OR = 298,                      /* OR  */
-    NOTEQ = 299,                   /* NOTEQ  */
-    EQ = 300,                      /* EQ  */
-    GREATER = 301,                 /* GREATER  */
-    LESS = 302,                    /* LESS  */
-    GREATEREQ = 303,               /* GREATEREQ  */
-    LESSEQ = 304,                  /* LESSEQ  */
-    PLUS = 305,                    /* PLUS  */
-    MINUS = 306,                   /* MINUS  */
-    MULTIPLY = 307,                /* MULTIPLY  */
-    DIVIDE = 308,                  /* DIVIDE  */
-    FFN = 309,                     /* FFN  */
-    DATASET = 310,                 /* DATASET  */
-    NONLN = 311,                   /* NONLN  */
-    SENSEI_OP = 312,               /* SENSEI_OP  */
-    INT = 313,                     /* INT  */
-    NEW = 314,                     /* NEW  */
-    NULL_KEY = 315                 /* NULL_KEY  */
+    RMSE_LOSS = 274,               /* RMSE_LOSS  */
+    ADAM = 275,                    /* ADAM  */
+    RELAXNLN = 276,                /* RELAXNLN  */
+    QUANT = 277,                   /* QUANT  */
+    GRAPH_ATTR = 278,              /* GRAPH_ATTR  */
+    FEAT_ATTR = 279,               /* FEAT_ATTR  */
+    RELU = 280,                    /* RELU  */
+    RABBIT_REORDER_OP = 281,       /* RABBIT_REORDER_OP  */
+    SAMPLE_RANDOM_OP = 282,        /* SAMPLE_RANDOM_OP  */
+    COLTILE = 283,                 /* COLTILE  */
+    AGGR = 284,                    /* AGGR  */
+    INTEGER = 285,                 /* INTEGER  */
+    FLOAT = 286,                   /* FLOAT  */
+    LBRACE = 287,                  /* LBRACE  */
+    RBRACE = 288,                  /* RBRACE  */
+    LSQBRA = 289,                  /* LSQBRA  */
+    RSQBRA = 290,                  /* RSQBRA  */
+    DOT = 291,                     /* DOT  */
+    COMMA = 292,                   /* COMMA  */
+    IF = 293,                      /* IF  */
+    ELSE = 294,                    /* ELSE  */
+    DO = 295,                      /* DO  */
+    WHILE = 296,                   /* WHILE  */
+    TRUE = 297,                    /* TRUE  */
+    FALSE = 298,                   /* FALSE  */
+    NOT = 299,                     /* NOT  */
+    AND = 300,                     /* AND  */
+    OR = 301,                      /* OR  */
+    NOTEQ = 302,                   /* NOTEQ  */
+    EQ = 303,                      /* EQ  */
+    GREATER = 304,                 /* GREATER  */
+    LESS = 305,                    /* LESS  */
+    GREATEREQ = 306,               /* GREATEREQ  */
+    LESSEQ = 307,                  /* LESSEQ  */
+    PLUS = 308,                    /* PLUS  */
+    MINUS = 309,                   /* MINUS  */
+    MULTIPLY = 310,                /* MULTIPLY  */
+    DIVIDE = 311,                  /* DIVIDE  */
+    FFN = 312,                     /* FFN  */
+    DATASET = 313,                 /* DATASET  */
+    NONLN = 314,                   /* NONLN  */
+    SENSEI_OP = 315,               /* SENSEI_OP  */
+    INT = 316,                     /* INT  */
+    NEW = 317,                     /* NEW  */
+    NULL_KEY = 318                 /* NULL_KEY  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -127,7 +130,7 @@ union YYSTYPE
     char *sval;
     FrontendIRNode *irNode;
 
-#line 131 "frontend.tab.h"
+#line 134 "frontend.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
