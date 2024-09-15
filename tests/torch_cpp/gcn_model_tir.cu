@@ -149,38 +149,38 @@ std::vector <at::Tensor> gather_forward_gcn(
     int *col_ptr = columns_graph.data_ptr<int>();
     float *val_ptr = value_graph.data_ptr<float>();
 
-//	dim3 gridDim((int)nrows / 8, ((int)dcols + 1) / 64);
-//    dim3 blockDim(32, 8);
-//    default_function_kernel_if<<<gridDim, blockDim>>>(oden_array,
-//                                                      offset_ptr,
-//                                                      val_ptr,
-//                                                      iden_ptr,
-//                                                      col_ptr,
-//                                                      nrows,
-//                                                      dcols);
+	dim3 gridDim(((int)nrows + 1) / 8, ((int)dcols + 1) / 64);
+    dim3 blockDim(32, 8);
+    default_function_kernel_if<<<gridDim, blockDim>>>(oden_array,
+                                                      offset_ptr,
+                                                      val_ptr,
+                                                      iden_ptr,
+                                                      col_ptr,
+                                                      nrows,
+                                                      dcols);
 
-   dim3 gridDim(((int)nrows + 1) / 8, (int)dcols / 64);
-   dim3 blockDim(32, 8);
-   default_function_kernel64<<<gridDim, blockDim>>>(oden_array,
-                                                    offset_ptr,
-                                                    val_ptr,
-                                                    iden_ptr,
-                                                    col_ptr,
-                                                    nrows,
-                                                    dcols);
-
-   if ((dcols % 64) > 0) {
-      dim3 gridDim_rem((int)nrows / 8, 1);
-      dim3 blockDim_rem(dcols % 64, 8);
-      default_function_kernel_rem<<<gridDim_rem, blockDim_rem>>>(oden_array,
-                                                                 offset_ptr,
-                                                                 val_ptr,
-                                                                 iden_ptr,
-                                                                 col_ptr,
-                                                                 nrows,
-                                                                 dcols,
-                                                                 ((int)dcols / 64) * 64);
-   }
+//   dim3 gridDim(((int)nrows + 1) / 8, (int)dcols / 64);
+//   dim3 blockDim(32, 8);
+//   default_function_kernel64<<<gridDim, blockDim>>>(oden_array,
+//                                                    offset_ptr,
+//                                                    val_ptr,
+//                                                    iden_ptr,
+//                                                    col_ptr,
+//                                                    nrows,
+//                                                    dcols);
+//
+//   if ((dcols % 64) > 0) {
+//      dim3 gridDim_rem(((int)nrows + 1) / 8, 1);
+//      dim3 blockDim_rem(dcols % 64, 8);
+//      default_function_kernel_rem<<<gridDim_rem, blockDim_rem>>>(oden_array,
+//                                                                 offset_ptr,
+//                                                                 val_ptr,
+//                                                                 iden_ptr,
+//                                                                 col_ptr,
+//                                                                 nrows,
+//                                                                 dcols,
+//                                                                 ((int)dcols / 64) * 64);
+//   }
 
 
     // Have a section that does till after 32, then another for the rest
