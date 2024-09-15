@@ -68,8 +68,8 @@ extern "C" __global__ void __launch_bounds__(256) default_function_kernel64(floa
 {
   if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows)
   {
-    C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] = 0.000000e+00f;
-    C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] = 0.000000e+00f;
+//    C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] = 0.000000e+00f;
+//    C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] = 0.000000e+00f;
     for (int j = 0; j < (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] - J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]); ++j)
     {
       C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] = (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] + (A[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))]));
@@ -89,7 +89,7 @@ extern "C" __global__ void __launch_bounds__(256) default_function_kernel32(floa
 {
   if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows)
   {
-    C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset] = 0.000000e+00f;
+//    C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset] = 0.000000e+00f;
     for (int j = 0; j < (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] - J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]); ++j)
     {
       C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset] = (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset] + (A[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset]));
@@ -108,7 +108,7 @@ extern "C" __global__ void __launch_bounds__(256) default_function_kernel_rem(fl
 {
   if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows)
   {
-    C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset] = 0.000000e+00f;
+//    C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset] = 0.000000e+00f;
     for (int j = 0; j < (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] - J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]); ++j)
     {
       C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset] = (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset] + (A[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset]));
@@ -128,7 +128,7 @@ extern "C" __global__ void __launch_bounds__(256) default_function_kernel_if(flo
   {
     if ((((((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) < dcols)
     {
-      C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] = 0.000000e+00f;
+//      C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] = 0.000000e+00f;
       for (int j = 0; j < (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] - J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]); ++j)
       {
         C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] = (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] + (A[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))]));
@@ -137,7 +137,7 @@ extern "C" __global__ void __launch_bounds__(256) default_function_kernel_if(flo
 
     if ((((((int)blockIdx.y) * 64)) + ((int)threadIdx.x) + 32) < dcols)
     {
-      C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] = 0.000000e+00f;
+//      C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] = 0.000000e+00f;
       for (int j = 0; j < (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] - J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]); ++j)
       {
         C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] = (C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] + (A[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * B[((((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)]));
