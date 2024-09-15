@@ -31,6 +31,9 @@ target_compile_features(gala_cuda_tile PRIVATE cxx_std_14)
 add_executable(gala_cuda_tir gcn_model_tir.cu)
 target_compile_features(gala_cuda_tir PRIVATE cxx_std_14)
 
+add_executable(gala_cuda_tile_tir gcn_model_col_tile_tir.cu)
+target_compile_features(gala_cuda_tile_tir PRIVATE cxx_std_14)
+
 #target_link_libraries(gala_cuda PUBLIC )
 
 message("Compiler: COMILER_ID is ${CMAKE_CXX_COMPILER_ID}")
