@@ -501,7 +501,7 @@ int main(int argc, char **argv)
   std::cout << adj.nrows() << " " << adj.ncols() << " " << adj.nvals() << std::endl;
 
   // Create a new Net.
-  auto net = std::make_shared<GCN>();
+  auto net = std::make_shared<GCN>(608, 32);
 
   // Instantiate an SGD optimization algorithm to update our Net's parameters.
   torch::optim::SGD optimizer(net->parameters(), /*lr=*/0.01);
