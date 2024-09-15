@@ -188,7 +188,7 @@ std::vector <at::Tensor> gather_forward_gcn(
    if ((dcols % 64) > 32) {
       dim3 gridDim_rem(((int)nrows + 1) / 8, 1);
       dim3 blockDim_rem(32, 8);
-      default_function_kernel_rem<<<gridDim_rem, blockDim_rem>>>(oden_array,
+      default_function_kernel32<<<gridDim_rem, blockDim_rem>>>(oden_array,
                                                                  offset_ptr,
                                                                  val_ptr,
                                                                  iden_ptr,
