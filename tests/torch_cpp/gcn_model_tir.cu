@@ -91,6 +91,7 @@ typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;
                                                                             float* __restrict__ B,
                                                                             int* __restrict__ J_indices_data,
                                                                             int nrows,
+                                                                            int dcols,
                                                                             int offset) {
    if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
      C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset] = 0.000000e+00f;
@@ -177,6 +178,7 @@ std::vector <at::Tensor> gather_forward_gcn(
                                                                  iden_ptr,
                                                                  col_ptr,
                                                                  nrows,
+                                                                 dcols,
                                                                  ((int)dcols / 64) * 64);
    }
 
