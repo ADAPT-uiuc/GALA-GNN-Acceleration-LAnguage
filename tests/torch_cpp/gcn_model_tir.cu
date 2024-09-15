@@ -68,24 +68,38 @@ typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;
 //   }
 // }
 
-// extern "C" __global__ void __launch_bounds__(256) default_function_kernel64(float* __restrict__ C,
-//                                                                            int* __restrict__ J_indptr_data,
-//                                                                            float* __restrict__ A,
-//                                                                            float* __restrict__ B,
-//                                                                            int* __restrict__ J_indices_data,
-//                                                                            int nrows,
-//                                                                            int dcols) {
-//   if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
-//     C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] = 0.000000e+00f;
-//     C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] = 0.000000e+00f;
-//     for (int j = 0; j < (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] - J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]); ++j) {
-//       C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] = (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] + (A[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))]));
-//       C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] = (C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] + (A[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * B[((((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)]));
-//     }
-//   }
-// }
+ extern "C" __global__ void __launch_bounds__(256) default_function_kernel64(float* __restrict__ C,
+                                                                            int* __restrict__ J_indptr_data,
+                                                                            float* __restrict__ A,
+                                                                            float* __restrict__ B,
+                                                                            int* __restrict__ J_indices_data,
+                                                                            int nrows) {
+   if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
+     C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] = 0.000000e+00f;
+     C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] = 0.000000e+00f;
+     for (int j = 0; j < (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] - J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]); ++j) {
+       C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] = (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] + (A[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))]));
+       C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] = (C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] + (A[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * B[((((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)]));
+     }
+   }
+ }
 
-extern "C" __global__ void __launch_bounds__(256) default_function_kernel64(float* __restrict__ C,
+  extern "C" __global__ void __launch_bounds__(256) default_function_kernel_rem(float* __restrict__ C,
+                                                                            int* __restrict__ J_indptr_data,
+                                                                            float* __restrict__ A,
+                                                                            float* __restrict__ B,
+                                                                            int* __restrict__ J_indices_data,
+                                                                            int nrows,
+                                                                            int offset) {
+   if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
+     C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset] = 0.000000e+00f;
+     for (int j = 0; j < (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] - J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]); ++j) {
+       C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset] = (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset] + (A[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset]));
+     }
+   }
+ }
+
+extern "C" __global__ void __launch_bounds__(256) default_function_kernel_if(float* __restrict__ C,
                                                                            int* __restrict__ J_indptr_data,
                                                                            float* __restrict__ A,
                                                                            float* __restrict__ B,
@@ -108,6 +122,7 @@ extern "C" __global__ void __launch_bounds__(256) default_function_kernel64(floa
     }
   }
 }
+
 
 std::vector <at::Tensor> gather_forward_gcn(
         torch::Tensor input_dense,
@@ -132,15 +147,37 @@ std::vector <at::Tensor> gather_forward_gcn(
     int *col_ptr = columns_graph.data_ptr<int>();
     float *val_ptr = value_graph.data_ptr<float>();
 
-	dim3 gridDim((int)nrows / 8, (int)dcols / 64);
-    dim3 blockDim(32, 8);
-    default_function_kernel64<<<gridDim, blockDim>>>(oden_array,
-                                                    offset_ptr,
-                                                    val_ptr,
-                                                    iden_ptr,
-                                                    col_ptr,
-                                                    nrows,
-                                                    dcols);
+//	dim3 gridDim((int)nrows / 8, ((int)dcols + 1) / 64);
+//    dim3 blockDim(32, 8);
+//    default_function_kernel_if<<<gridDim, blockDim>>>(oden_array,
+//                                                      offset_ptr,
+//                                                      val_ptr,
+//                                                      iden_ptr,
+//                                                      col_ptr,
+//                                                      nrows,
+//                                                      dcols);
+
+   dim3 gridDim(((int)nrows + 1) / 8, (int)dcols / 64);
+   dim3 blockDim(32, 8);
+   default_function_kernel64<<<gridDim, blockDim>>>(oden_array,
+                                                   offset_ptr,
+                                                   val_ptr,
+                                                   iden_ptr,
+                                                   col_ptr,
+                                                   nrows);
+
+   if ((dcols % 64) > 0) {
+      dim3 gridDim_rem((int)nrows / 8, 1);
+      dim3 blockDim_rem(dcols % 64, 8);
+      default_function_kernel_rem<<<gridDim_rem, blockDim_rem>>>(oden_array,
+                                                                 offset_ptr,
+                                                                 val_ptr,
+                                                                 iden_ptr,
+                                                                 col_ptr,
+                                                                 nrows,
+                                                                 ((int)dcols / 64) * 64);
+   }
+
 
     // Have a section that does till after 32, then another for the rest
     // Test out what adding an if condition would do to the overall execution
