@@ -192,7 +192,7 @@ std::vector<at::Tensor> gather_forward_gcn(
     cudaStream_t stream1, stream2, stream3;
     cudaStreamCreate(&stream1);
 
-    dim3 gridDim(((int)nrows + 1) / 8, (int)dcols / 64);
+    dim3 gridDim(((int)nrows / 8) + 1, (int)dcols / 64);
     dim3 blockDim(32, 8);
     default_function_kernel64<<<gridDim, blockDim, 0, stream1>>>(oden_array,
                                                                  &offset_ptr[i1 * (nrows + 1)],
@@ -205,7 +205,7 @@ std::vector<at::Tensor> gather_forward_gcn(
     if ((dcols % 64) > 32)
     {
       cudaStreamCreate(&stream2);
-      dim3 gridDim_rem(((int)nrows + 1) / 8, 1);
+      dim3 gridDim_rem(((int)nrows / 8) + 1/ 8, 1);
       dim3 blockDim_rem(32, 8);
       default_function_kernel32<<<gridDim_rem, blockDim_rem, 0, stream2>>>(oden_array,
                                                                            &offset_ptr[i1 * (nrows + 1)],
@@ -218,7 +218,7 @@ std::vector<at::Tensor> gather_forward_gcn(
       if ((dcols % 32) > 0)
       {
         cudaStreamCreate(&stream3);
-        dim3 gridDim_rem(((int)nrows + 1) / 8, 1);
+        dim3 gridDim_rem(((int)nrows / 8) + 1 / 8, 1);
         dim3 blockDim_rem(dcols % 32, 8);
         default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream3>>>(oden_array,
                                                                                &offset_ptr[i1 * (nrows + 1)],
@@ -233,7 +233,7 @@ std::vector<at::Tensor> gather_forward_gcn(
     else if ((dcols % 64) > 0)
     {
       cudaStreamCreate(&stream2);
-      dim3 gridDim_rem(((int)nrows + 1) / 8, 1);
+      dim3 gridDim_rem(((int)nrows / 8) + 1 / 8, 1);
       dim3 blockDim_rem(dcols % 64, 8);
       default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream2>>>(oden_array,
                                                                              &offset_ptr[i1 * (nrows + 1)],
