@@ -73,7 +73,8 @@ typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;
                                                                             float* __restrict__ A,
                                                                             float* __restrict__ B,
                                                                             int* __restrict__ J_indices_data,
-                                                                            int nrows) {
+                                                                            int nrows,
+                                                                            int dcols) {
    if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
      C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] = 0.000000e+00f;
      C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] = 0.000000e+00f;
@@ -160,11 +161,12 @@ std::vector <at::Tensor> gather_forward_gcn(
    dim3 gridDim(((int)nrows + 1) / 8, (int)dcols / 64);
    dim3 blockDim(32, 8);
    default_function_kernel64<<<gridDim, blockDim>>>(oden_array,
-                                                   offset_ptr,
-                                                   val_ptr,
-                                                   iden_ptr,
-                                                   col_ptr,
-                                                   nrows);
+                                                    offset_ptr,
+                                                    val_ptr,
+                                                    iden_ptr,
+                                                    col_ptr,
+                                                    nrows,
+                                                    dcols);
 
    if ((dcols % 64) > 0) {
       dim3 gridDim_rem((int)nrows / 8, 1);
