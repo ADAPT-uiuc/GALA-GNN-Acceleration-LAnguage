@@ -205,60 +205,164 @@ std::vector<at::Tensor> gather_forward_gcn(
     //                                                 nrows,
     //                                                 dcols);
 
-    cudaStream_t stream1, stream2, stream3;
-    cudaStreamCreate(&stream1);
 
-    dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 64);
-    dim3 blockDim(32, 8);
-    default_function_kernel64<<<gridDim, blockDim, 0, stream1>>>(oden_array,
-                                                                 &offset_ptr[i1 * (nrows + 1)],
-                                                                 &val_ptr[start_vals],
-                                                                 iden_ptr,
-                                                                 &col_ptr[start_vals],
-                                                                 nrows,
-                                                                 dcols);
 
-    if ((dcols % 64) > 32)
-    {
-      cudaStreamCreate(&stream2);
-      dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
-      dim3 blockDim_rem(32, 8);
-      default_function_kernel32<<<gridDim_rem, blockDim_rem, 0, stream2>>>(oden_array,
-                                                                           &offset_ptr[i1 * (nrows + 1)],
-                                                                           &val_ptr[start_vals],
-                                                                           iden_ptr,
-                                                                           &col_ptr[start_vals],
-                                                                           nrows,
-                                                                           dcols,
-                                                                           ((int)dcols / 64) * 64);
-      if ((dcols % 32) > 0)
-      {
-        cudaStreamCreate(&stream3);
+    if ((int)dcols / 128) {
+      cudaStream_t stream1, stream2, stream3, stream4;
+      cudaStreamCreate(&stream1);
+
+      dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 128);
+      dim3 blockDim(32, 8);
+      default_function_kernel128<<<gridDim, blockDim, 0, stream1>>>(oden_array,
+                                                                  &offset_ptr[i1 * (nrows + 1)],
+                                                                  &val_ptr[start_vals],
+                                                                  iden_ptr,
+                                                                  &col_ptr[start_vals],
+                                                                  nrows,
+                                                                  dcols,
+                                                                  0);
+      if ((dcols % 128) > 64) {
+        cudaStreamCreate(&stream2);
         dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
-        dim3 blockDim_rem(dcols % 32, 8);
-        default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream3>>>(oden_array,
-                                                                               &offset_ptr[i1 * (nrows + 1)],
-                                                                               &val_ptr[start_vals],
-                                                                               iden_ptr,
-                                                                               &col_ptr[start_vals],
-                                                                               nrows,
-                                                                               dcols,
-                                                                               (((int)dcols / 64) * 64) + 32);
+        dim3 blockDim_rem(32, 8);
+        default_function_kernel64<<<gridDim_rem, blockDim_rem, 0, stream2>>>(oden_array,
+                                                                            &offset_ptr[i1 * (nrows + 1)],
+                                                                            &val_ptr[start_vals],
+                                                                            iden_ptr,
+                                                                            &col_ptr[start_vals],
+                                                                            nrows,
+                                                                            dcols,
+                                                                            ((int)dcols / 128) * 128);
+        if ((dcols % 64) > 32) {
+          cudaStreamCreate(&stream3);
+          dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+          dim3 blockDim_rem(32, 8);
+          default_function_kernel32<<<gridDim_rem, blockDim_rem, 0, stream2>>>(oden_array,
+                                                                              &offset_ptr[i1 * (nrows + 1)],
+                                                                              &val_ptr[start_vals],
+                                                                              iden_ptr,
+                                                                              &col_ptr[start_vals],
+                                                                              nrows,
+                                                                              dcols,
+                                                                              ((int)dcols / 64) * 64);
+          if ((dcols % 32) > 0) {
+            cudaStreamCreate(&stream4);
+            dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+            dim3 blockDim_rem(dcols % 32, 8);
+            default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream3>>>(oden_array,
+                                                                                  &offset_ptr[i1 * (nrows + 1)],
+                                                                                  &val_ptr[start_vals],
+                                                                                  iden_ptr,
+                                                                                  &col_ptr[start_vals],
+                                                                                  nrows,
+                                                                                  dcols,
+                                                                                  (((int)dcols / 64) * 64) + 32);
+          }
+        } else if ((dcols % 64) > 0) {
+          cudaStreamCreate(&stream3);
+          dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+          dim3 blockDim_rem(dcols % 64, 8);
+          default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream2>>>(oden_array,
+                                                                                &offset_ptr[i1 * (nrows + 1)],
+                                                                                &val_ptr[start_vals],
+                                                                                iden_ptr,
+                                                                                &col_ptr[start_vals],
+                                                                                nrows,
+                                                                                dcols,
+                                                                                ((int)dcols / 64) * 64);
+        }
+      } else {
+        if ((dcols % 64) > 32) {
+          cudaStreamCreate(&stream2);
+          dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+          dim3 blockDim_rem(32, 8);
+          default_function_kernel32<<<gridDim_rem, blockDim_rem, 0, stream2>>>(oden_array,
+                                                                              &offset_ptr[i1 * (nrows + 1)],
+                                                                              &val_ptr[start_vals],
+                                                                              iden_ptr,
+                                                                              &col_ptr[start_vals],
+                                                                              nrows,
+                                                                              dcols,
+                                                                              ((int)dcols / 64) * 64);
+          if ((dcols % 32) > 0) {
+            cudaStreamCreate(&stream3);
+            dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+            dim3 blockDim_rem(dcols % 32, 8);
+            default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream3>>>(oden_array,
+                                                                                  &offset_ptr[i1 * (nrows + 1)],
+                                                                                  &val_ptr[start_vals],
+                                                                                  iden_ptr,
+                                                                                  &col_ptr[start_vals],
+                                                                                  nrows,
+                                                                                  dcols,
+                                                                                  (((int)dcols / 64) * 64) + 32);
+          }
+        } else if ((dcols % 64) > 0) {
+          cudaStreamCreate(&stream2);
+          dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+          dim3 blockDim_rem(dcols % 64, 8);
+          default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream2>>>(oden_array,
+                                                                                &offset_ptr[i1 * (nrows + 1)],
+                                                                                &val_ptr[start_vals],
+                                                                                iden_ptr,
+                                                                                &col_ptr[start_vals],
+                                                                                nrows,
+                                                                                dcols,
+                                                                                ((int)dcols / 64) * 64);
+        }
       }
-    }
-    else if ((dcols % 64) > 0)
-    {
-      cudaStreamCreate(&stream2);
-      dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
-      dim3 blockDim_rem(dcols % 64, 8);
-      default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream2>>>(oden_array,
-                                                                             &offset_ptr[i1 * (nrows + 1)],
-                                                                             &val_ptr[start_vals],
-                                                                             iden_ptr,
-                                                                             &col_ptr[start_vals],
-                                                                             nrows,
-                                                                             dcols,
-                                                                             ((int)dcols / 64) * 64);
+    } else {
+      cudaStream_t stream1, stream2, stream3;
+      cudaStreamCreate(&stream1);
+      dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 64);
+      dim3 blockDim(32, 8);
+      default_function_kernel64<<<gridDim, blockDim, 0, stream1>>>(oden_array,
+                                                                  &offset_ptr[i1 * (nrows + 1)],
+                                                                  &val_ptr[start_vals],
+                                                                  iden_ptr,
+                                                                  &col_ptr[start_vals],
+                                                                  nrows,
+                                                                  dcols,
+                                                                  0);
+
+      if ((dcols % 64) > 32) {
+        cudaStreamCreate(&stream2);
+        dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+        dim3 blockDim_rem(32, 8);
+        default_function_kernel32<<<gridDim_rem, blockDim_rem, 0, stream2>>>(oden_array,
+                                                                            &offset_ptr[i1 * (nrows + 1)],
+                                                                            &val_ptr[start_vals],
+                                                                            iden_ptr,
+                                                                            &col_ptr[start_vals],
+                                                                            nrows,
+                                                                            dcols,
+                                                                            ((int)dcols / 64) * 64);
+        if ((dcols % 32) > 0) {
+          cudaStreamCreate(&stream3);
+          dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+          dim3 blockDim_rem(dcols % 32, 8);
+          default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream3>>>(oden_array,
+                                                                                &offset_ptr[i1 * (nrows + 1)],
+                                                                                &val_ptr[start_vals],
+                                                                                iden_ptr,
+                                                                                &col_ptr[start_vals],
+                                                                                nrows,
+                                                                                dcols,
+                                                                                (((int)dcols / 64) * 64) + 32);
+        }
+      } else if ((dcols % 64) > 0) {
+        cudaStreamCreate(&stream2);
+        dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+        dim3 blockDim_rem(dcols % 64, 8);
+        default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream2>>>(oden_array,
+                                                                              &offset_ptr[i1 * (nrows + 1)],
+                                                                              &val_ptr[start_vals],
+                                                                              iden_ptr,
+                                                                              &col_ptr[start_vals],
+                                                                              nrows,
+                                                                              dcols,
+                                                                              ((int)dcols / 64) * 64);
+      }
     }
   }
 
