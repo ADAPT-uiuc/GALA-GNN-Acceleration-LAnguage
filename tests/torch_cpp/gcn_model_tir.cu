@@ -108,7 +108,7 @@ std::vector <at::Tensor> gather_forward_gcn(
     int *col_ptr = columns_graph.data_ptr<int>();
     float *val_ptr = value_graph.data_ptr<float>();
 
-	dim3 gridDim((int)nrows / 8, gridDimY, 1);
+	dim3 gridDim((int)nrows / 8, (int)dcols / 64);
     dim3 blockDim(32, 8);
 
     default_function_kernel0<<<gridDim, blockDim>>>(oden_array,
@@ -116,7 +116,8 @@ std::vector <at::Tensor> gather_forward_gcn(
                                                     val_ptr,
                                                     iden_ptr,
                                                     col_ptr,
-                                                    nrows);
+                                                    nrows,
+                                                    dcols);
 
 //    float alpha = 1.0f;
 //    float beta = 1.0f;
