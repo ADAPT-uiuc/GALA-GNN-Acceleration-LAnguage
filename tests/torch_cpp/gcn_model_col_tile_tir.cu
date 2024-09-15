@@ -373,7 +373,7 @@ struct GCN : torch::nn::Module
 {
   GCN(int in_size, int out_size) {
     // Construct and register two Linear submodules.
-    fc1 = register_module("fc1", torch::nn::Linear(in_feat, out_feat));
+    fc1 = register_module("fc1", torch::nn::Linear(in_size, out_size));
     in_feat_size = in_size;
     out_feat_size = out_size;
   }
