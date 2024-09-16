@@ -2,7 +2,7 @@
 // Created by damitha on 5/12/24.
 //
 // Define a new Module.
-#include <cuda_runtime_api.h>  // cudaMalloc, cudaMemcpy, etc.
+#include <cuda_runtime_api.h> // cudaMalloc, cudaMemcpy, etc.
 #include <cusparse.h>
 #include <torch/script.h>
 
@@ -34,14 +34,14 @@ typedef float val_t;
 typedef DenseMatrix<ind1_t, ind2_t, val_t> DM;
 typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;
 
-#define CUDA_CHECK(func)                                                   \
-  do {                                                                     \
-    cudaError_t status = (func);                                           \
-    if (status != cudaSuccess) {                                           \
-      printf("CUDA API failed at line %d with error: %s (%d)\n", __LINE__, \
-             cudaGetErrorString(status), status);                          \
-      exit(EXIT_FAILURE);                                                  \
-    }                                                                      \
+#define CUDA_CHECK(func)                                                       \
+  do {                                                                         \
+    cudaError_t status = (func);                                               \
+    if (status != cudaSuccess) {                                               \
+      printf("CUDA API failed at line %d with error: %s (%d)\n", __LINE__,     \
+             cudaGetErrorString(status), status);                              \
+      exit(EXIT_FAILURE);                                                      \
+    }                                                                          \
   } while (0)
 
 #define CUSPARSE_CHECK(func)                                                   \
@@ -108,15 +108,15 @@ extern "C" __global__ void __launch_bounds__(256)
           J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
          ++j) {
       C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
-          (((int)blockIdx.y) * 64)) +
+          (((int)blockIdx.y) * 32)) +
          ((int)threadIdx.x))] =
           (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
-               (((int)blockIdx.y) * 64)) +
+               (((int)blockIdx.y) * 32)) +
               ((int)threadIdx.x))] +
            (B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
                                                     ((int)threadIdx.y))])] *
                  dcols) +
-                (((int)blockIdx.y) * 64)) +
+                (((int)blockIdx.y) * 32)) +
                ((int)threadIdx.x))]));
     }
   }
@@ -134,17 +134,17 @@ extern "C" __global__ void __launch_bounds__(256)
           J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
          ++j) {
       C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
-          (((int)blockIdx.y) * 64)) +
+          (((int)blockIdx.y) * 32)) +
          ((int)threadIdx.x)) +
         offset] =
           (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
-               (((int)blockIdx.y) * 64)) +
+               (((int)blockIdx.y) * 32)) +
               ((int)threadIdx.x)) +
              offset] +
            (B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
                                                     ((int)threadIdx.y))])] *
                  dcols) +
-                (((int)blockIdx.y) * 64)) +
+                (((int)blockIdx.y) * 32)) +
                ((int)threadIdx.x)) +
               offset]));
     }
@@ -163,17 +163,17 @@ extern "C" __global__ void __launch_bounds__(256)
           J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
          ++j) {
       C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
-          (((int)blockIdx.y) * 64)) +
+          (((int)blockIdx.y) * 32)) +
          ((int)threadIdx.x)) +
         offset] =
           (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
-               (((int)blockIdx.y) * 64)) +
+               (((int)blockIdx.y) * 32)) +
               ((int)threadIdx.x)) +
              offset] +
            (B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
                                                     ((int)threadIdx.y))])] *
                  dcols) +
-                (((int)blockIdx.y) * 64)) +
+                (((int)blockIdx.y) * 32)) +
                ((int)threadIdx.x)) +
               offset]));
     }
@@ -506,22 +506,33 @@ std::vector<at::Tensor> gather_forward_gcn(torch::Tensor input_dense,
               &col_ptr[start_vals], nrows, dcols, ((int)dcols / 64) * 64);
         }
       } else {
-        cudaStreamCreate(&stream1);
-        dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, (int)dcols / 32);
-        dim3 blockDim_rem(32, 8);
-        default_function_kernel32_undir<<<gridDim_rem, blockDim_rem, 0,
-                                          stream1>>>(
-            oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
-            &col_ptr[start_vals], nrows, dcols);
-        if ((dcols % 32) > 0) {
-          cudaStreamCreate(&stream3);
+        if ((int)dcols / 32) {
+          cudaStreamCreate(&stream1);
+          dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, (int)dcols / 32);
+          dim3 blockDim_rem(32, 8);
+          default_function_kernel32_undir<<<gridDim_rem, blockDim_rem, 0,
+                                            stream1>>>(
+              oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+              &col_ptr[start_vals], nrows, dcols);
+          if ((dcols % 32) > 0) {
+            cudaStreamCreate(&stream2);
+            dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+            dim3 blockDim_rem(dcols % 32, 8);
+            default_function_kernel_rem_undir<<<gridDim_rem, blockDim_rem, 0,
+                                                stream2>>>(
+                oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+                &col_ptr[start_vals], nrows, dcols,
+                (((int)dcols / 32) * 32));
+          }
+        } else {
+          cudaStreamCreate(&stream1);
           dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
           dim3 blockDim_rem(dcols % 32, 8);
           default_function_kernel_rem_undir<<<gridDim_rem, blockDim_rem, 0,
-                                              stream3>>>(
+                                              stream1>>>(
               oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
               &col_ptr[start_vals], nrows, dcols,
-              (((int)dcols / 64) * 64) + 32);
+              0);
         }
       }
     }
@@ -552,29 +563,46 @@ struct GCN : torch::nn::Module {
   //
   //
   // Implement the Net's algorithm.
-  std::vector<torch::Tensor> forward(
-      torch::Tensor input_dense,    // B
-      torch::Tensor offset_graph,   // A_sparse_offset
-      torch::Tensor columns_graph,  // A_sparse_col_ids
-      torch::Tensor value_graph,    // A_sparse_values
-      torch::Tensor bounds,         // A_sparse_tile_bounds
-      int nrows, int segments) {
-    
+  std::vector<torch::Tensor>
+  forward(torch::Tensor input_dense,   // B
+          torch::Tensor offset_graph,  // A_sparse_offset
+          torch::Tensor columns_graph, // A_sparse_col_ids
+          torch::Tensor value_graph,   // A_sparse_values
+          torch::Tensor bounds,        // A_sparse_tile_bounds
+          int nrows, int segments) {
+
     auto options = torch::TensorOptions()
                        .dtype(torch::kFloat)
-                       .requires_grad(true)
+                       .requires_grad(false)
                        .device(torch::kCUDA, 0);
     auto ones = torch::ones({nrows, 1}, options);
-	torch::Tensor degree =
-        gather_forward_gcn(input_dense, offset_graph, columns_graph,
-                           value_graph, bounds, nrows, segments, directed)[0];
+    torch::Tensor degree =
+        gather_forward_gcn(ones, offset_graph, columns_graph,
+                           value_graph, bounds, nrows, segments,
+                           directed)[0];
+    // torch::Tensor degree = ones;
+
+    degree = torch::pow(degree, -1 / 2);
+
+    // std::cout << "degree: " << degree.sizes()[0] << " " << degree.sizes()[1]
+    // << std::endl;
 
     torch::Tensor norm_input = degree * input_dense;
 
+    // std::cout << "norm_input: " << norm_input.sizes()[0] << " " <<
+    // norm_input.sizes()[1] << std::endl;
+
     torch::Tensor msg_aggr =
-        gather_forward_gcn(norm_input, offset_graph, columns_graph,
-                           value_graph, bounds, nrows, segments, directed)[0];
+        gather_forward_gcn(norm_input, offset_graph, columns_graph, value_graph,
+                           bounds, nrows, segments, directed)[0];
+
+    // std::cout << "msg_aggr: " << msg_aggr.sizes()[0] << " " <<
+    // msg_aggr.sizes()[1] << std::endl;
+
     torch::Tensor msg_update = fc1->forward(msg_aggr);
+
+    // std::cout << "msg_update: " << msg_update.sizes()[0] << " " <<
+    // msg_update.sizes()[1] << std::endl;
 
     torch::Tensor norm_out = degree * msg_update;
 
@@ -593,8 +621,9 @@ struct GCN : torch::nn::Module {
     // }
     // The GEMM normalization
 
-//    return gather_forward_gcn(input_dense, offset_graph, columns_graph,
-//                              value_graph, bounds, nrows, segments, directed);
+    // return gather_forward_gcn(input_dense, offset_graph, columns_graph,
+    //                           value_graph, bounds, nrows, segments,
+    //                           directed);
   }
 
   // Use one of many "standard library" modules.
@@ -699,8 +728,10 @@ int main(int argc, char **argv) {
   std::cout << adj.nrows() << " " << adj.ncols() << " " << adj.nvals()
             << std::endl;
 
+  torch::Device device(torch::kCUDA);
   // Create a new Net.
   auto net = std::make_shared<GCN>(emb_size, 32, false);
+  net->to(device);
 
   // Instantiate an SGD optimization algorithm to update our Net's parameters.
   torch::optim::SGD optimizer(net->parameters(), /*lr=*/0.01);
