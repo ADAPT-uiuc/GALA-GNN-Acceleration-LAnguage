@@ -567,14 +567,14 @@ struct GCN : torch::nn::Module {
     auto ones = torch::ones({nrows, 1}, options);
 	torch::Tensor degree =
         gather_forward_gcn(input_dense, offset_graph, columns_graph,
-                           value_graph, bounds, nrows, segments, directed);
+                           value_graph, bounds, nrows, segments, directed)[0];
 
     torch::Tensor norm_input = degree * input_dense;
 
     torch::Tensor msg_aggr =
         gather_forward_gcn(norm_input, offset_graph, columns_graph,
-                           value_graph, bounds, nrows, segments, directed);
-    torch::Tensor msg_update = fc1->forward(msg_aggr));
+                           value_graph, bounds, nrows, segments, directed)[0];
+    torch::Tensor msg_update = fc1->forward(msg_aggr);
 
     torch::Tensor norm_out = degree * msg_update;
 
