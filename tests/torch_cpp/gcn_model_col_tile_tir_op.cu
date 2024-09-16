@@ -592,7 +592,11 @@ struct GCN : torch::nn::Module {
 
     degree = torch::pow(degree, -1 / 2);
 
-    torch::Tensor norm_input = degree * input_dense;
+    torch::Tensor msg_update = fc1->forward(input_dense);
+
+    torch::Tensor norm_input = degree * msg_update;
+
+    msg_update = torch::zeros({1});    
 
     torch::Tensor msg_aggr =
         gather_forward_gcn(norm_input, offset_graph, columns_graph, value_graph,
@@ -601,13 +605,9 @@ struct GCN : torch::nn::Module {
     // Delate the norm_input alloc
     norm_input = torch::zeros({1});
 
-    torch::Tensor msg_update = fc1->forward(msg_aggr);
+    torch::Tensor norm_out = degree * msg_aggr;
 
     msg_aggr = torch::zeros({1});
-
-    torch::Tensor norm_out = degree * msg_update;
-
-    msg_update = torch::zeros({1});
 
     torch::Tensor msg_relu = torch::relu(norm_out);
 
@@ -623,15 +623,15 @@ struct GCN : torch::nn::Module {
 
     norm_input = torch::zeros({1});
 
-    msg_update = fc2->forward(msg_aggr);
-
+    norm_out = degree * msg_aggr;
+    
     msg_aggr = torch::zeros({1});
 
-    norm_out = degree * msg_update;
+    msg_update = fc2->forward(norm_out);
 
-    msg_update = torch::zeros({1});
+    norm_out = torch::zeros({1});
 
-    msg_relu = torch::relu(norm_out);
+    msg_relu = torch::relu(msg_update);
 
     return {msg_relu};
 

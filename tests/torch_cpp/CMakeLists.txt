@@ -28,11 +28,17 @@ target_compile_features(gala_cuda PRIVATE cxx_std_14)
 add_executable(gala_cuda_tile gcn_model_col_tile.cu)
 target_compile_features(gala_cuda_tile PRIVATE cxx_std_14)
 
-add_executable(gala_cuda_tir gcn_model_tir.cu)
+add_executable(gala_cuda_tir gcn_model_tir_base.cu)
 target_compile_features(gala_cuda_tir PRIVATE cxx_std_14)
 
 add_executable(gala_cuda_tile_tir gcn_model_col_tile_tir.cu)
 target_compile_features(gala_cuda_tile_tir PRIVATE cxx_std_14)
+
+add_executable(gala_cuda_tile_tir_op gcn_model_col_tile_tir_op.cu)
+target_compile_features(gala_cuda_tile_tir_op PRIVATE cxx_std_14)
+
+add_executable(gala_cuda_tile_tir_op_tim gcn_model_col_tile_tir_op_tim.cu)
+target_compile_features(gala_cuda_tile_tir_op_tim PRIVATE cxx_std_14)
 
 #target_link_libraries(gala_cuda PUBLIC )
 
