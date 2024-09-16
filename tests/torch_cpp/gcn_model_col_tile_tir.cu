@@ -578,7 +578,7 @@ struct GCN : torch::nn::Module {
 
     torch::Tensor norm_out = degree * msg_update;
 
-    return torch::relu(norm_out);
+    return {torch::relu(norm_out)};
 
     // if (in_feat_size > out_feat_size) {
     //   torch::Tensor msg_update = fc1->forward(input_dense));
