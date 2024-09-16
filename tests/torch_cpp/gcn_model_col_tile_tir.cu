@@ -521,8 +521,7 @@ std::vector<at::Tensor> gather_forward_gcn(torch::Tensor input_dense,
             default_function_kernel_rem_undir<<<gridDim_rem, blockDim_rem, 0,
                                                 stream2>>>(
                 oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
-                &col_ptr[start_vals], nrows, dcols,
-                (((int)dcols / 32) * 32));
+                &col_ptr[start_vals], nrows, dcols, (((int)dcols / 32) * 32));
           }
         } else {
           cudaStreamCreate(&stream1);
@@ -531,8 +530,7 @@ std::vector<at::Tensor> gather_forward_gcn(torch::Tensor input_dense,
           default_function_kernel_rem_undir<<<gridDim_rem, blockDim_rem, 0,
                                               stream1>>>(
               oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
-              &col_ptr[start_vals], nrows, dcols,
-              0);
+              &col_ptr[start_vals], nrows, dcols, 0);
         }
       }
     }
@@ -542,10 +540,12 @@ std::vector<at::Tensor> gather_forward_gcn(torch::Tensor input_dense,
 }
 
 struct GCN : torch::nn::Module {
-  GCN(int in_size, int out_size, bool dir) {
+  GCN(int in_size, int hidden_size, int out_size, bool dir) {
     // Construct and register two Linear submodules.
-    fc1 = register_module("fc1", torch::nn::Linear(in_size, out_size));
+    fc1 = register_module("fc1", torch::nn::Linear(in_size, hidden_size));
+    fc2 = register_module("fc2", torch::nn::Linear(hidden_size, out_size));
     in_feat_size = in_size;
+    hidden_feat_size = hidden_size;
     out_feat_size = out_size;
     directed = dir;
   }
@@ -577,49 +577,53 @@ struct GCN : torch::nn::Module {
                        .device(torch::kCUDA, 0);
     auto ones = torch::ones({nrows, 1}, options);
     torch::Tensor degree =
-        gather_forward_gcn(ones, offset_graph, columns_graph,
-                           value_graph, bounds, nrows, segments,
-                           directed)[0];
-    // torch::Tensor degree = ones;
+        gather_forward_gcn(ones, offset_graph, columns_graph, value_graph,
+                           bounds, nrows, segments, directed)[0];
 
     degree = torch::pow(degree, -1 / 2);
 
-    // std::cout << "degree: " << degree.sizes()[0] << " " << degree.sizes()[1]
-    // << std::endl;
-
     torch::Tensor norm_input = degree * input_dense;
-
-    // std::cout << "norm_input: " << norm_input.sizes()[0] << " " <<
-    // norm_input.sizes()[1] << std::endl;
 
     torch::Tensor msg_aggr =
         gather_forward_gcn(norm_input, offset_graph, columns_graph, value_graph,
                            bounds, nrows, segments, directed)[0];
 
-    // std::cout << "msg_aggr: " << msg_aggr.sizes()[0] << " " <<
-    // msg_aggr.sizes()[1] << std::endl;
+    // Delate the norm_input alloc
+    norm_input = torch::zeros({1});
 
     torch::Tensor msg_update = fc1->forward(msg_aggr);
 
-    // std::cout << "msg_update: " << msg_update.sizes()[0] << " " <<
-    // msg_update.sizes()[1] << std::endl;
+    msg_aggr = torch::zeros({1});
 
     torch::Tensor norm_out = degree * msg_update;
 
-    return {torch::relu(norm_out)};
+    msg_update = torch::zeros({1});
 
-    // if (in_feat_size > out_feat_size) {
-    //   torch::Tensor msg_update = fc1->forward(input_dense));
-    //   torch::Tensor msg_aggr =
-    //       gather_forward_gcn(msg_update, offset_graph, columns_graph,
-    //                          value_graph, bounds, nrows, segments, directed);
-    // } else {
-    //   torch::Tensor msg_aggr =
-    //       gather_forward_gcn(input_dense, offset_graph, columns_graph,
-    //                          value_graph, bounds, nrows, segments, directed);
-    //   torch::Tensor msg_update = fc1->forward(input_dense));
-    // }
-    // The GEMM normalization
+    torch::Tensor msg_relu = torch::relu(norm_out);
+
+    norm_out = torch::zeros({1});
+    
+    norm_input = degree * msg_relu;
+
+    msg_relu = torch::zeros({1});
+
+    msg_aggr =
+        gather_forward_gcn(norm_input, offset_graph, columns_graph, value_graph,
+                           bounds, nrows, segments, directed)[0];
+
+    norm_input = torch::zeros({1});
+
+    msg_update = fc2->forward(msg_aggr);
+
+    msg_aggr = torch::zeros({1});
+
+    norm_out = degree * msg_update;
+
+    msg_update = torch::zeros({1});
+
+    msg_relu = torch::relu(norm_out);
+
+    return {msg_relu};
 
     // return gather_forward_gcn(input_dense, offset_graph, columns_graph,
     //                           value_graph, bounds, nrows, segments,
@@ -627,8 +631,8 @@ struct GCN : torch::nn::Module {
   }
 
   // Use one of many "standard library" modules.
-  torch::nn::Linear fc1{nullptr};
-  int in_feat_size, out_feat_size;
+  torch::nn::Linear fc1{nullptr}, fc2{nullptr};
+  int in_feat_size, hidden_feat_size, out_feat_size;
   bool directed;
 };
 
@@ -730,7 +734,16 @@ int main(int argc, char **argv) {
 
   torch::Device device(torch::kCUDA);
   // Create a new Net.
-  auto net = std::make_shared<GCN>(emb_size, 32, false);
+
+  double start_init, end_init;
+  cudaDeviceSynchronize();
+  start_init = get_time();
+  auto net = std::make_shared<GCN>(emb_size, 32, 50, false);
+  cudaDeviceSynchronize();
+  end_init = get_time();
+
+  std::cout << "Initialization time: " << end_init - start_init << std::endl;
+
   net->to(device);
 
   // Instantiate an SGD optimization algorithm to update our Net's parameters.
