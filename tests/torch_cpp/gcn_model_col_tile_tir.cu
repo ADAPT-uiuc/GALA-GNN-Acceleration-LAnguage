@@ -58,7 +58,72 @@ typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;
     }                                                                          \
   } while (0)
 
+// Undirected
+extern "C" __global__ void __launch_bounds__(256) default_function_kernel64(float *__restrict__ C,
+                                                                            int *__restrict__ J_indptr_data,
+                                                                            float *__restrict__ B,
+                                                                            int *__restrict__ J_indices_data,
+                                                                            int nrows,
+                                                                            int dcols)
+{
+  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows)
+  {
+    for (int j = 0; j < (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] - J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]); ++j)
+    {
+      C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] = (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] + (B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))]));
+      C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] = (C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] + (B[((((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)]));
+    }
+  }
+}
+extern "C" __global__ void __launch_bounds__(256) default_function_kernel32(float *__restrict__ C,
+                                                                            int *__restrict__ J_indptr_data,
+                                                                            float *__restrict__ B,
+                                                                            int *__restrict__ J_indices_data,
+                                                                            int nrows,
+                                                                            int dcols)
+{
+  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows)
+  {
+    for (int j = 0; j < (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] - J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]); ++j)
+    {
+      C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] = (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] + (B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))]));
+    }
+  }
+}
+extern "C" __global__ void __launch_bounds__(256) default_function_kernel32_offset(float *__restrict__ C,
+                                                                                   int *__restrict__ J_indptr_data,
+                                                                                   float *__restrict__ B,
+                                                                                   int *__restrict__ J_indices_data,
+                                                                                   int nrows,
+                                                                                   int dcols,
+                                                                                   int offset)
+{
+  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows)
+  {
+    for (int j = 0; j < (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] - J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]); ++j)
+    {
+      C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset] = (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset] + (B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset]));
+    }
+  }
+}
+extern "C" __global__ void __launch_bounds__(256) default_function_kernel_rem(float *__restrict__ C,
+                                                                              int *__restrict__ J_indptr_data,
+                                                                              float *__restrict__ B,
+                                                                              int *__restrict__ J_indices_data,
+                                                                              int nrows,
+                                                                              int dcols,
+                                                                              int offset)
+{
+  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows)
+  {
+    for (int j = 0; j < (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] - J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]); ++j)
+    {
+      C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset] = (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset] + (B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + offset]));
+    }
+  }
+}
 
+// Directed
 extern "C" __global__ void __launch_bounds__(256) default_function_kernel64(float *__restrict__ C,
                                                                             int *__restrict__ J_indptr_data,
                                                                             float *__restrict__ A,
@@ -93,13 +158,13 @@ extern "C" __global__ void __launch_bounds__(256) default_function_kernel32(floa
   }
 }
 extern "C" __global__ void __launch_bounds__(256) default_function_kernel32_offset(float *__restrict__ C,
-                                                                                  int *__restrict__ J_indptr_data,
-                                                                                  float *__restrict__ A,
-                                                                                  float *__restrict__ B,
-                                                                                  int *__restrict__ J_indices_data,
-                                                                                  int nrows,
-                                                                                  int dcols,
-                                                                                  int offset)
+                                                                                   int *__restrict__ J_indptr_data,
+                                                                                   float *__restrict__ A,
+                                                                                   float *__restrict__ B,
+                                                                                   int *__restrict__ J_indices_data,
+                                                                                   int nrows,
+                                                                                   int dcols,
+                                                                                   int offset)
 {
   if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows)
   {
@@ -140,7 +205,7 @@ extern "C" __global__ void __launch_bounds__(256) default_function_kernel_if(flo
   {
     if ((((((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) < dcols)
     {
-//      C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] = 0.000000e+00f;
+      //      C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] = 0.000000e+00f;
       for (int j = 0; j < (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] - J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]); ++j)
       {
         C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] = (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))] + (A[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x))]));
@@ -149,7 +214,7 @@ extern "C" __global__ void __launch_bounds__(256) default_function_kernel_if(flo
 
     if ((((((int)blockIdx.y) * 64)) + ((int)threadIdx.x) + 32) < dcols)
     {
-//      C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] = 0.000000e+00f;
+      //      C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] = 0.000000e+00f;
       for (int j = 0; j < (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] - J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]); ++j)
       {
         C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] = (C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)] + (A[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * B[((((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] * dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)]));
@@ -164,7 +229,7 @@ std::vector<at::Tensor> gather_forward_gcn(
     torch::Tensor columns_graph,
     torch::Tensor value_graph,
     torch::Tensor bounds,
-    int nrows, int segments)
+    int nrows, int segments, bool is_directed)
 {
   auto full_iden = input_dense.numel();
   auto dcols = full_iden / nrows;
@@ -192,82 +257,172 @@ std::vector<at::Tensor> gather_forward_gcn(
 
     cudaStream_t stream1, stream2, stream3;
 
-    if ((int)dcols / 64){
-      cudaStreamCreate(&stream1);
-      dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 64);
-      dim3 blockDim(32, 8);
-      default_function_kernel64<<<gridDim, blockDim, 0, stream1>>>(oden_array,
-                                                                  &offset_ptr[i1 * (nrows + 1)],
-                                                                  &val_ptr[start_vals],
-                                                                  iden_ptr,
-                                                                  &col_ptr[start_vals],
-                                                                  nrows,
-                                                                  dcols);
+    if (is_directed)
+    {
+      if ((int)dcols / 64)
+      {
+        cudaStreamCreate(&stream1);
+        dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 64);
+        dim3 blockDim(32, 8);
+        default_function_kernel64<<<gridDim, blockDim, 0, stream1>>>(oden_array,
+                                                                     &offset_ptr[i1 * (nrows + 1)],
+                                                                     &val_ptr[start_vals],
+                                                                     iden_ptr,
+                                                                     &col_ptr[start_vals],
+                                                                     nrows,
+                                                                     dcols);
 
-      if ((dcols % 64) > 32) {
-        cudaStreamCreate(&stream2);
-        dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+        if ((dcols % 64) > 32)
+        {
+          cudaStreamCreate(&stream2);
+          dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+          dim3 blockDim_rem(32, 8);
+          default_function_kernel32_offset<<<gridDim_rem, blockDim_rem, 0, stream2>>>(oden_array,
+                                                                                      &offset_ptr[i1 * (nrows + 1)],
+                                                                                      &val_ptr[start_vals],
+                                                                                      iden_ptr,
+                                                                                      &col_ptr[start_vals],
+                                                                                      nrows,
+                                                                                      dcols,
+                                                                                      ((int)dcols / 64) * 64);
+          if ((dcols % 32) > 0)
+          {
+            cudaStreamCreate(&stream3);
+            dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+            dim3 blockDim_rem(dcols % 32, 8);
+            default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream3>>>(oden_array,
+                                                                                   &offset_ptr[i1 * (nrows + 1)],
+                                                                                   &val_ptr[start_vals],
+                                                                                   iden_ptr,
+                                                                                   &col_ptr[start_vals],
+                                                                                   nrows,
+                                                                                   dcols,
+                                                                                   (((int)dcols / 64) * 64) + 32);
+          }
+        }
+        else if ((dcols % 64) > 0)
+        {
+          cudaStreamCreate(&stream2);
+          dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+          dim3 blockDim_rem(dcols % 64, 8);
+          default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream2>>>(oden_array,
+                                                                                 &offset_ptr[i1 * (nrows + 1)],
+                                                                                 &val_ptr[start_vals],
+                                                                                 iden_ptr,
+                                                                                 &col_ptr[start_vals],
+                                                                                 nrows,
+                                                                                 dcols,
+                                                                                 ((int)dcols / 64) * 64);
+        }
+      }
+      else
+      {
+        cudaStreamCreate(&stream1);
+        dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, (int)dcols / 32);
         dim3 blockDim_rem(32, 8);
-        default_function_kernel32_offset<<<gridDim_rem, blockDim_rem, 0, stream2>>>(oden_array,
-                                                                            &offset_ptr[i1 * (nrows + 1)],
-                                                                            &val_ptr[start_vals],
-                                                                            iden_ptr,
-                                                                            &col_ptr[start_vals],
-                                                                            nrows,
-                                                                            dcols,
-                                                                            ((int)dcols / 64) * 64);
-        if ((dcols % 32) > 0) {
+        default_function_kernel32<<<gridDim_rem, blockDim_rem, 0, stream1>>>(oden_array,
+                                                                             &offset_ptr[i1 * (nrows + 1)],
+                                                                             &val_ptr[start_vals],
+                                                                             iden_ptr,
+                                                                             &col_ptr[start_vals],
+                                                                             nrows,
+                                                                             dcols);
+        if ((dcols % 32) > 0)
+        {
           cudaStreamCreate(&stream3);
           dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
           dim3 blockDim_rem(dcols % 32, 8);
           default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream3>>>(oden_array,
-                                                                                &offset_ptr[i1 * (nrows + 1)],
-                                                                                &val_ptr[start_vals],
-                                                                                iden_ptr,
-                                                                                &col_ptr[start_vals],
-                                                                                nrows,
-                                                                                dcols,
-                                                                                (((int)dcols / 64) * 64) + 32);
+                                                                                 &offset_ptr[i1 * (nrows + 1)],
+                                                                                 &val_ptr[start_vals],
+                                                                                 iden_ptr,
+                                                                                 &col_ptr[start_vals],
+                                                                                 nrows,
+                                                                                 dcols,
+                                                                                 (((int)dcols / 64) * 64) + 32);
         }
-      } else if ((dcols % 64) > 0) {
-        cudaStreamCreate(&stream2);
-        dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
-        dim3 blockDim_rem(dcols % 64, 8);
-        default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream2>>>(oden_array,
-                                                                              &offset_ptr[i1 * (nrows + 1)],
-                                                                              &val_ptr[start_vals],
-                                                                              iden_ptr,
-                                                                              &col_ptr[start_vals],
-                                                                              nrows,
-                                                                              dcols,
-                                                                              ((int)dcols / 64) * 64);
-      }
-    } else {
-      cudaStreamCreate(&stream1);
-      dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, (int)dcols / 32);
-      dim3 blockDim_rem(32, 8);
-      default_function_kernel32<<<gridDim_rem, blockDim_rem, 0, stream1>>>(oden_array,
-                                                                            &offset_ptr[i1 * (nrows + 1)],
-                                                                            &val_ptr[start_vals],
-                                                                            iden_ptr,
-                                                                            &col_ptr[start_vals],
-                                                                            nrows,
-                                                                            dcols);
-      if ((dcols % 32) > 0) {
-        cudaStreamCreate(&stream3);
-        dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
-        dim3 blockDim_rem(dcols % 32, 8);
-        default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream3>>>(oden_array,
-                                                                              &offset_ptr[i1 * (nrows + 1)],
-                                                                              &val_ptr[start_vals],
-                                                                              iden_ptr,
-                                                                              &col_ptr[start_vals],
-                                                                              nrows,
-                                                                              dcols,
-                                                                              (((int)dcols / 64) * 64) + 32);
       }
     }
-    
+    else
+    {
+      if ((int)dcols / 64)
+      {
+        cudaStreamCreate(&stream1);
+        dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 64);
+        dim3 blockDim(32, 8);
+        default_function_kernel64<<<gridDim, blockDim, 0, stream1>>>(oden_array,
+                                                                     &offset_ptr[i1 * (nrows + 1)],
+                                                                     iden_ptr,
+                                                                     &col_ptr[start_vals],
+                                                                     nrows,
+                                                                     dcols);
+
+        if ((dcols % 64) > 32)
+        {
+          cudaStreamCreate(&stream2);
+          dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+          dim3 blockDim_rem(32, 8);
+          default_function_kernel32_offset<<<gridDim_rem, blockDim_rem, 0, stream2>>>(oden_array,
+                                                                                      &offset_ptr[i1 * (nrows + 1)],
+                                                                                      iden_ptr,
+                                                                                      &col_ptr[start_vals],
+                                                                                      nrows,
+                                                                                      dcols,
+                                                                                      ((int)dcols / 64) * 64);
+          if ((dcols % 32) > 0)
+          {
+            cudaStreamCreate(&stream3);
+            dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+            dim3 blockDim_rem(dcols % 32, 8);
+            default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream3>>>(oden_array,
+                                                                                   &offset_ptr[i1 * (nrows + 1)],
+                                                                                   iden_ptr,
+                                                                                   &col_ptr[start_vals],
+                                                                                   nrows,
+                                                                                   dcols,
+                                                                                   (((int)dcols / 64) * 64) + 32);
+          }
+        }
+        else if ((dcols % 64) > 0)
+        {
+          cudaStreamCreate(&stream2);
+          dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+          dim3 blockDim_rem(dcols % 64, 8);
+          default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream2>>>(oden_array,
+                                                                                 &offset_ptr[i1 * (nrows + 1)],
+                                                                                 iden_ptr,
+                                                                                 &col_ptr[start_vals],
+                                                                                 nrows,
+                                                                                 dcols,
+                                                                                 ((int)dcols / 64) * 64);
+        }
+      }
+      else
+      {
+        cudaStreamCreate(&stream1);
+        dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, (int)dcols / 32);
+        dim3 blockDim_rem(32, 8);
+        default_function_kernel32<<<gridDim_rem, blockDim_rem, 0, stream1>>>(oden_array,
+                                                                             &offset_ptr[i1 * (nrows + 1)],
+                                                                             iden_ptr,
+                                                                             &col_ptr[start_vals],
+                                                                             nrows,
+                                                                             dcols);
+        if ((dcols % 32) > 0)
+        {
+          cudaStreamCreate(&stream3);
+          dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+          dim3 blockDim_rem(dcols % 32, 8);
+          default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream3>>>(oden_array,
+                                                                                 &offset_ptr[i1 * (nrows + 1)],
+                                                                                 iden_ptr,
+                                                                                 &col_ptr[start_vals],
+                                                                                 nrows,
+                                                                                 dcols,
+                                                                                 (((int)dcols / 64) * 64) + 32);
+        }
+      }
+    }
   }
 
   return {output_dense};
@@ -275,11 +430,13 @@ std::vector<at::Tensor> gather_forward_gcn(
 
 struct GCN : torch::nn::Module
 {
-  GCN(int in_size, int out_size) {
+  GCN(int in_size, int out_size, bool dir)
+  {
     // Construct and register two Linear submodules.
     fc1 = register_module("fc1", torch::nn::Linear(in_size, out_size));
     in_feat_size = in_size;
     out_feat_size = out_size;
+    directed = dir;
   }
 
   // Layers should be 602, 32, 50
@@ -294,24 +451,25 @@ struct GCN : torch::nn::Module
   //
   //
   // Implement the Net's algorithm.
-  std::vector<torch::Tensor> forward(torch::Tensor input_dense, // B
-                                     torch::Tensor offset_graph, // A_sparse_offset
+  std::vector<torch::Tensor> forward(torch::Tensor input_dense,   // B
+                                     torch::Tensor offset_graph,  // A_sparse_offset
                                      torch::Tensor columns_graph, // A_sparse_col_ids
-                                     torch::Tensor value_graph, // A_sparse_values
-                                     torch::Tensor bounds, // A_sparse_tile_bounds
+                                     torch::Tensor value_graph,   // A_sparse_values
+                                     torch::Tensor bounds,        // A_sparse_tile_bounds
                                      int nrows,
                                      int segments)
   {
-//    if (in_feat_size > out_feat_size) {
-//
-//    }
+    //    if (in_feat_size > out_feat_size) {
+    //
+    //    }
     // The GEMM normalization
-    return gather_forward_gcn(input_dense, offset_graph, columns_graph, value_graph, bounds, nrows, segments);
+    return gather_forward_gcn(input_dense, offset_graph, columns_graph, value_graph, bounds, nrows, segments, directed);
   }
 
   // Use one of many "standard library" modules.
   torch::nn::Linear fc1{nullptr};
   int in_feat_size, out_feat_size;
+  bool directed;
 };
 
 int main(int argc, char **argv)
@@ -400,12 +558,12 @@ int main(int argc, char **argv)
   out_emb.set_all(0);
   out_emb2.set_all(0);
 
-//  gSpMM(&adj, &input_emb, &out_emb2, wsum_aggr);
+  //  gSpMM(&adj, &input_emb, &out_emb2, wsum_aggr);
 
   std::cout << adj.nrows() << " " << adj.ncols() << " " << adj.nvals() << std::endl;
 
   // Create a new Net.
-  auto net = std::make_shared<GCN>(608, 32);
+  auto net = std::make_shared<GCN>(608, 32, false);
 
   // Instantiate an SGD optimization algorithm to update our Net's parameters.
   torch::optim::SGD optimizer(net->parameters(), /*lr=*/0.01);
@@ -481,15 +639,15 @@ int main(int argc, char **argv)
       times_arr.push_back(end - start);
     }
 
-//    for (int x = 0; x < nrows; x++){
-//        for (int y = 0; y < emb_size; y++){
-//            if (prediction[x][y].item<val_t>()!= out_emb2.vals_ptr()[x * emb_size + y]) {
-//                std::cout << "The results don't match at: " << x << "," << y << ":  " << prediction[x][y].item<val_t>() << ", "
-//                          << out_emb2.vals_ptr()[x * emb_size + y] << std::endl;
-//                break;
-//            }
-//        }
-//    }
+    //    for (int x = 0; x < nrows; x++){
+    //        for (int y = 0; y < emb_size; y++){
+    //            if (prediction[x][y].item<val_t>()!= out_emb2.vals_ptr()[x * emb_size + y]) {
+    //                std::cout << "The results don't match at: " << x << "," << y << ":  " << prediction[x][y].item<val_t>() << ", "
+    //                          << out_emb2.vals_ptr()[x * emb_size + y] << std::endl;
+    //                break;
+    //            }
+    //        }
+    //    }
   }
 
   CUDA_CHECK(cudaFree(dA_csrOffsets));
