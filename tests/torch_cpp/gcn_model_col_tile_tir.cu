@@ -700,7 +700,7 @@ int main(int argc, char **argv) {
             << std::endl;
 
   // Create a new Net.
-  auto net = std::make_shared<GCN>(608, 32, false);
+  auto net = std::make_shared<GCN>(emb_size, 32, false);
 
   // Instantiate an SGD optimization algorithm to update our Net's parameters.
   torch::optim::SGD optimizer(net->parameters(), /*lr=*/0.01);
@@ -761,7 +761,7 @@ int main(int argc, char **argv) {
       torch::TensorOptions().dtype(torch::kFloat).device(torch::kCUDA, 0);
   torch::Tensor t_vals = torch::from_blob(dA_values, {nvals}, options_cu_float);
   torch::Tensor t_iden =
-      torch::from_blob(dB, {nrows * emb_size}, options_cu_float);
+      torch::from_blob(dB, {nrows, emb_size}, options_cu_float);
 
   double start, end;
   val_t randVal;
