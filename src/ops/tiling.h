@@ -327,6 +327,7 @@ void ord_col_tiling_torch_dcsr(std::vector<typename SM::itype> &col_breakpoints,
     memcpy(copy_offsets, src->offset_ptr(), (src->nrows() + 1) * sizeof(nT));
 
     nT new_nvals = 0;
+    // nT prev_nvals = 0;
     iT new_nrows = 0;
 
     new_offset_ptr_vec.push_back(new_nvals);
@@ -335,11 +336,11 @@ void ord_col_tiling_torch_dcsr(std::vector<typename SM::itype> &col_breakpoints,
         iT j_start = col_breakpoints.at(nth_tile);
         iT j_end = col_breakpoints.at(nth_tile + 1);
 
-        bool found_nnz = false;
-
         // Set the initial offset
         row_bounds[nth_tile * 2] = new_nrows;
         for (iT i_i = 0; i_i < src_nrows; i_i += 1) {
+            bool found_nnz = false;
+            
             nT first_node_edge = copy_offsets[i_i];
             nT last_node_edge = src_offset_ptr[i_i + 1];
 
@@ -366,10 +367,16 @@ void ord_col_tiling_torch_dcsr(std::vector<typename SM::itype> &col_breakpoints,
             }
         }
         row_bounds[nth_tile * 2 + 1] = new_nrows;
+        // std::cout << "ii: " << row_bounds[nth_tile * 2] << " " << row_bounds[nth_tile * 2 + 1] << std::endl;
+        // std::cout << "row ids: " << new_rows_vec[row_bounds[nth_tile * 2]] << " " << new_rows_vec[row_bounds[nth_tile * 2 + 1] - 1] << std::endl;
+
+        // std::cout << new_offset_ptr_vec[row_bounds[nth_tile * 2]] << " " << new_offset_ptr_vec[row_bounds[nth_tile * 2] + 1] << std::endl;
+        // std::cout << new_offset_ptr_vec[row_bounds[nth_tile * 2 + 1] - 1] << " " << new_offset_ptr_vec[row_bounds[nth_tile * 2 + 1]] << std::endl;
+
     }
 
     output_rows = torch::zeros({new_nrows}, options_int);
-    output_offsets = torch::zeros({new_nrows}, options_int);
+    output_offsets = torch::zeros({new_nrows + 1}, options_int);
 
     iT *rows_ptr = output_rows.data_ptr<iT>();
     iT *offsets_ptr = output_offsets.data_ptr<iT>();
