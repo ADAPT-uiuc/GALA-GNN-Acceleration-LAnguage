@@ -48,6 +48,15 @@ target_compile_features(gala_cuda_tir_dcsr PRIVATE cxx_std_14)
 add_executable(gala_cuda_tile_tir_mask gcn_model_col_tile_tir_mask.cu)
 target_compile_features(gala_cuda_tile_tir_mask PRIVATE cxx_std_14)
 
+# npy
+add_executable(gala npy_gcn_model.cu)
+target_compile_features(gala PRIVATE cxx_std_14)
+add_executable(gala_tir npy_gcn_model_tir_base.cu)
+target_compile_features(gala_tir PRIVATE cxx_std_14)
+add_executable(gala_tile_tir npy_gcn_model_col_tile_tir.cu)
+target_compile_features(gala_tile_tir PRIVATE cxx_std_14)
+add_executable(gala_tile_tir_op npy_gcn_model_col_tile_tir_op.cu)
+target_compile_features(gala_tile_tir_op PRIVATE cxx_std_14)
 
 #target_link_libraries(gala_cuda PUBLIC )
 

@@ -240,6 +240,29 @@ void readSM_npy32(std::string path, SM *adj) {
     data_adj_src.clear();
 }
 
+template<class DM>
+void readDM_npy(std::string filename, DM *mtx, typename DM::DENSE_MTX_TYPE type) {
+    typedef typename DM::itype diT;
+    typedef typename DM::ntype dnT;
+    typedef typename DM::vtype dvT;
+
+    diT nrows, ncols;
+    dvT *vals;
+
+    std::vector<unsigned long> shape{};
+    bool fortran_order;
+    std::vector<dvT> data;
+    npy::LoadArrayFromNumpy(filename, shape, fortran_order, data);
+
+    nrows = (diT) shape.at(0);
+    ncols = (diT) shape.at(1);
+
+    vals = (dvT *) aligned_alloc(64, (nrows * ncols) * sizeof(dvT));
+    std::copy(data.begin(), data.end(), vals);
+
+    mtx->build(nrows, ncols, vals, type, 0);
+}
+
 template<class SM>
 void readSM(std::string filename, CSRCMatrix<typename SM::itype, typename SM::ntype, typename SM::vtype> *mtx) {
     typedef typename SM::itype iT;

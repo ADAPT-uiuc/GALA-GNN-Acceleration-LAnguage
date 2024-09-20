@@ -56,11 +56,11 @@ typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;
 
 // Undirected
 extern "C" __global__ void __launch_bounds__(256)
-    default_function_kernel64_undir(float *__restrict__ C,
+    default_function_kernel64_undir_sample(float *__restrict__ C,
                                     int *__restrict__ J_indptr_data,
                                     float *__restrict__ B,
                                     int *__restrict__ J_indices_data, int nrows,
-                                    int dcols) {
+                                    int dcols, int sample_size) {
   if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
     for (int j = 0;
          j <
