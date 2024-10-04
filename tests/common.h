@@ -14,6 +14,23 @@
 #include <stdlib.h>
 #include <random>
 
+
+template<class DM1, class DM2>
+void repopulate(DM1 *src, DM2 *dst){
+    typedef typename DM1::itype iT;
+    typedef typename DM1::ntype nT;
+    // source / target types
+    typedef typename DM1::vtype sT;
+    typedef typename DM2::vtype tT;
+
+    dst->build(src->nrows(), src->ncols(), DM2::DENSE_MTX_TYPE::RM, 0);
+    
+#pragma omp parallel for schedule(static)
+    for (iT i = 0; i < src->nrows() * src->ncols(); i++) {
+        dst->vals_ptr()[i] = (tT)src->vals_ptr()[i];
+    }
+}
+
 template<class DM>
 void readDM(std::string filename, DM *mtx, typename DM::DENSE_MTX_TYPE type) {
     typedef typename DM::itype diT;

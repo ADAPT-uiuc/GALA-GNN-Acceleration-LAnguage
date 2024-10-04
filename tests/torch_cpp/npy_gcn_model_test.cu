@@ -20,9 +20,9 @@ typedef DenseMatrix<ind1_t, ind2_t, mask_t> DB;
 typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;
 
 torch::Tensor gather_forward_gcn(torch::Tensor input_dense,
-                                           torch::Tensor offset_graph,
-                                           torch::Tensor columns_graph,
-                                           torch::Tensor value_graph) {
+                                 torch::Tensor offset_graph,
+                                 torch::Tensor columns_graph,
+                                 torch::Tensor value_graph) {
   auto nrows = offset_graph.numel() - 1;
   auto nvals = columns_graph.numel();
   auto full_iden = input_dense.numel();
@@ -44,62 +44,47 @@ torch::Tensor gather_forward_gcn(torch::Tensor input_dense,
   int *col_ptr = columns_graph.data_ptr<int>();
   float *val_ptr = value_graph.data_ptr<float>();
 
-  cudaStream_t stream1, stream2, stream3;
+  float alpha = 1.0f;
+  float beta = 1.0f;
 
-  if ((int)dcols / 64) {
-    cudaStreamCreate(&stream1);
-    dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 64);
-    dim3 blockDim(32, 8);
-    default_function_kernel64<<<gridDim, blockDim, 0, stream1>>>(
-        oden_array, offset_ptr, val_ptr, iden_ptr, col_ptr, nrows, dcols);
+  // Create the sparse / dense objects
+  cusparseHandle_t handle = NULL;
+  cusparseSpMatDescr_t matA;
+  cusparseDnMatDescr_t matB, matC;
+  void *dBuffer = NULL;
+  size_t bufferSize = 0;
 
-    if ((dcols % 64) > 32) {
-      cudaStreamCreate(&stream2);
-      dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
-      dim3 blockDim_rem(32, 8);
-      default_function_kernel32_offset<<<gridDim_rem, blockDim_rem, 0,
-                                         stream2>>>(
-          oden_array, offset_ptr, val_ptr, iden_ptr, col_ptr, nrows, dcols,
-          ((int)dcols / 64) * 64);
-      if ((dcols % 32) > 0) {
-        cudaStreamCreate(&stream3);
-        dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
-        dim3 blockDim_rem(dcols % 32, 8);
-        default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream3>>>(
-            oden_array, offset_ptr, val_ptr, iden_ptr, col_ptr, nrows, dcols,
-            (((int)dcols / 64) * 64) + 32);
-      }
-    } else if ((dcols % 64) > 0) {
-      cudaStreamCreate(&stream2);
-      dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
-      dim3 blockDim_rem(dcols % 64, 8);
-      default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream2>>>(
-          oden_array, offset_ptr, val_ptr, iden_ptr, col_ptr, nrows, dcols,
-          ((int)dcols / 64) * 64);
-    }
-  } else {
-    if ((int)dcols / 32) {
-      cudaStreamCreate(&stream1);
-      dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, (int)dcols / 32);
-      dim3 blockDim_rem(32, 8);
-      default_function_kernel32<<<gridDim_rem, blockDim_rem, 0, stream1>>>(
-          oden_array, offset_ptr, val_ptr, iden_ptr, col_ptr, nrows, dcols);
-      if ((dcols % 32) > 0) {
-        cudaStreamCreate(&stream2);
-        dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
-        dim3 blockDim_rem(dcols % 32, 8);
-        default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream2>>>(
-            oden_array, offset_ptr, val_ptr, iden_ptr, col_ptr, nrows, dcols,
-            (((int)dcols / 32) * 32));
-      }
-    } else {
-      cudaStreamCreate(&stream1);
-      dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
-      dim3 blockDim_rem(dcols % 32, 8);
-      default_function_kernel_rem<<<gridDim_rem, blockDim_rem, 0, stream1>>>(
-          oden_array, offset_ptr, val_ptr, iden_ptr, col_ptr, nrows, dcols, 0);
-    }
-  }
+  CUSPARSE_CHECK(cusparseCreate(&handle));
+  CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals, offset_ptr,
+                                   col_ptr, val_ptr, CUSPARSE_INDEX_32I,
+                                   CUSPARSE_INDEX_32I, // Need to change these
+                                   CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
+  // Create dense matrix B
+  CUSPARSE_CHECK(cusparseCreateDnMat(&matB, nrows, dcols, dcols, iden_ptr,
+                                     CUDA_R_32F,
+                                     CUSPARSE_ORDER_ROW)); // changed
+  // Create dense matrix C
+  CUSPARSE_CHECK(cusparseCreateDnMat(&matC, nrows, dcols, dcols, oden_array,
+                                     CUDA_R_32F,
+                                     CUSPARSE_ORDER_ROW)); // changed
+
+  // allocate an external buffer if needed
+  CUSPARSE_CHECK(cusparseSpMM_bufferSize(
+      handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+      CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, matA, matB, &beta, matC,
+      CUDA_R_32F, CUSPARSE_SPMM_CSR_ALG2, &bufferSize));
+  CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));
+
+  CUSPARSE_CHECK(cusparseSpMM(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+                              CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, matA,
+                              matB, &beta, matC, CUDA_R_32F,
+                              CUSPARSE_SPMM_CSR_ALG2, dBuffer));
+
+  CUSPARSE_CHECK(cusparseDestroySpMat(matA));
+  CUSPARSE_CHECK(cusparseDestroyDnMat(matB));
+  CUSPARSE_CHECK(cusparseDestroyDnMat(matC));
+  CUSPARSE_CHECK(cusparseDestroy(handle));
+  CUDA_CHECK(cudaFree(dBuffer));
 
   return output_dense;
 }
@@ -131,16 +116,47 @@ public:
 };
 
 struct GCN : torch::nn::Module {
-  GCN(int in_size, int hidden_size, int out_size, bool dir) {
+  // GCN(int in_size, int hidden_size, int out_size, bool dir) {
+  //   // Construct and register two Linear submodules.
+  //   fc1 = register_module("fc1", torch::nn::Linear(in_size, hidden_size));
+  //   fc2 = register_module("fc2", torch::nn::Linear(hidden_size, out_size));
+  //   in_feat_size = in_size;
+  //   hidden_feat_size = hidden_size;
+  //   out_feat_size = out_size;
+  //   directed = dir;
+  // }
+
+  GCN(int in_size, int hidden_size, int out_size, bool dir, torch::Tensor w0, torch::Tensor w1) {
     // Construct and register two Linear submodules.
-    fc1 = register_module("fc1", torch::nn::Linear(in_size, hidden_size));
-    fc2 = register_module("fc2", torch::nn::Linear(hidden_size, out_size));
+    auto w0_val = torch::nn::Linear(in_size, hidden_size);
+    std::cout << "wo: " << w0_val->weight.sizes()[0] << " " << w0_val->weight.sizes()[1] << std::endl;
+    w0_val->weight.set_data(w0);
+    std::cout << "wo: " << w0_val->weight.sizes()[0] << " " << w0_val->weight.sizes()[1] << std::endl;
+    auto w1_val = torch::nn::Linear(hidden_size, out_size);
+    w1_val->weight.set_data(w1);
+    // fc1 = register_module("fc1", torch::nn::Linear(in_size, hidden_size));
+    // fc2 = register_module("fc2", torch::nn::Linear(hidden_size, out_size));
+
+    fc1 = register_module("fc1", w0_val);
+    fc2 = register_module("fc2", w1_val);
     in_feat_size = in_size;
     hidden_feat_size = hidden_size;
     out_feat_size = out_size;
     directed = dir;
   }
 
+  // Layers should be 602, 32, 50
+  // TODOs -- for training aware
+  //  DCSR - Having it should count as a format seletion, but to be better it
+  //  needs CSC kernels Automatic operation reordering Boolean mask skip nodes
+  //  -- Training aware Initial SpMM is in init -- Training aware SENSEi style
+  //  of execution -- How do you expose this?? Memory usage optimization --
+  //  Based on what Vimarsh said, this comes about because the graph is being
+  //  stored multiple times. For an undirected graph, you can directly use the
+  //  existing graph without transpose. Kernel optimization -- Coalesed acceses
+  //  which the current implmentation has by default
+  //
+  //
   // Implement the Net's algorithm.
   std::vector<torch::Tensor>
   forward(torch::Tensor input_dense,   // B
@@ -157,17 +173,86 @@ struct GCN : torch::nn::Module {
         gather_forward_gcn(ones, offset_graph, columns_graph, value_graph);
 
     degree = torch::pow(degree, -0.5);
+    degree = degree.view({degree.sizes()[0], 1});
 
-    torch::Tensor res = degree * input_dense;
-    res = GatherForward::apply(res, offset_graph, columns_graph, value_graph);
+    // std::cout << "degree: " << degree.requires_grad() << std::endl;
+    std::cout << "degree: " << degree[0][0].item<float>() << " " << degree[1][0].item<float>() << " " << degree[2][0].item<float>() << std::endl;
+
+    std::cout << "input_dense: " << input_dense[0][0].item<float>() << " " << input_dense[0][1].item<float>() << " " << input_dense[1][0].item<float>() << std::endl;
+    // std::cout << "input_dense: " << input_dense.requires_grad() << std::endl;
+
+    // torch::Tensor res = degree * input_dense;
+    torch::Tensor res = input_dense * degree;
+
+    std::cout << "after_norm: " << res[0][0].item<float>() << " " << res[0][1].item<float>() << " " << res[1][0].item<float>() << std::endl;
+
+    // std::cout << "norm_input: " << norm_input.requires_grad() << std::endl;
+
+    // torch::Tensor msg_aggr = gather_forward_gcn(norm_input, offset_graph,
+    //                                             columns_graph, value_graph);
     res = fc1->forward(res);
-    res = degree * res;
-    res = torch::relu(res);
-    res = degree * res;
+
+    std::cout << "matmul: " << res[0][0].item<float>() << " " << res[0][1].item<float>() << " " << res[1][0].item<float>() << std::endl;
+
+
     res = GatherForward::apply(res, offset_graph, columns_graph, value_graph);
+
+    std::cout << "aggr: " << res[0][0].item<float>() << " " << res[0][1].item<float>() << " " << res[1][0].item<float>() << std::endl;
+
+    // std::cout << "msg_aggr: " << msg_aggr.requires_grad() << std::endl;
+
+    // Delate the norm_input alloc
+    // norm_input = torch::zeros({1});
+
+    
+
+    // std::cout << "msg_update: " << msg_update.requires_grad() << std::endl;
+
+    // msg_aggr = torch::zeros({1});
+
+    // res = degree * res;
+    res = res * degree;
+
+    // std::cout << "norm_out: " << norm_out.requires_grad() << std::endl;
+
+    // msg_update = torch::zeros({1});
+
+    res = torch::relu(res);
+
+    // std::cout << "msg_relu: " << msg_relu.requires_grad() << std::endl;
+
+    // norm_out = torch::zeros({1});
+
+    // res = degree * res;
+    res = res * degree;
+
+    // std::cout << "norm_input: " << norm_input.requires_grad() << std::endl;
+
+    // msg_relu = torch::zeros({1});
+
+    res = GatherForward::apply(res, offset_graph, columns_graph, value_graph);
+    // msg_aggr = GatherForward::apply(norm_input, offset_graph, columns_graph,
+    //                                 value_graph);
+
+    // std::cout << "msg_aggr: " << msg_aggr.requires_grad() << std::endl;
+
+    // norm_input = torch::zeros({1});
+
     res = fc2->forward(res);
-    res = degree * res;
+
+    // std::cout << "msg_update: " << msg_update.requires_grad() << std::endl;
+
+    // msg_aggr = torch::zeros({1});
+
+    // res = degree * res;
+    res = res * degree;
+
+    // No ReLU in the final layer
     return {torch::log_softmax(res, /*dim=*/1)};
+
+    // return gather_forward_gcn(input_dense, offset_graph, columns_graph,
+    //                           value_graph, bounds, nrows, segments,
+    //                           directed);
   }
 
   // Use one of many "standard library" modules.
@@ -225,6 +310,12 @@ int main(int argc, char **argv) {
   DBL test_mask_load;
   readDM_npy<DBL>(filename + "TsMsk.npy", &test_mask_load,
                   DBL::DENSE_MTX_TYPE::RM);
+  DM w0;
+  readDM_npy<DM>(filename + "W0train.npy", &w0,
+                 DM::DENSE_MTX_TYPE::RM);
+  DM w1;
+  readDM_npy<DM>(filename + "W1train.npy", &w1,
+                 DM::DENSE_MTX_TYPE::RM);
 
   DB train_mask;
   repopulate<DBL, DB>(&train_mask_load, &train_mask);
@@ -255,6 +346,8 @@ int main(int argc, char **argv) {
   CUDA_CHECK(cudaMalloc((void **)&d_train_mask, nrows * sizeof(bool)));
   CUDA_CHECK(cudaMalloc((void **)&d_valid_mask, nrows * sizeof(bool)));
   CUDA_CHECK(cudaMalloc((void **)&d_test_mask, nrows * sizeof(bool)));
+  CUDA_CHECK(cudaMalloc((void **)&dw0, (w0.nrows() * w0.ncols()) * sizeof(float)));
+  CUDA_CHECK(cudaMalloc((void **)&dw1, (w1.nrows() * w1.ncols()) * sizeof(float)));
 
   CUDA_CHECK(cudaMemcpy(dA_csrOffsets, adj.offset_ptr(),
                         (nrows + 1) * sizeof(int), cudaMemcpyHostToDevice));
@@ -273,6 +366,13 @@ int main(int argc, char **argv) {
                         nrows * sizeof(bool), cudaMemcpyHostToDevice));
   CUDA_CHECK(cudaMemcpy(d_test_mask, test_mask.vals_ptr(), nrows * sizeof(bool),
                         cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpy(dw0, w0.vals_ptr(),
+                        (w0.nrows() * w0.ncols()) * sizeof(float),
+                        cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpy(dw1, w1.vals_ptr(),
+                        (w1.nrows() * w1.ncols()) * sizeof(float),
+                        cudaMemcpyHostToDevice));
+
   auto options_cu_int = torch::TensorOptions()
                             .dtype(torch::kInt)
                             .requires_grad(false)
@@ -297,6 +397,13 @@ int main(int argc, char **argv) {
       torch::from_blob(dA_values, {nvals}, options_cu_float_ngrad);
   torch::Tensor t_iden =
       torch::from_blob(dB, {nrows, emb_size}, options_cu_float_grad);
+  torch::Tensor t_w0 =
+      torch::from_blob(dw0, {w0.nrows(), w0.ncols()}, options_cu_float_grad);
+  torch::Tensor t_w1 =
+      torch::from_blob(dw1, {w1.nrows(), w1.ncols()}, options_cu_float_grad);
+
+  t_w0 = t_w0.transpose(0, 1);
+  t_w1 = t_w1.transpose(0, 1);
 
   auto options_cu_bool = torch::TensorOptions()
                              .dtype(torch::kBool)
@@ -312,7 +419,8 @@ int main(int argc, char **argv) {
   double start_init, end_init;
   cudaDeviceSynchronize();
   start_init = get_time();
-  auto net = std::make_shared<GCN>(emb_size, 32, classes, false);
+  // auto net = std::make_shared<GCN>(emb_size, 32, classes, false);
+  auto net = std::make_shared<GCN>(emb_size, 32, classes, false, t_w0, t_w1);
   cudaDeviceSynchronize();
   end_init = get_time();
 
@@ -334,6 +442,8 @@ int main(int argc, char **argv) {
     // Execute the model on the input data.
     cudaDeviceSynchronize();
     start = get_time();
+    //        std::vector<torch::Tensor> prediction = net->forward(t_iden,
+    //        t_offsets, t_cols, t_vals);
     torch::Tensor prediction =
         net->forward(t_iden, t_offsets, t_cols, t_vals, nrows)[0];
 
@@ -346,18 +456,22 @@ int main(int argc, char **argv) {
     torch::Tensor prediction_train = prediction.index({t_train_mask});
     torch::Tensor labels_train = t_labs.index({t_train_mask});
 
+    torch::Tensor prediction_test = prediction.index({t_test_mask});
+    torch::Tensor labels_test = t_labs.index({t_test_mask});
+
+    // torch::Tensor d_loss = torch::nn::functional::cross_entropy(prediction,
+    // t_labs);
+    // TODO potential -- Change this to long
     auto criterion = torch::nn::CrossEntropyLoss();
+    // torch::Tensor d_loss = torch::nll_loss(prediction_train, labels_train);
     torch::Tensor d_loss = criterion(prediction_train, labels_train);
 
-    d_loss.backward();
+    // d_loss.backward();
 
-    optimizer.step();
+    // optimizer.step();
 
     cudaDeviceSynchronize();
     end_train = get_time();
-
-    torch::Tensor prediction_test = prediction.index({t_test_mask});
-    torch::Tensor labels_test = t_labs.index({t_test_mask});
 
     auto [pred_val, pred_idx] = torch::max({prediction_test}, 1);
 
@@ -372,6 +486,8 @@ int main(int argc, char **argv) {
       times_arr.push_back(end - start);
       times_arr_train.push_back(end_train - start_train);
     }
+
+    // Print the results of the precompute function
   }
 
   CUDA_CHECK(cudaFree(dA_csrOffsets));

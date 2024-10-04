@@ -57,6 +57,18 @@ add_executable(gala_tile_tir npy_gcn_model_col_tile_tir.cu)
 target_compile_features(gala_tile_tir PRIVATE cxx_std_14)
 add_executable(gala_tile_tir_op npy_gcn_model_col_tile_tir_op.cu)
 target_compile_features(gala_tile_tir_op PRIVATE cxx_std_14)
+add_executable(gala_tile_tir_op_tim npy_gcn_model_col_tile_tir_op_tim.cu)
+target_compile_features(gala_tile_tir_op_tim PRIVATE cxx_std_14)
+add_executable(gala_tile_tir_op_tim2 npy_gcn_model_col_tile_tir_op_tim2.cu)
+target_compile_features(gala_tile_tir_op_tim2 PRIVATE cxx_std_14)
+add_executable(gala_tile_tir_op_tim2_ogbn npy_gcn_model_col_tile_tir_op_tim2_ogbn.cu)
+target_compile_features(gala_tile_tir_op_tim2_ogbn PRIVATE cxx_std_14)
+
+add_executable(gala_tile_tir_op_cus npy_gcn_model_col_tile_tir_op_cus.cu)
+target_compile_features(gala_tile_tir_op_cus PRIVATE cxx_std_14)
+
+add_executable(gala_test npy_gcn_model_test.cu)
+target_compile_features(gala_test PRIVATE cxx_std_14)
 
 #target_link_libraries(gala_cuda PUBLIC )
 

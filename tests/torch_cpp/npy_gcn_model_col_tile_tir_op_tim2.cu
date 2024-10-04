@@ -218,6 +218,11 @@ public:
 };
 
 struct GCN : torch::nn::Module {
+  // Use one of many "standard library" modules.
+  torch::nn::Linear fc1{nullptr}, fc2{nullptr};
+  int in_feat_size, hidden_feat_size, out_feat_size;
+  bool directed;
+
   GCN(int in_size, int hidden_size, int out_size, bool dir) {
     // Construct and register two Linear submodules.
     fc1 = register_module("fc1", torch::nn::Linear(in_size, hidden_size));
@@ -230,7 +235,8 @@ struct GCN : torch::nn::Module {
   }
 
   std::vector<torch::Tensor>
-  forward(torch::Tensor input_dense,   // B
+  forward(torch::Tensor input_dense, // B
+          torch::Tensor degree,
           torch::Tensor offset_graph,  // A_sparse_offset
           torch::Tensor columns_graph, // A_sparse_col_ids
           torch::Tensor value_graph,   // A_sparse_values
@@ -240,21 +246,7 @@ struct GCN : torch::nn::Module {
     global_nrows = nrows;
     global_segments = segments;
 
-    auto options = torch::TensorOptions()
-                       .dtype(torch::kFloat)
-                       .requires_grad(false)
-                       .device(torch::kCUDA, 0);
-    auto ones = torch::ones({nrows, 1}, options);
-    torch::Tensor degree =
-        gather_forward_gcn(ones, offset_graph, columns_graph, value_graph,
-                           bounds, nrows, segments, directed);
-
-    degree = torch::pow(degree, -0.5);
-    
     torch::Tensor res = fc1->forward(input_dense);
-    res = degree * res;
-    res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
-                               bounds);
     res = degree * res;
     res = torch::relu(res);
     res = degree * res;
@@ -264,11 +256,6 @@ struct GCN : torch::nn::Module {
     res = fc2->forward(res);
     return {torch::log_softmax(res, /*dim=*/1)};
   }
-
-  // Use one of many "standard library" modules.
-  torch::nn::Linear fc1{nullptr}, fc2{nullptr};
-  int in_feat_size, hidden_feat_size, out_feat_size;
-  bool directed;
 };
 
 int main(int argc, char **argv) {
@@ -441,7 +428,22 @@ int main(int argc, char **argv) {
   double start_init, end_init;
   cudaDeviceSynchronize();
   start_init = get_time();
-  auto net = std::make_shared<GCN>(emb_size, 32, classes, false);
+  bool directed = false;
+  // TICM
+  auto options = torch::TensorOptions()
+                     .dtype(torch::kFloat)
+                     .requires_grad(false)
+                     .device(torch::kCUDA, 0);
+  auto t_ones = torch::ones({nrows, 1}, options);
+  torch::Tensor t_degree =
+      gather_forward_gcn(t_ones, t_offsets, t_cols, t_vals, total_bounds, nrows,
+                         segments, directed);
+  t_degree = torch::pow(t_degree, -0.5).detach();
+  torch::Tensor norm_input = t_degree * t_iden;
+  torch::Tensor t_tim_input =
+      gather_forward_gcn(norm_input, t_offsets, t_cols, t_vals, total_bounds,
+                         nrows, segments, directed);
+  auto net = std::make_shared<GCN>(emb_size, 32, classes, directed);
   cudaDeviceSynchronize();
   end_init = get_time();
 
@@ -457,14 +459,16 @@ int main(int argc, char **argv) {
   double start_train, end_train;
   val_t randVal;
   std::vector<double> times_arr, times_arr_train;
+
   for (size_t epoch = 1; epoch <= num_iters; ++epoch) {
     // Reset gradients.
     optimizer.zero_grad();
     // Execute the model on the input data.
     cudaDeviceSynchronize();
     start = get_time();
-    torch::Tensor prediction = net->forward(t_iden, t_offsets, t_cols, t_vals,
-                                            total_bounds, nrows, segments)[0];
+    torch::Tensor prediction =
+        net->forward(t_tim_input, t_degree, t_offsets, t_cols, t_vals, total_bounds,
+                     nrows, segments)[0];
 
     cudaDeviceSynchronize();
     end = get_time();
