@@ -22,6 +22,9 @@
 #include "../../src/utils/mtx_io.h"
 #include "../common.h"
 
+// #include "../../src/ops/reordering.h"
+// #include "../../src/third_party/rabbit_reorder/rabbit_reordering.h"
+
 #define CUDA_CHECK(func)                                                       \
   do {                                                                         \
     cudaError_t status = (func);                                               \
@@ -42,7 +45,6 @@
     }                                                                          \
   } while (0)
 
-
 // template<class DM>
 // int max_arr(const DM *lbs) {
 //     typedef typename DM::itype iT; // Node IDs
@@ -60,7 +62,8 @@
 //         maxs[c] = 0;
 //         // mins[c] = lbs->nrows();
 
-//         for (iT i = work_per_core * c; i < std::min(work_per_core * c, lbs->nrows()); i++) {
+//         for (iT i = work_per_core * c; i < std::min(work_per_core * c,
+//         lbs->nrows()); i++) {
 //             vT val = lbs->vals_ptr()[i];
 //             // if (val < mins[c]) {
 //             //     mins[c] = val;
@@ -79,8 +82,6 @@
 //     }
 //     return max_val;
 // }
-
-
 
 // Undirected
 extern "C" __global__ void __launch_bounds__(256)
@@ -403,6 +404,94 @@ extern "C" __global__ void __launch_bounds__(256)
                   ((int)threadIdx.x)) +
                  32)]));
       }
+    }
+  }
+}
+
+// SDDVV
+extern "C" __global__ void __launch_bounds__(256)
+    default_function_kernel_sddvv_plus(
+        float *__restrict__ C,           // output
+        int *__restrict__ J_indptr_data, // index pointer
+        float *__restrict__ A,           // input A
+        float *__restrict__ B,           // Input B
+        int *__restrict__ J_indices_data, int nrows) {
+  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) { // This is fine
+    for (int j = (int)threadIdx.x; // Not fine. This should increase by 32
+         j <
+         (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
+          J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
+         j += 32) {
+      C[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] =
+          (C[(j +
+              J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] +
+           (A[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))] +
+            B[(J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
+                                                  ((int)threadIdx.y))])])]));
+    }
+  }
+}
+extern "C" __global__ void __launch_bounds__(256)
+    default_function_kernel_sddvv_mult(
+        float *__restrict__ C,           // output
+        int *__restrict__ J_indptr_data, // index pointer
+        float *__restrict__ A,           // input A
+        float *__restrict__ B,           // Input B
+        int *__restrict__ J_indices_data, int nrows) {
+  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) { // This is fine
+    for (int j = (int)threadIdx.x; // Not fine. This should increase by 32
+         j <
+         (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
+          J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
+         j += 32) {
+      C[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] =
+          (C[(j +
+              J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] *
+           (A[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))] *
+            B[(J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
+                                                  ((int)threadIdx.y))])])]));
+    }
+  }
+}
+extern "C" __global__ void __launch_bounds__(256)
+    default_function_kernel_sddvv_mult_undir(
+        float *__restrict__ C,           // output
+        int *__restrict__ J_indptr_data, // index pointer
+        float *__restrict__ A,           // input A
+        float *__restrict__ B,           // Input B
+        int *__restrict__ J_indices_data, int nrows) {
+  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) { // This is fine
+    for (int j = (int)threadIdx.x; // Not fine. This should increase by 32
+         j <
+         (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
+          J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
+         j += 32) {
+      C[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] =
+          ((A[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))] *
+            B[(J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
+                                                  ((int)threadIdx.y))])])]));
+    }
+  }
+}
+extern "C" __global__ void __launch_bounds__(256)
+    default_function_kernel_sddvv_plus_nowarp(
+        float *__restrict__ C,           // output
+        int *__restrict__ J_indptr_data, // index pointer
+        float *__restrict__ A,           // input A
+        float *__restrict__ B,           // Input B
+        int *__restrict__ J_indices_data, int nrows) {
+  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) { // This is fine
+    for (int j = 0; // Not fine. This should increase by 32
+         j <
+         (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
+          J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
+         j += 1) {
+      C[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] =
+          (C[(j +
+              J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] +
+           (A[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))] +
+            B[(J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
+                                                  ((int)threadIdx.y))])])]));
     }
   }
 }

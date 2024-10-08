@@ -19,14 +19,24 @@ int global_nrows;
 int global_segments;
 bool global_is_directed;
 
-torch::Tensor gather_forward_gcn(torch::Tensor input_dense,
-                                 torch::Tensor offset_graph,
-                                 torch::Tensor columns_graph,
-                                 torch::Tensor value_graph,
-                                 torch::Tensor bounds, int nrows, int segments,
-                                 bool is_directed) {
+torch::Tensor global_offset_graph;
+torch::Tensor global_columns_graph;
+torch::Tensor global_value_graph;
+torch::Tensor global_bounds;
+
+torch::Tensor gather_forward_gcn(torch::Tensor input_dense) {
   auto full_iden = input_dense.numel();
-  auto dcols = full_iden / nrows;
+ 
+  int nrows = global_nrows;
+  int segments = global_segments;
+  bool is_directed = global_is_directed;
+
+  torch::Tensor offset_graph = global_offset_graph;
+  torch::Tensor columns_graph = global_columns_graph;
+  torch::Tensor value_graph = global_value_graph;
+  torch::Tensor bounds = global_bounds;
+
+   auto dcols = full_iden / nrows;
 
   // // Dense
   // Input
@@ -191,39 +201,25 @@ torch::Tensor gather_forward_gcn(torch::Tensor input_dense,
 
 class GatherForward : public torch::autograd::Function<GatherForward> {
 public:
-  static torch::Tensor
-  forward(torch::autograd::AutogradContext *ctx, torch::Tensor input_dense,
-          torch::Tensor offset_graph, torch::Tensor columns_graph,
-          torch::Tensor value_graph, torch::Tensor bounds) {
-    ctx->save_for_backward({offset_graph, columns_graph, value_graph, bounds});
-    return gather_forward_gcn(input_dense, offset_graph, columns_graph,
-                              value_graph, bounds, global_nrows,
-                              global_segments, global_is_directed);
+  static torch::Tensor forward(torch::autograd::AutogradContext *ctx,
+                               torch::Tensor input_dense) {
+    return gather_forward_gcn(input_dense);
   }
 
   static torch::autograd::tensor_list
   backward(torch::autograd::AutogradContext *ctx,
            torch::autograd::tensor_list grad_outputs) {
     torch::Tensor input_dense = grad_outputs[0];
-    auto saved = ctx->get_saved_variables();
-    torch::Tensor offset_graph = saved[0];
-    torch::Tensor columns_graph = saved[1];
-    torch::Tensor value_graph = saved[2];
-    torch::Tensor bounds = saved[3];
-    // std::cout << "grad: " << input_dense.sizes()[0] << "," <<
-    // input_dense.sizes()[1] << std::endl;
-
-    // std::cout << "grad: " << input_dense[0][0].item<val_t>() << "," <<
-    // input_dense[0][1].item<val_t>() << "," << input_dense[1][0].item<val_t>()
-    // << std::endl;
-    return {gather_forward_gcn(input_dense, offset_graph, columns_graph,
-                               value_graph, bounds, global_nrows,
-                               global_segments, global_is_directed),
-            torch::Tensor(), torch::Tensor(), torch::Tensor(), torch::Tensor()};
+    return {gather_forward_gcn(input_dense)};
   }
 };
 
 struct GCN : torch::nn::Module {
+  // Use one of many "standard library" modules.
+  torch::nn::Linear fc1{nullptr}, fc2{nullptr};
+  int in_feat_size, hidden_feat_size, out_feat_size;
+  bool directed;
+
   GCN(int in_size, int hidden_size, int out_size, bool dir) {
     // Construct and register two Linear submodules.
     fc1 = register_module("fc1", torch::nn::Linear(in_size, hidden_size));
@@ -235,46 +231,18 @@ struct GCN : torch::nn::Module {
     global_is_directed = dir;
   }
 
-  std::vector<torch::Tensor>
-  forward(torch::Tensor input_dense,   // B
-          torch::Tensor offset_graph,  // A_sparse_offset
-          torch::Tensor columns_graph, // A_sparse_col_ids
-          torch::Tensor value_graph,   // A_sparse_values
-          torch::Tensor bounds,        // A_sparse_tile_bounds
-          int nrows, int segments) {
-
-    global_nrows = nrows;
-    global_segments = segments;
-
-    auto options = torch::TensorOptions()
-                       .dtype(torch::kFloat)
-                       .requires_grad(false)
-                       .device(torch::kCUDA, 0);
-    auto ones = torch::ones({nrows, 1}, options);
-    torch::Tensor degree =
-        gather_forward_gcn(ones, offset_graph, columns_graph, value_graph,
-                           bounds, nrows, segments, directed);
-
-    degree = torch::pow(degree, -0.5);
+  std::vector<torch::Tensor> forward(torch::Tensor input_dense, // B
+                                     torch::Tensor degree) {
 
     torch::Tensor res = fc1->forward(input_dense);
     res = degree * res;
-    res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
-                               bounds);
-    res = degree * res;
     res = torch::relu(res);
     res = degree * res;
-    res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
-                               bounds);
+    res = GatherForward::apply(res);
     res = degree * res;
     res = fc2->forward(res);
     return {torch::log_softmax(res, /*dim=*/1)};
   }
-
-  // Use one of many "standard library" modules.
-  torch::nn::Linear fc1{nullptr}, fc2{nullptr};
-  int in_feat_size, hidden_feat_size, out_feat_size;
-  bool directed;
 };
 
 int main(int argc, char **argv) {
@@ -294,10 +262,11 @@ int main(int argc, char **argv) {
   // Column tiling
   iT cols_per_tile = stoi(string(argv[3]));
 
-  // bool do_reorder = stoi(string(argv[4]));
-
   // Const settings
   int skip_cache_warmup = 5;
+
+  // Set the graph is directed 
+  bool directed = false;
 
   std::string filename;
   SM adj;
@@ -311,16 +280,14 @@ int main(int argc, char **argv) {
   iT ncols = adj.ncols();
   nT nvals = adj.nvals();
 
-  // Init input with random numbers
+  // Load input 
   DM input_emb;
   readDM_npy<DM>(filename + "Feat.npy", &input_emb,
                  DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
   iT emb_size = input_emb.ncols();
-
   DL labels;
   readDM_npy<DL>(filename + "Lab.npy", &labels,
                  DenseMatrix<ind1_t, ind2_t, lab_t>::DENSE_MTX_TYPE::RM);
-
   DBL train_mask_load;
   readDM_npy<DBL>(filename + "TnMsk.npy", &train_mask_load,
                   DBL::DENSE_MTX_TYPE::RM);
@@ -330,7 +297,6 @@ int main(int argc, char **argv) {
   DBL test_mask_load;
   readDM_npy<DBL>(filename + "TsMsk.npy", &test_mask_load,
                   DBL::DENSE_MTX_TYPE::RM);
-
   DB train_mask;
   repopulate<DBL, DB>(&train_mask_load, &train_mask);
   DB valid_mask;
@@ -338,56 +304,28 @@ int main(int argc, char **argv) {
   DB test_mask;
   repopulate<DBL, DB>(&test_mask_load, &test_mask);
 
-  // std::cout << train_mask.vals_ptr()[0] << "," << train_mask.vals_ptr()[1]
-  //           << "," << train_mask.vals_ptr()[2] << ","
-  //           << train_mask.vals_ptr()[3] << std::endl;
-
-  // if (do_reorder) {
-  //   std::unique_ptr<vint[]> perm_rabbit;
-  //   auto nvals_var = adj.nvals();
-  //   SM::itype *col_ids_var = adj.ids_ptr();
-  //   auto vals_var = adj.vals_ptr();
-  //   SM_t::itype *row_ids_var;
-  //   get_row_ids<SM>(&adj, row_ids_var);
-  //   get_perm_graph<SM>(nvals_var, row_ids_var, col_ids_var, vals_var,
-  //                        perm_rabbit);
-  //   SM::itype perm[adj.nrows()];
-  //   for (SM::ntype p_i = 0; p_i < adj.nrows(); p_i++) {
-  //     perm[p_i] = (SM::itype)perm_rabbit[p_i];
-  //   }
-  //   rowReorderToTorch(&adj, &input_emb, &train_mask, &valid_mask, &test_mask,
-  //                &labels, perm);
-  // }
-
+  // -------------- Tiling the input graph --------------------
   std::vector<SM *> tiled_adj;
   tiled_adj.push_back(&adj);
-
   torch::Tensor total_offsets;
   torch::Tensor total_cols;
   torch::Tensor total_vals;
   torch::Tensor total_bounds;
-
   std::vector<iT> tile_offsets =
       static_ord_col_breakpoints<SM>(&adj, cols_per_tile);
-
   iT segments = tile_offsets.size() - 1;
-
   auto options_int =
       torch::TensorOptions().dtype(torch::kInt).requires_grad(false);
   auto options_float =
       torch::TensorOptions().dtype(torch::kFloat).requires_grad(true);
-
   // The first and last value of this should also give the offsets for the
   // columns and vals
   total_offsets = torch::zeros({(adj.nrows() + 1) * (segments)}, options_int);
   total_cols = torch::zeros({adj.nvals()}, options_int);
   total_vals = torch::zeros({adj.nvals()}, options_float);
-
   total_bounds = torch::zeros({2 * (segments)}, options_int);
-
   ord_col_tiling_torch(tile_offsets, total_offsets, total_cols, total_vals,
                        total_bounds, &adj);
-
   iT *offset_ptr = total_offsets.data_ptr<iT>();
   iT *col_ptr = total_cols.data_ptr<iT>();
   vT *val_ptr = total_vals.data_ptr<vT>();
@@ -470,7 +408,25 @@ int main(int argc, char **argv) {
   double start_init, end_init;
   cudaDeviceSynchronize();
   start_init = get_time();
-  auto net = std::make_shared<GCN>(emb_size, 32, classes, false);
+  // TICM
+  auto options = torch::TensorOptions()
+                     .dtype(torch::kFloat)
+                     .requires_grad(false)
+                     .device(torch::kCUDA, 0);
+  global_nrows = nrows;
+  global_segments = segments;
+  global_bounds = total_bounds;
+  global_offset_graph = t_offsets;
+  global_value_graph = t_vals;
+  global_columns_graph = t_cols;
+  auto t_ones = torch::ones({nrows, 1}, options);
+  torch::Tensor t_degree =
+      gather_forward_gcn(t_ones);
+  t_degree = torch::pow(t_degree, -0.5).detach();
+  torch::Tensor norm_input = t_degree * t_iden;
+  torch::Tensor t_tim_input =
+      gather_forward_gcn(norm_input);
+  auto net = std::make_shared<GCN>(emb_size, 32, classes, directed);
   cudaDeviceSynchronize();
   end_init = get_time();
 
@@ -486,14 +442,15 @@ int main(int argc, char **argv) {
   double start_train, end_train;
   val_t randVal;
   std::vector<double> times_arr, times_arr_train;
+
   for (size_t epoch = 1; epoch <= num_iters; ++epoch) {
     // Reset gradients.
     optimizer.zero_grad();
     // Execute the model on the input data.
     cudaDeviceSynchronize();
     start = get_time();
-    torch::Tensor prediction = net->forward(t_iden, t_offsets, t_cols, t_vals,
-                                            total_bounds, nrows, segments)[0];
+    torch::Tensor prediction =
+        net->forward(t_tim_input, t_degree)[0];
 
     cudaDeviceSynchronize();
     end = get_time();

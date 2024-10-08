@@ -395,6 +395,17 @@ public:
         return INFO::SUCCESS;
     }
 
+    I_* get_sids(){
+        I_* res = (I_ *) aligned_alloc(64, (nvals_) * sizeof(I_));
+
+#pragma omp parallel for
+        for (I_ r = 0; r < nrows_; r++) {
+            std::fill(res + offset_[r], res + offset_[r+1], r);
+        }
+
+        return res;
+    }
+
     void set_all(V_ val) {
         if (vals_ == nullptr) {
             vals_ = vals_alloc_.allocate(nvals_);

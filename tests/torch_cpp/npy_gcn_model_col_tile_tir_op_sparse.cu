@@ -19,6 +19,63 @@ int global_nrows;
 int global_segments;
 bool global_is_directed;
 
+torch::Tensor edge_forward_gcn(torch::Tensor input_dense1,
+                               torch::Tensor input_dense2,
+                               torch::Tensor offset_graph,
+                               torch::Tensor columns_graph,
+                               torch::Tensor value_graph, torch::Tensor bounds,
+                               int nrows, int segments, bool is_directed) {
+  auto nvals = columns_graph.numel();
+  auto full_iden = input_dense1.numel();
+  auto dcols = full_iden / nrows;
+
+  // // Dense
+  // Input
+  float *iden_ptr1 = input_dense1.data_ptr<float>();
+  float *iden_ptr2 = input_dense2.data_ptr<float>();
+  // Output
+  auto options = torch::TensorOptions()
+                     .dtype(torch::kFloat)
+                     .requires_grad(true)
+                     .device(torch::kCUDA, 0);
+  auto output_sparse = torch::zeros({nvals}, options);
+  float *oden_array = output_sparse.data_ptr<float>();
+
+  // Sparse
+  int *offset_ptr = offset_graph.data_ptr<int>();
+  int *col_ptr = columns_graph.data_ptr<int>();
+  float *val_ptr = value_graph.data_ptr<float>();
+  int *bounds_ptr = bounds.data_ptr<int>();
+
+  // cudaStream_t stream1;
+  // cudaStreamCreate(&stream1);
+  // dim3 gridDim(((int)(nrows - 1) / 8) + 1);
+  // dim3 blockDim(32, 8);
+  // default_function_kernel_sddvv_plus<<<gridDim, blockDim, 0, stream1>>>(
+  //     oden_array, offset_ptr, iden_ptr1, iden_ptr2, col_ptr, nrows);
+
+  for (int i = 0; i < segments; i++) {
+    int i1 = i;
+    int start_vals = bounds_ptr[i1 * 2];
+    int end_vals = bounds_ptr[i1 * 2 + 1];
+    int nvals = end_vals - start_vals;
+
+    cudaStream_t stream1, stream2, stream3;
+
+    if (is_directed) {
+      cudaStreamCreate(&stream1);
+      dim3 gridDim(((int)(nrows - 1) / 8) + 1);
+      dim3 blockDim(32, 8);
+      default_function_kernel_sddvv_mult_undir<<<gridDim, blockDim, 0,
+                                                 stream1>>>(
+          &oden_array[start_vals], &offset_ptr[i1 * (nrows + 1)], iden_ptr1,
+          iden_ptr2, &col_ptr[start_vals], nrows);
+    }
+  }
+
+  return output_sparse;
+}
+
 torch::Tensor gather_forward_gcn(torch::Tensor input_dense,
                                  torch::Tensor offset_graph,
                                  torch::Tensor columns_graph,
@@ -210,12 +267,6 @@ public:
     torch::Tensor columns_graph = saved[1];
     torch::Tensor value_graph = saved[2];
     torch::Tensor bounds = saved[3];
-    // std::cout << "grad: " << input_dense.sizes()[0] << "," <<
-    // input_dense.sizes()[1] << std::endl;
-
-    // std::cout << "grad: " << input_dense[0][0].item<val_t>() << "," <<
-    // input_dense[0][1].item<val_t>() << "," << input_dense[1][0].item<val_t>()
-    // << std::endl;
     return {gather_forward_gcn(input_dense, offset_graph, columns_graph,
                                value_graph, bounds, global_nrows,
                                global_segments, global_is_directed),
@@ -246,27 +297,12 @@ struct GCN : torch::nn::Module {
     global_nrows = nrows;
     global_segments = segments;
 
-    auto options = torch::TensorOptions()
-                       .dtype(torch::kFloat)
-                       .requires_grad(false)
-                       .device(torch::kCUDA, 0);
-    auto ones = torch::ones({nrows, 1}, options);
-    torch::Tensor degree =
-        gather_forward_gcn(ones, offset_graph, columns_graph, value_graph,
-                           bounds, nrows, segments, directed);
-
-    degree = torch::pow(degree, -0.5);
-
     torch::Tensor res = fc1->forward(input_dense);
-    res = degree * res;
     res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
                                bounds);
-    res = degree * res;
     res = torch::relu(res);
-    res = degree * res;
     res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
                                bounds);
-    res = degree * res;
     res = fc2->forward(res);
     return {torch::log_softmax(res, /*dim=*/1)};
   }
@@ -337,27 +373,6 @@ int main(int argc, char **argv) {
   repopulate<DBL, DB>(&valid_mask_load, &valid_mask);
   DB test_mask;
   repopulate<DBL, DB>(&test_mask_load, &test_mask);
-
-  // std::cout << train_mask.vals_ptr()[0] << "," << train_mask.vals_ptr()[1]
-  //           << "," << train_mask.vals_ptr()[2] << ","
-  //           << train_mask.vals_ptr()[3] << std::endl;
-
-  // if (do_reorder) {
-  //   std::unique_ptr<vint[]> perm_rabbit;
-  //   auto nvals_var = adj.nvals();
-  //   SM::itype *col_ids_var = adj.ids_ptr();
-  //   auto vals_var = adj.vals_ptr();
-  //   SM_t::itype *row_ids_var;
-  //   get_row_ids<SM>(&adj, row_ids_var);
-  //   get_perm_graph<SM>(nvals_var, row_ids_var, col_ids_var, vals_var,
-  //                        perm_rabbit);
-  //   SM::itype perm[adj.nrows()];
-  //   for (SM::ntype p_i = 0; p_i < adj.nrows(); p_i++) {
-  //     perm[p_i] = (SM::itype)perm_rabbit[p_i];
-  //   }
-  //   rowReorderToTorch(&adj, &input_emb, &train_mask, &valid_mask, &test_mask,
-  //                &labels, perm);
-  // }
 
   std::vector<SM *> tiled_adj;
   tiled_adj.push_back(&adj);
@@ -470,7 +485,21 @@ int main(int argc, char **argv) {
   double start_init, end_init;
   cudaDeviceSynchronize();
   start_init = get_time();
-  auto net = std::make_shared<GCN>(emb_size, 32, classes, false);
+  bool directed = true;
+  // TICM
+  auto options = torch::TensorOptions()
+                     .dtype(torch::kFloat)
+                     .requires_grad(false)
+                     .device(torch::kCUDA, 0);
+  auto t_ones = torch::ones({nrows, 1}, options);
+  torch::Tensor t_degree =
+      gather_forward_gcn(t_ones, t_offsets, t_cols, t_vals, total_bounds, nrows,
+                         segments, directed);
+  t_degree = torch::pow(t_degree, -0.5).detach();
+  torch::Tensor t_sp_vals =
+      edge_forward_gcn(t_degree, t_degree, t_offsets, t_cols, t_vals,
+                       total_bounds, nrows, segments, directed);
+  auto net = std::make_shared<GCN>(emb_size, 32, classes, directed);
   cudaDeviceSynchronize();
   end_init = get_time();
 
@@ -478,7 +507,8 @@ int main(int argc, char **argv) {
 
   net->to(device);
 
-  // Instantiate an SGD optimization algorithm to update our Net's parameters.
+  // Instantiate an SGD optimization algorithm to update our Net's
+  // parameters.
   torch::optim::Adam optimizer(
       net->parameters(), torch::optim::AdamOptions(1e-2).weight_decay(5e-4));
 
@@ -492,8 +522,8 @@ int main(int argc, char **argv) {
     // Execute the model on the input data.
     cudaDeviceSynchronize();
     start = get_time();
-    torch::Tensor prediction = net->forward(t_iden, t_offsets, t_cols, t_vals,
-                                            total_bounds, nrows, segments)[0];
+    torch::Tensor prediction = net->forward(
+        t_iden, t_offsets, t_cols, t_sp_vals, total_bounds, nrows, segments)[0];
 
     cudaDeviceSynchronize();
     end = get_time();
