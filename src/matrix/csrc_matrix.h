@@ -400,8 +400,11 @@ public:
 
 #pragma omp parallel for
         for (I_ r = 0; r < nrows_; r++) {
+            // std::cout << offset_[r] << " " << offset_[r+1] << " " << r << std::endl;
             std::fill(res + offset_[r], res + offset_[r+1], r);
         }
+
+        // std::cout << res[0] << " " << res[1] << " " << res[2]  << " " << res[3] << " " << res[4] << std::endl;
 
         return res;
     }

@@ -13,7 +13,113 @@
 #include <fstream>
 #include <stdlib.h>
 #include <random>
+#include <omp.h>
 
+
+template<class SM, class DM>
+void getMaskSubgraphs(SM* adj, DM* mask, int layers, std::vector<SM *> &forward_vec, std::vector<SM *> &backward_vec){
+    typedef typename SM::itype iT;
+    typedef typename SM::ntype nT; 
+    typedef typename SM::vtype vT;
+
+    typedef typename DM::vtype dvT;
+
+    // iterate through all rows
+    DM* cur_mask = mask;
+    iT nrows = adj->nrows();
+    iT ncols = adj->ncols();
+    nT src_nvals = adj->nvals();
+    iT *src_ids = adj->ids_ptr();
+    nT *src_offset = adj->offset_ptr();
+    vT *src_vals = adj->vals_ptr();
+
+    for (int l = 0; l < layers; l++){
+        nT *new_offset = (nT *) aligned_alloc(64, (nrows + 1) * sizeof(nT));
+        std::fill(new_offset, new_offset + (nrows + 1), 0);
+        // Get offsets added by each row
+
+        dvT* mask_ptr = cur_mask->vals_ptr();
+
+#pragma omp parallel for schedule(dynamic, 1)
+        for (iT i = 0; i < nrows; i++){
+            // new_offset[i + 1] = src_offset[i+1] - src_offset[i]; 
+            if (mask_ptr[i] > 0){
+                new_offset[i + 1] = src_offset[i+1] - src_offset[i]; 
+            } else {
+                new_offset[i + 1] = 0;
+            }         
+        }
+
+        for (iT i = 0; i < nrows; i++){
+            new_offset[i + 1] = new_offset[i + 1] + new_offset[i]; 
+        }
+
+        nT new_nvals = new_offset[nrows];
+        // std::cout << "nvals:" << new_nvals << std::endl;
+
+
+        iT *new_ids = (iT *) aligned_alloc(64, (new_nvals) * sizeof(iT));
+        vT *new_vals = (vT *) aligned_alloc(64, (new_nvals) * sizeof(vT));
+
+#pragma omp parallel for schedule(dynamic, 1)
+        for (iT i = 0; i < nrows; i++){
+            nT local_e_start = new_offset[i];
+            nT local_e_end = new_offset[i + 1];
+
+            nT src_e_start = src_offset[i];
+            nT src_e_end = src_offset[i + 1];
+
+            // std::cout << "i: " << i << std::endl; 
+            // std::cout << "i1: " << local_e_start << " " << local_e_end << std::endl; 
+            // std::cout << "i2: " << src_e_start << " " << src_e_end << std::endl; 
+
+            for (nT j = 0; j < (local_e_end - local_e_start); j++){
+                new_ids[local_e_start + j] = src_ids[src_e_start + j];
+                new_vals[local_e_start + j] = src_vals[src_e_start + j];
+            }
+
+        }
+
+        SM *new_adj = new SM();
+        new_adj->import_csr(nrows,
+                    ncols,
+                    new_nvals,
+                    new_ids,
+                    new_vals,
+                    new_offset);
+
+        forward_vec.push_back(new_adj);
+        
+        SM *new_trans = new SM();
+        buildTranspose(new_adj, new_trans);
+        backward_vec.push_back(new_trans);
+
+        auto maxaggr = maxAgg<dvT, dvT, nT>;
+        DM* new_mask = new DM();
+        new_mask->build(nrows, 1, cur_mask->type(), 0);
+        // new_mask->clone_mtx(nrows, 1, cur_mask->vals_ptr(), mask->type(), 0);
+        gSpMM(adj, cur_mask, new_mask, maxaggr);
+        cur_mask = new_mask;
+    }
+}
+
+template<class SM>
+void buildTranspose(SM* src, SM* res){
+    typedef typename SM::itype iT;
+    typedef typename SM::ntype nT; 
+    typedef typename SM::vtype vT;
+
+    // iT* sparse_ids = (iT *) aligned_alloc(64, (src->nvals()) * sizeof(iT));
+    // iT* sparse_ids = src->ids_ptr();
+    iT* sparse_ids = src->get_sids();
+    iT* col_ids = src->ids_ptr();
+    // iT* col_ids = (iT *) aligned_alloc(64, (src->nvals()) * sizeof(iT));
+    vT* vals = src->vals_ptr();
+    // vT* vals = (vT *) aligned_alloc(64, (src->nvals()) * sizeof(vT));
+
+    // std::cout << src->ncols() << " " << src->nrows() << " " << src->nvals() << " " << col_ids[src->nvals() - 1] << " " << sparse_ids[src->nvals() - 1] << std::endl;
+    res->build(src->ncols(), src->nrows(), src->nvals(), col_ids, sparse_ids, vals, CSRC_TYPE::CSR);
+}
 
 template<class DM1, class DM2>
 void repopulate(DM1 *src, DM2 *dst){

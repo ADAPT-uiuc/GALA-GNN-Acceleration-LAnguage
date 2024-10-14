@@ -275,7 +275,6 @@ int main(int argc, char **argv) {
       if (prediction[x].item<val_t>() != 2) {
         std::cout << "The results don't match at: " << x << ":  "
                   << prediction[x].item<val_t>() << std::endl;
-        break;
       }
     }
 

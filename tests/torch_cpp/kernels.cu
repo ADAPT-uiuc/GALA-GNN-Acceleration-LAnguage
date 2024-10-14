@@ -83,6 +83,277 @@
 //     return max_val;
 // }
 
+// Undirected sampled
+extern "C" __global__ void __launch_bounds__(256)
+    default_function_kernel64_undir_sample(float *__restrict__ C,
+                                           int *__restrict__ J_indptr_data,
+                                           float *__restrict__ B,
+                                           int *__restrict__ J_indices_data,
+                                           int nrows, int dcols, int nsamples,
+                                           int ra, int rb) {
+  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
+    int jmax =
+        (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
+         J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
+    for (int ji = 0; ji < nsamples; ++ji) {
+      int j = (ra * ji + rb) % jmax;
+      C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+          (((int)blockIdx.y) * 64)) +
+         ((int)threadIdx.x))] =
+          (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+               (((int)blockIdx.y) * 64)) +
+              ((int)threadIdx.x))] +
+           (B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
+                                                    ((int)threadIdx.y))])] *
+                 dcols) +
+                (((int)blockIdx.y) * 64)) +
+               ((int)threadIdx.x))]));
+      C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+           (((int)blockIdx.y) * 64)) +
+          ((int)threadIdx.x)) +
+         32)] =
+          (C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+                (((int)blockIdx.y) * 64)) +
+               ((int)threadIdx.x)) +
+              32)] +
+           (B[((((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
+                                                     ((int)threadIdx.y))])] *
+                  dcols) +
+                 (((int)blockIdx.y) * 64)) +
+                ((int)threadIdx.x)) +
+               32)]));
+    }
+  }
+}
+extern "C" __global__ void __launch_bounds__(256)
+    default_function_kernel32_undir_sample(float *__restrict__ C,
+                                           int *__restrict__ J_indptr_data,
+                                           float *__restrict__ B,
+                                           int *__restrict__ J_indices_data,
+                                           int nrows, int dcols, int nsamples,
+                                           int ra, int rb) {
+  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
+    int jmax =
+        (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
+         J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
+    for (int ji = 0; ji < nsamples; ++ji) {
+      int j = (ra * ji + rb) % jmax;
+      C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+          (((int)blockIdx.y) * 32)) +
+         ((int)threadIdx.x))] =
+          (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+               (((int)blockIdx.y) * 32)) +
+              ((int)threadIdx.x))] +
+           (B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
+                                                    ((int)threadIdx.y))])] *
+                 dcols) +
+                (((int)blockIdx.y) * 32)) +
+               ((int)threadIdx.x))]));
+    }
+  }
+}
+extern "C" __global__ void __launch_bounds__(256)
+    default_function_kernel32_offset_undir_sample(
+        float *__restrict__ C, int *__restrict__ J_indptr_data,
+        float *__restrict__ B, int *__restrict__ J_indices_data, int nrows,
+        int dcols, int offset, int nsamples, int ra, int rb) {
+  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
+    int jmax =
+        (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
+         J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
+    for (int ji = 0; ji < nsamples; ++ji) {
+      int j = (ra * ji + rb) % jmax;
+      C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+          (((int)blockIdx.y) * 32)) +
+         ((int)threadIdx.x)) +
+        offset] =
+          (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+               (((int)blockIdx.y) * 32)) +
+              ((int)threadIdx.x)) +
+             offset] +
+           (B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
+                                                    ((int)threadIdx.y))])] *
+                 dcols) +
+                (((int)blockIdx.y) * 32)) +
+               ((int)threadIdx.x)) +
+              offset]));
+    }
+  }
+}
+extern "C" __global__ void __launch_bounds__(256)
+    default_function_kernel_rem_undir_sample(float *__restrict__ C,
+                                             int *__restrict__ J_indptr_data,
+                                             float *__restrict__ B,
+                                             int *__restrict__ J_indices_data,
+                                             int nrows, int dcols, int offset,
+                                             int nsamples, int ra, int rb) {
+  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
+    int jmax =
+        (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
+         J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
+    for (int ji = 0; ji < nsamples; ++ji) {
+      int j = (ra * ji + rb) % jmax;
+      C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+          (((int)blockIdx.y) * 32)) +
+         ((int)threadIdx.x)) +
+        offset] =
+          (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+               (((int)blockIdx.y) * 32)) +
+              ((int)threadIdx.x)) +
+             offset] +
+           (B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
+                                                    ((int)threadIdx.y))])] *
+                 dcols) +
+                (((int)blockIdx.y) * 32)) +
+               ((int)threadIdx.x)) +
+              offset]));
+    }
+  }
+}
+// Directed
+extern "C" __global__ void __launch_bounds__(256)
+    default_function_kernel64_sample(float *__restrict__ C,
+                                     int *__restrict__ J_indptr_data,
+                                     float *__restrict__ A,
+                                     float *__restrict__ B,
+                                     int *__restrict__ J_indices_data,
+                                     int nrows, int dcols, int nsamples, int ra,
+                                     int rb) {
+  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
+    int jmax =
+        (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
+         J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
+    for (int ji = 0; ji < nsamples; ++ji) {
+      int j = (ra * ji + rb) % jmax;
+      C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+          (((int)blockIdx.y) * 64)) +
+         ((int)threadIdx.x))] =
+          (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+               (((int)blockIdx.y) * 64)) +
+              ((int)threadIdx.x))] +
+           (A[(j +
+               J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] *
+            B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
+                                                    ((int)threadIdx.y))])] *
+                 dcols) +
+                (((int)blockIdx.y) * 64)) +
+               ((int)threadIdx.x))]));
+      C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+           (((int)blockIdx.y) * 64)) +
+          ((int)threadIdx.x)) +
+         32)] =
+          (C[(((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+                (((int)blockIdx.y) * 64)) +
+               ((int)threadIdx.x)) +
+              32)] +
+           (A[(j +
+               J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] *
+            B[((((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
+                                                     ((int)threadIdx.y))])] *
+                  dcols) +
+                 (((int)blockIdx.y) * 64)) +
+                ((int)threadIdx.x)) +
+               32)]));
+    }
+  }
+}
+extern "C" __global__ void __launch_bounds__(256)
+    default_function_kernel32_sample(float *__restrict__ C,
+                                     int *__restrict__ J_indptr_data,
+                                     float *__restrict__ A,
+                                     float *__restrict__ B,
+                                     int *__restrict__ J_indices_data,
+                                     int nrows, int dcols, int nsamples, int ra,
+                                     int rb) {
+  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
+    int jmax =
+        (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
+         J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
+    for (int ji = 0; ji < nsamples; ++ji) {
+      int j = (ra * ji + rb) % jmax;
+      C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+          (((int)blockIdx.y) * 64)) +
+         ((int)threadIdx.x))] =
+          (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+               (((int)blockIdx.y) * 64)) +
+              ((int)threadIdx.x))] +
+           (A[(j +
+               J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] *
+            B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
+                                                    ((int)threadIdx.y))])] *
+                 dcols) +
+                (((int)blockIdx.y) * 64)) +
+               ((int)threadIdx.x))]));
+    }
+  }
+}
+extern "C" __global__ void __launch_bounds__(256)
+    default_function_kernel32_offset_sample(float *__restrict__ C,
+                                            int *__restrict__ J_indptr_data,
+                                            float *__restrict__ A,
+                                            float *__restrict__ B,
+                                            int *__restrict__ J_indices_data,
+                                            int nrows, int dcols, int offset,
+                                            int nsamples, int ra, int rb) {
+  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
+    int jmax =
+        (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
+         J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
+    for (int ji = 0; ji < nsamples; ++ji) {
+      int j = (ra * ji + rb) % jmax;
+      C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+          (((int)blockIdx.y) * 64)) +
+         ((int)threadIdx.x)) +
+        offset] =
+          (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+               (((int)blockIdx.y) * 64)) +
+              ((int)threadIdx.x)) +
+             offset] +
+           (A[(j +
+               J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] *
+            B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
+                                                    ((int)threadIdx.y))])] *
+                 dcols) +
+                (((int)blockIdx.y) * 64)) +
+               ((int)threadIdx.x)) +
+              offset]));
+    }
+  }
+}
+extern "C" __global__ void __launch_bounds__(256)
+    default_function_kernel_rem_sample(float *__restrict__ C,
+                                       int *__restrict__ J_indptr_data,
+                                       float *__restrict__ A,
+                                       float *__restrict__ B,
+                                       int *__restrict__ J_indices_data,
+                                       int nrows, int dcols, int offset,
+                                       int nsamples, int ra, int rb) {
+  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
+    int jmax =
+        (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
+         J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
+    for (int ji = 0; ji < nsamples; ++ji) {
+      int j = (ra * ji + rb) % jmax;
+      C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+          (((int)blockIdx.y) * 64)) +
+         ((int)threadIdx.x)) +
+        offset] =
+          (C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+               (((int)blockIdx.y) * 64)) +
+              ((int)threadIdx.x)) +
+             offset] +
+           (A[(j +
+               J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] *
+            B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
+                                                    ((int)threadIdx.y))])] *
+                 dcols) +
+                (((int)blockIdx.y) * 64)) +
+               ((int)threadIdx.x)) +
+              offset]));
+    }
+  }
+}
+
 // Undirected
 extern "C" __global__ void __launch_bounds__(256)
     default_function_kernel64_undir(float *__restrict__ C,

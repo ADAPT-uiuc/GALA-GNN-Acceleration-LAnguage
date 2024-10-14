@@ -247,7 +247,6 @@ struct GCN : torch::nn::Module {
     global_segments = segments;
 
     torch::Tensor res = fc1->forward(input_dense);
-    res = degree * res;
     res = torch::relu(res);
     res = degree * res;
     res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
@@ -440,9 +439,10 @@ int main(int argc, char **argv) {
                          segments, directed);
   t_degree = torch::pow(t_degree, -0.5).detach();
   torch::Tensor norm_input = t_degree * t_iden;
-  torch::Tensor t_tim_input =
+  norm_input =
       gather_forward_gcn(norm_input, t_offsets, t_cols, t_vals, total_bounds,
                          nrows, segments, directed);
+  norm_input = (t_degree * norm_input).detach();
   auto net = std::make_shared<GCN>(emb_size, 32, classes, directed);
   cudaDeviceSynchronize();
   end_init = get_time();
@@ -467,7 +467,7 @@ int main(int argc, char **argv) {
     cudaDeviceSynchronize();
     start = get_time();
     torch::Tensor prediction =
-        net->forward(t_tim_input, t_degree, t_offsets, t_cols, t_vals, total_bounds,
+        net->forward(norm_input, t_degree, t_offsets, t_cols, t_vals, total_bounds,
                      nrows, segments)[0];
 
     cudaDeviceSynchronize();
