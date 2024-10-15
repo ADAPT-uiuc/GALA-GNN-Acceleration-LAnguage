@@ -1,6 +1,6 @@
 import torch
 import time
-from numpy import mean, std
+from numpy import mean, std, sum
 
 def train(g, model, epochs):
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
@@ -49,12 +49,17 @@ def train(g, model, epochs):
         optimizer.step()
 
         epochTimes.append(time.time() - start)
+        '''
         if epoch % 5 == 0:
             print(
                 f"In epoch {epoch}, loss: {loss:.3f}, val acc: {val_acc:.3f} (best {best_val_acc:.3f}), test acc: {test_acc:.3f} (best {best_test_acc:.3f})"
         )
+        '''
     
+    epochTimes = epochTimes[4:]
     print("-"*25)
+    print("Total execution time for {} epochs: {}".format(len(epochTimes), sum(epochTimes)))
+    print("Best Validation Accuracy: {} Best Test Acc, {}".format(best_val_acc, test_acc))
     print("Average time per epoch: ", mean(epochTimes), "±", std(epochTimes))
     print("Average time of each layer: ", mean(layerTimes), "±", std(layerTimes))
     print("Average forward propogation time: ", mean(forwardPropTimes), "±", std(forwardPropTimes))

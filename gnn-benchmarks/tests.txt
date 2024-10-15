@@ -1,5 +1,2 @@
-pyg gcn [16] proteins 200
-dgl gcn [16] products 200
-pyg sage [16] arxiv 200
-dgl gat [16] products 200 [8,1]
-pyg gat [16] proteins 200 [8,1]
+dgl gcn [32] Cora 200
+dgl gat [32] Cora 200 [8,1]

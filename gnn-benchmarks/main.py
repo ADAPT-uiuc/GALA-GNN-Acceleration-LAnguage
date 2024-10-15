@@ -39,6 +39,7 @@ def main(benchmark):
     if benchmark[0].lower() == "dgl":
         dataset, graph = dgl_loadData.main(benchmark[3])
         graph = graph.to(device)
+        print(device)
 
         # converting to int array, adding feature size and embedding size
         sizes = [int(x) for x in benchmark[2].strip("[").strip("]").replace(" ", "").split(",")]
