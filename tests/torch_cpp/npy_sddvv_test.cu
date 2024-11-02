@@ -50,12 +50,221 @@ torch::Tensor edge_forward_gcn(torch::Tensor input_dense1,
   cudaStreamCreate(&stream1);
   dim3 gridDim(((int)(nrows - 1) / 8) + 1);
   dim3 blockDim(32, 8);
-  default_function_kernel_sddvv_mult<<<gridDim, blockDim, 0, stream1>>>(
-      oden_array, offset_ptr, iden_ptr1, iden_ptr2, col_ptr, nrows);
+  // default_function_kernel_sddmm_mult_undir<<<gridDim, blockDim, 0,
+  // stream1>>>(
+  //     oden_array, offset_ptr, iden_ptr1, iden_ptr2, col_ptr, nrows, dcols);
+  int shared_memory_size = dcols * sizeof(float);
+  default_function_kernel_sddmm_mult_undir_shared<<<
+      gridDim, blockDim, shared_memory_size, stream1>>>(
+      oden_array, offset_ptr, iden_ptr1, iden_ptr2, col_ptr, nrows, dcols);
   // dim3 blockDim(1, 8);
   // default_function_kernel_sddvv_plus_nowarp<<<gridDim, blockDim, 0,
   // stream1>>>(
   //     oden_array, offset_ptr, iden_ptr1, iden_ptr2, col_ptr, nrows);
+
+  return output_sparse;
+}
+
+torch::Tensor node_spmv_backward_of_sddmm(torch::Tensor offset_graph,
+                                          torch::Tensor columns_graph,
+                                          torch::Tensor value_graph,
+                                          torch::Tensor bounds, int nrows,
+                                          int segments, bool is_directed) {
+  // Output
+  auto options = torch::TensorOptions()
+                     .dtype(torch::kFloat)
+                     .requires_grad(true)
+                     .device(torch::kCUDA, 0);
+  auto output_dense = torch::zeros({nrows, 1}, options);
+  float *oden_array = output_dense.data_ptr<float>();
+
+  // Sparse
+  int *offset_ptr = offset_graph.data_ptr<int>();
+  int *col_ptr = columns_graph.data_ptr<int>();
+  float *val_ptr = value_graph.data_ptr<float>();
+  int *bounds_ptr = bounds.data_ptr<int>();
+
+  for (int i = 0; i < segments; i++) {
+    int i1 = i;
+    int start_vals = bounds_ptr[i1 * 2];
+    // int end_vals = bounds_ptr[i1 * 2 + 1];
+    // int nvals = end_vals - start_vals;
+
+    cudaStream_t stream1;
+
+    cudaStreamCreate(&stream1);
+    dim3 gridDim_rem(((int)(nrows - 1) / 32) + 1);
+    dim3 blockDim_rem(32);
+    default_function_kernel_spmm_backward_sddmm_32<<<gridDim_rem, blockDim_rem,
+                                                     0, stream1>>>(
+        oden_array, &offset_ptr[i1 * (nrows + 1)], val_ptr,
+        &col_ptr[start_vals], nrows);
+  }
+
+  return output_dense;
+}
+
+torch::Tensor inplace_softmax_sddvv(torch::Tensor row_val,
+                                    torch::Tensor offset_graph,
+                                    torch::Tensor columns_graph,
+                                    torch::Tensor value_graph,
+                                    torch::Tensor bounds, int nrows,
+                                    int segments, bool is_directed) {
+  float *row_val_ptr = row_val.data_ptr<float>();
+  // Sparse
+  int *offset_ptr = offset_graph.data_ptr<int>();
+  int *col_ptr = columns_graph.data_ptr<int>();
+  float *val_ptr = value_graph.data_ptr<float>();
+  int *bounds_ptr = bounds.data_ptr<int>();
+
+  for (int i = 0; i < segments; i++) {
+    int i1 = i;
+    int start_vals = bounds_ptr[i1 * 2];
+    // int end_vals = bounds_ptr[i1 * 2 + 1];
+    // int nvals = end_vals - start_vals;
+
+    cudaStream_t stream1;
+
+    cudaStreamCreate(&stream1);
+    dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1);
+    dim3 blockDim_rem(32, 8);
+    default_function_kernel_softmax_sddvv_undir<<<gridDim_rem, blockDim_rem, 0,
+                                                  stream1>>>(
+        val_ptr, &offset_ptr[i1 * (nrows + 1)], row_val_ptr,
+        &col_ptr[start_vals], nrows);
+  }
+
+  return value_graph;
+}
+
+torch::Tensor inplace_softmax_sddvv_mult(torch::Tensor row_val,
+                                         torch::Tensor offset_graph,
+                                         torch::Tensor columns_graph,
+                                         torch::Tensor value_graph,
+                                         torch::Tensor bounds, int nrows,
+                                         int segments, bool is_directed) {
+  float *row_val_ptr = row_val.data_ptr<float>();
+  // Sparse
+  int *offset_ptr = offset_graph.data_ptr<int>();
+  int *col_ptr = columns_graph.data_ptr<int>();
+  float *val_ptr = value_graph.data_ptr<float>();
+  int *bounds_ptr = bounds.data_ptr<int>();
+
+  for (int i = 0; i < segments; i++) {
+    int i1 = i;
+    int start_vals = bounds_ptr[i1 * 2];
+    // int end_vals = bounds_ptr[i1 * 2 + 1];
+    // int nvals = end_vals - start_vals;
+
+    cudaStream_t stream1;
+
+    cudaStreamCreate(&stream1);
+    dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1);
+    dim3 blockDim_rem(32, 8);
+    default_function_kernel_mult_sddvv_undir<<<gridDim_rem, blockDim_rem, 0,
+                                               stream1>>>(
+        val_ptr, &offset_ptr[i1 * (nrows + 1)], row_val_ptr,
+        &col_ptr[start_vals], nrows);
+  }
+
+  return value_graph;
+}
+
+torch::Tensor edge_sddvv(torch::Tensor input_dense1, torch::Tensor input_dense2,
+                         torch::Tensor offset_graph,
+                         torch::Tensor columns_graph, torch::Tensor value_graph,
+                         torch::Tensor bounds, int nrows, int segments,
+                         bool is_directed) {
+  auto nvals = columns_graph.numel();
+  // auto full_iden = input_dense1.numel();
+  // auto dcols = full_iden / nrows;
+
+  // // Dense
+  // Input
+  float *iden_ptr1 = input_dense1.data_ptr<float>();
+  float *iden_ptr2 = input_dense2.data_ptr<float>();
+  // Output
+  auto options = torch::TensorOptions()
+                     .dtype(torch::kFloat)
+                     .requires_grad(true)
+                     .device(torch::kCUDA, 0);
+  auto output_sparse = torch::zeros({nvals}, options);
+  float *oden_array = output_sparse.data_ptr<float>();
+
+  // Sparse
+  int *offset_ptr = offset_graph.data_ptr<int>();
+  int *col_ptr = columns_graph.data_ptr<int>();
+  float *val_ptr = value_graph.data_ptr<float>();
+  int *bounds_ptr = bounds.data_ptr<int>();
+
+  for (int i = 0; i < segments; i++) {
+    int i1 = i;
+    int start_vals = bounds_ptr[i1 * 2];
+    // int end_vals = bounds_ptr[i1 * 2 + 1];
+    // int nvals = end_vals - start_vals;
+
+    cudaStream_t stream1;
+
+    if (is_directed) {
+      cudaStreamCreate(&stream1);
+      dim3 gridDim(((int)(nrows - 1) / 8) + 1);
+      dim3 blockDim(32, 8);
+      default_function_kernel_sddvv_plus_undir<<<gridDim, blockDim, 0,
+                                                 stream1>>>(
+          &oden_array[start_vals], &offset_ptr[i1 * (nrows + 1)], iden_ptr1,
+          iden_ptr2, &col_ptr[start_vals], nrows);
+    }
+  }
+
+  return output_sparse;
+}
+
+torch::Tensor edge_sddmm(torch::Tensor input_dense1, torch::Tensor input_dense2,
+                         torch::Tensor offset_graph,
+                         torch::Tensor columns_graph, torch::Tensor value_graph,
+                         torch::Tensor bounds, int nrows, int segments,
+                         bool is_directed) {
+  auto nvals = columns_graph.numel();
+  auto full_iden = input_dense1.numel();
+  auto dcols = full_iden / nrows;
+
+  // // Dense
+  // Input
+  float *iden_ptr1 = input_dense1.data_ptr<float>();
+  float *iden_ptr2 = input_dense2.data_ptr<float>();
+  // Output
+  auto options = torch::TensorOptions()
+                     .dtype(torch::kFloat)
+                     .requires_grad(true)
+                     .device(torch::kCUDA, 0);
+  auto output_sparse = torch::zeros({nvals}, options);
+  float *oden_array = output_sparse.data_ptr<float>();
+
+  // Sparse
+  int *offset_ptr = offset_graph.data_ptr<int>();
+  int *col_ptr = columns_graph.data_ptr<int>();
+  float *val_ptr = value_graph.data_ptr<float>();
+  int *bounds_ptr = bounds.data_ptr<int>();
+
+  for (int i = 0; i < segments; i++) {
+    int i1 = i;
+    int start_vals = bounds_ptr[i1 * 2];
+    // int end_vals = bounds_ptr[i1 * 2 + 1];
+    // int nvals = end_vals - start_vals;
+
+    cudaStream_t stream1;
+
+    if (is_directed) {
+      cudaStreamCreate(&stream1);
+      dim3 gridDim(((int)(nrows - 1) / 8) + 1);
+      dim3 blockDim(32, 8);
+      int shared_memory_size = dcols * sizeof(float);
+      default_function_kernel_sddmm_mult_undir_shared<<<
+          gridDim, blockDim, shared_memory_size, stream1>>>(
+          &oden_array[start_vals], &offset_ptr[i1 * (nrows + 1)], iden_ptr1,
+          iden_ptr2, &col_ptr[start_vals], nrows, dcols);
+    }
+  }
 
   return output_sparse;
 }
@@ -139,12 +348,17 @@ int main(int argc, char **argv) {
   filename = path;
   readSM_npy32<SM>(filename, &adj);
 
+  std::cout << "PyTorch version: "
+    << TORCH_VERSION_MAJOR << "."
+    << TORCH_VERSION_MINOR << "."
+    << TORCH_VERSION_PATCH << std::endl;
   // Adj info
+  
   iT nrows = adj.nrows();
   iT ncols = adj.ncols();
   nT nvals = adj.nvals();
 
-  int emb_size = 1;
+  int emb_size = 32;
 
   // Init input with random numbers
   DM input_emb1;
@@ -270,13 +484,13 @@ int main(int argc, char **argv) {
 
     // auto correct = torch::sum(pred_idx == labels_test);
 
-#pragma omp parallel for schedule(static)
-    for (int x = 0; x < nvals; x++) {
-      if (prediction[x].item<val_t>() != 2) {
-        std::cout << "The results don't match at: " << x << ":  "
-                  << prediction[x].item<val_t>() << std::endl;
-      }
-    }
+// #pragma omp parallel for schedule(static)
+//     for (int x = 0; x < nvals; x++) {
+//       if (prediction[x].item<val_t>() != emb_size) {
+//         std::cout << "The results don't match at: " << x << ":  "
+//                   << prediction[x].item<val_t>() << std::endl;
+//       }
+//     }
 
     // std::cout << "Epoch " << epoch << " Loss: " << d_loss.item<val_t>()
     //           << " Accuracy: "

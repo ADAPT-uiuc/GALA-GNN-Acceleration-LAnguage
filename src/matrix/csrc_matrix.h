@@ -161,8 +161,9 @@ public:
         N_ *counts;  // counts to calculate offsets
 
         I_ nids;        // either nrows or ncols
-        I_ *ids_local;  // row_ids or col_ids
-        I_ *ids2 = nullptr;
+        // Commented
+        // I_ *ids_local;  // row_ids or col_ids
+        // I_ *ids2 = nullptr;
         // allocate counts, offset_, ids_, vals_
         try {
             if (type == CSRC_TYPE::CSR || type == CSRC_TYPE::HCSR) {

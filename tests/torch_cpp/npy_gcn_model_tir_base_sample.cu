@@ -195,15 +195,15 @@ struct GCN : torch::nn::Module {
 
     degree = torch::pow(degree, -0.5);
 
-    torch::Tensor res = degree * input_dense;
+    torch::Tensor res = fc1->forward(input_dense); 
+    res = degree * res;
     res = GatherForward::apply(res, offset_graph, columns_graph, value_graph);
-    res = fc1->forward(res);
     res = degree * res;
     res = torch::relu(res);
     res = degree * res;
     res = GatherForward::apply(res, offset_graph, columns_graph, value_graph);
-    res = fc2->forward(res);
     res = degree * res;
+    res = fc2->forward(res);
     return {torch::log_softmax(res, /*dim=*/1)};
   }
 

@@ -80,6 +80,31 @@ torch::Tensor gather_forward_gcn(torch::Tensor input_dense,
                               matB, &beta, matC, CUDA_R_32F,
                               CUSPARSE_SPMM_CSR_ALG2, dBuffer));
 
+  // CUSPARSE_CHECK(cusparseCreateCsc(&matA, nrows, nrows, nvals, offset_ptr,
+  //                                  col_ptr, val_ptr, CUSPARSE_INDEX_32I,
+  //                                  CUSPARSE_INDEX_32I, // Need to change these
+  //                                  CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));
+  // // Create dense matrix B
+  // CUSPARSE_CHECK(cusparseCreateDnMat(&matB, nrows, dcols, dcols, iden_ptr,
+  //                                    CUDA_R_32F,
+  //                                    CUSPARSE_ORDER_ROW)); // changed
+  // // Create dense matrix C
+  // CUSPARSE_CHECK(cusparseCreateDnMat(&matC, nrows, dcols, dcols, oden_array,
+  //                                    CUDA_R_32F,
+  //                                    CUSPARSE_ORDER_ROW)); // changed
+
+  // // allocate an external buffer if needed
+  // CUSPARSE_CHECK(cusparseSpMM_bufferSize(
+  //     handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+  //     CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, matA, matB, &beta, matC,
+  //     CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, &bufferSize));
+  // CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));
+
+  // CUSPARSE_CHECK(cusparseSpMM(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+  //                             CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, matA,
+  //                             matB, &beta, matC, CUDA_R_32F,
+  //                             CUSPARSE_SPMM_ALG_DEFAULT, dBuffer));
+
   CUSPARSE_CHECK(cusparseDestroySpMat(matA));
   CUSPARSE_CHECK(cusparseDestroyDnMat(matB));
   CUSPARSE_CHECK(cusparseDestroyDnMat(matC));

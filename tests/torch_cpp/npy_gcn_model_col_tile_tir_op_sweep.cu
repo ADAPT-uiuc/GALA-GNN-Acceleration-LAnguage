@@ -19,63 +19,6 @@ int global_nrows;
 int global_segments;
 bool global_is_directed;
 
-torch::Tensor edge_forward_gcn(torch::Tensor input_dense1,
-                               torch::Tensor input_dense2,
-                               torch::Tensor offset_graph,
-                               torch::Tensor columns_graph,
-                               torch::Tensor value_graph, torch::Tensor bounds,
-                               int nrows, int segments, bool is_directed) {
-  auto nvals = columns_graph.numel();
-  auto full_iden = input_dense1.numel();
-  auto dcols = full_iden / nrows;
-
-  // // Dense
-  // Input
-  float *iden_ptr1 = input_dense1.data_ptr<float>();
-  float *iden_ptr2 = input_dense2.data_ptr<float>();
-  // Output
-  auto options = torch::TensorOptions()
-                     .dtype(torch::kFloat)
-                     .requires_grad(true)
-                     .device(torch::kCUDA, 0);
-  auto output_sparse = torch::zeros({nvals}, options);
-  float *oden_array = output_sparse.data_ptr<float>();
-
-  // Sparse
-  int *offset_ptr = offset_graph.data_ptr<int>();
-  int *col_ptr = columns_graph.data_ptr<int>();
-  float *val_ptr = value_graph.data_ptr<float>();
-  int *bounds_ptr = bounds.data_ptr<int>();
-
-  // cudaStream_t stream1;
-  // cudaStreamCreate(&stream1);
-  // dim3 gridDim(((int)(nrows - 1) / 8) + 1);
-  // dim3 blockDim(32, 8);
-  // default_function_kernel_sddvv_plus<<<gridDim, blockDim, 0, stream1>>>(
-  //     oden_array, offset_ptr, iden_ptr1, iden_ptr2, col_ptr, nrows);
-
-  for (int i = 0; i < segments; i++) {
-    int i1 = i;
-    int start_vals = bounds_ptr[i1 * 2];
-    int end_vals = bounds_ptr[i1 * 2 + 1];
-    int nvals = end_vals - start_vals;
-
-    cudaStream_t stream1, stream2, stream3;
-
-    if (is_directed) {
-      cudaStreamCreate(&stream1);
-      dim3 gridDim(((int)(nrows - 1) / 8) + 1);
-      dim3 blockDim(32, 8);
-      default_function_kernel_sddvv_mult_undir<<<gridDim, blockDim, 0,
-                                                 stream1>>>(
-          &oden_array[start_vals], &offset_ptr[i1 * (nrows + 1)], iden_ptr1,
-          iden_ptr2, &col_ptr[start_vals], nrows);
-    }
-  }
-
-  return output_sparse;
-}
-
 torch::Tensor gather_forward_gcn(torch::Tensor input_dense,
                                  torch::Tensor offset_graph,
                                  torch::Tensor columns_graph,
@@ -105,8 +48,6 @@ torch::Tensor gather_forward_gcn(torch::Tensor input_dense,
   for (int i = 0; i < segments; i++) {
     int i1 = i;
     int start_vals = bounds_ptr[i1 * 2];
-    int end_vals = bounds_ptr[i1 * 2 + 1];
-    int nvals = end_vals - start_vals;
 
     cudaStream_t stream1, stream2, stream3;
 
@@ -177,7 +118,82 @@ torch::Tensor gather_forward_gcn(torch::Tensor input_dense,
         }
       }
     } else {
-      if ((int)dcols / 64) {
+      if (((int)dcols / 1024) && ((int)dcols % 1024 < 32)){
+        cudaStreamCreate(&stream1);
+        dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 1024);
+        dim3 blockDim(32, 8);
+        default_function_kernel64_undir<<<gridDim, blockDim, 0, stream1>>>(
+            oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+            &col_ptr[start_vals], nrows, dcols);
+        if ((dcols % 32) > 0) {
+            cudaStreamCreate(&stream3);
+            dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+            dim3 blockDim_rem(dcols % 32, 8);
+            default_function_kernel_rem_undir<<<gridDim_rem, blockDim_rem, 0,
+                                                stream3>>>(
+                oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+                &col_ptr[start_vals], nrows, dcols,
+                (((int)dcols / 1024) * 1024));
+        }
+
+      }
+      else if (((int)dcols / 576) && ((int)dcols % 576 < 32)){
+        cudaStreamCreate(&stream1);
+        dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 576);
+        dim3 blockDim(32, 8);
+        default_function_kernel64_undir<<<gridDim, blockDim, 0, stream1>>>(
+            oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+            &col_ptr[start_vals], nrows, dcols);
+        if ((dcols % 32) > 0) {
+            cudaStreamCreate(&stream3);
+            dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+            dim3 blockDim_rem(dcols % 32, 8);
+            default_function_kernel_rem_undir<<<gridDim_rem, blockDim_rem, 0,
+                                                stream3>>>(
+                oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+                &col_ptr[start_vals], nrows, dcols,
+                (((int)dcols / 576) * 576));
+        }
+
+      }
+      else if (((int)dcols / 512) && ((int)dcols % 512 < 32)){
+        cudaStreamCreate(&stream1);
+        dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 512);
+        dim3 blockDim(32, 8);
+        default_function_kernel64_undir<<<gridDim, blockDim, 0, stream1>>>(
+            oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+            &col_ptr[start_vals], nrows, dcols);
+        if ((dcols % 32) > 0) {
+            cudaStreamCreate(&stream3);
+            dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+            dim3 blockDim_rem(dcols % 32, 8);
+            default_function_kernel_rem_undir<<<gridDim_rem, blockDim_rem, 0,
+                                                stream3>>>(
+                oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+                &col_ptr[start_vals], nrows, dcols,
+                (((int)dcols / 512) * 512));
+        }
+
+      }
+      else if (((int)dcols / 256) && ((int)dcols % 256 == 0)){
+        cudaStreamCreate(&stream1);
+        dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 256);
+        dim3 blockDim(32, 8);
+        default_function_kernel64_undir<<<gridDim, blockDim, 0, stream1>>>(
+            oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+            &col_ptr[start_vals], nrows, dcols);
+
+      }
+      else if (((int)dcols / 128) && ((int)dcols % 128 == 0)){
+        cudaStreamCreate(&stream1);
+        dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 128);
+        dim3 blockDim(32, 8);
+        default_function_kernel64_undir<<<gridDim, blockDim, 0, stream1>>>(
+            oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+            &col_ptr[start_vals], nrows, dcols);
+
+      }
+      else if ((int)dcols / 64) {
         cudaStreamCreate(&stream1);
         dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 64);
         dim3 blockDim(32, 8);
@@ -267,6 +283,12 @@ public:
     torch::Tensor columns_graph = saved[1];
     torch::Tensor value_graph = saved[2];
     torch::Tensor bounds = saved[3];
+    // std::cout << "grad: " << input_dense.sizes()[0] << "," <<
+    // input_dense.sizes()[1] << std::endl;
+
+    // std::cout << "grad: " << input_dense[0][0].item<val_t>() << "," <<
+    // input_dense[0][1].item<val_t>() << "," << input_dense[1][0].item<val_t>()
+    // << std::endl;
     return {gather_forward_gcn(input_dense, offset_graph, columns_graph,
                                value_graph, bounds, global_nrows,
                                global_segments, global_is_directed),
@@ -275,15 +297,26 @@ public:
 };
 
 struct GCN : torch::nn::Module {
-  GCN(int in_size, int hidden_size, int out_size, bool dir) {
+  GCN(int in_size, int hidden_size, int out_size, bool dir, int nl) {
     // Construct and register two Linear submodules.
-    fc1 = register_module("fc1", torch::nn::Linear(in_size, hidden_size));
-    fc2 = register_module("fc2", torch::nn::Linear(hidden_size, out_size));
+    if (nl == 0){
+      fc_vec.push_back(register_module("fc0", torch::nn::Linear(in_size, out_size)));
+    } else {
+      fc_vec.push_back(register_module("fc0", torch::nn::Linear(in_size, hidden_size)));
+      for (int i = 0; i < nl - 1; i++){
+        std::string m_name =  "fc" + std::to_string(i + 1);
+        fc_vec.push_back(register_module(m_name, torch::nn::Linear(hidden_size, hidden_size)));
+      }
+      std::string m_name_last =  "fc" + std::to_string(nl);
+      fc_vec.push_back(register_module(m_name_last, torch::nn::Linear(hidden_size, out_size)));
+    }
+    fx0 = register_module("fx0", torch::nn::Linear(in_size, out_size));
     in_feat_size = in_size;
     hidden_feat_size = hidden_size;
     out_feat_size = out_size;
     directed = dir;
     global_is_directed = dir;
+    n_layers = nl;
   }
 
   std::vector<torch::Tensor>
@@ -297,27 +330,95 @@ struct GCN : torch::nn::Module {
     global_nrows = nrows;
     global_segments = segments;
 
-    torch::Tensor res = fc1->forward(input_dense);
-    res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
-                               bounds);
-    res = torch::relu(res);
-    if (hidden_feat_size > out_feat_size){
-      res = fc2->forward(res);
-      res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
-                               bounds);
-    } else {
-      res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
-                               bounds);
-      res = fc2->forward(res);
-    }
-    
-    return {torch::log_softmax(res, /*dim=*/1)};
+    auto options = torch::TensorOptions()
+                       .dtype(torch::kFloat)
+                       .requires_grad(false)
+                       .device(torch::kCUDA, 0);
+    auto ones = torch::ones({nrows, 1}, options);
+    torch::Tensor degree =
+        gather_forward_gcn(ones, offset_graph, columns_graph, value_graph,
+                           bounds, nrows, segments, directed);
 
+    degree = torch::pow(degree, -0.5);
+
+    torch::Tensor res;
+
+    // res = fc_vec[0]->forward(res);
+    // res = degree * res;
+    // res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
+    //                           bounds);
+    // res = degree * res;
+    // return {torch::log_softmax(res, /*dim=*/1)};    
+    // std::cout << "run this"_ << n_layers << std::endl;
+    if (n_layers == 0) {
+      // std::cout << "run this" << std::endl;
+      if (in_feat_size > out_feat_size){
+        res = fc_vec[0]->forward(input_dense);
+        // std::cout << "run this" << std::endl;
+        res = degree * res;
+        // std::cout << "run this" << std::endl;
+        res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
+                                  bounds);
+        // std::cout << "run this" << std::endl;
+        res = degree * res;
+        // std::cout << "run this" << std::endl;
+        return {torch::log_softmax(res, /*dim=*/1)};    
+      } else {
+        res = degree * input_dense;
+        res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
+                                  bounds);
+        res = degree * res;
+        res = fc_vec[0]->forward(res); 
+        return {torch::log_softmax(res, /*dim=*/1)};    
+      }
+    } else {
+      torch::Tensor res;
+      if (in_feat_size > hidden_feat_size){
+        res = fc_vec[0]->forward(input_dense);
+        res = degree * res;
+        res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
+                                  bounds);
+        res = degree * res;
+        res = torch::relu(res);
+      } else {
+        res = degree * input_dense;
+
+        res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
+                                  bounds);
+        res = degree * res;
+        res = fc_vec[0]->forward(res);
+        res = torch::relu(res); 
+      }
+      for (int i = 0; i < n_layers - 1; i++){
+        res = degree * res;
+        res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
+                                  bounds);
+        res = degree * res;
+        res = fc_vec[i + 1]->forward(res);
+        res = torch::relu(res);
+      }
+      if (hidden_feat_size > out_feat_size){
+        res = fc_vec[n_layers]->forward(res);
+        res = degree * res;
+        res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
+                                  bounds);
+        res = degree * res;
+        return {torch::log_softmax(res, /*dim=*/1)};    
+      } else {
+        res = degree * res;
+        res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
+                                  bounds);
+        res = degree * res;
+        res = fc_vec[n_layers]->forward(res); 
+        return {torch::log_softmax(res, /*dim=*/1)};    
+      }
+    }
   }
 
   // Use one of many "standard library" modules.
-  torch::nn::Linear fc1{nullptr}, fc2{nullptr};
-  int in_feat_size, hidden_feat_size, out_feat_size;
+  std::vector<torch::nn::Linear> fc_vec;
+  torch::nn::Linear fx0{nullptr};
+  int in_feat_size, hidden_feat_size, out_feat_size, n_layers;
   bool directed;
 };
 
@@ -338,6 +439,8 @@ int main(int argc, char **argv) {
   // Column tiling
   iT cols_per_tile = stoi(string(argv[3]));
 
+  int n_hidden = stoi(string(argv[4]));
+  int n_layers = stoi(string(argv[5]));
   // bool do_reorder = stoi(string(argv[4]));
 
   // Const settings
@@ -381,6 +484,27 @@ int main(int argc, char **argv) {
   repopulate<DBL, DB>(&valid_mask_load, &valid_mask);
   DB test_mask;
   repopulate<DBL, DB>(&test_mask_load, &test_mask);
+
+  // std::cout << train_mask.vals_ptr()[0] << "," << train_mask.vals_ptr()[1]
+  //           << "," << train_mask.vals_ptr()[2] << ","
+  //           << train_mask.vals_ptr()[3] << std::endl;
+
+  // if (do_reorder) {
+  //   std::unique_ptr<vint[]> perm_rabbit;
+  //   auto nvals_var = adj.nvals();
+  //   SM::itype *col_ids_var = adj.ids_ptr();
+  //   auto vals_var = adj.vals_ptr();
+  //   SM_t::itype *row_ids_var;
+  //   get_row_ids<SM>(&adj, row_ids_var);
+  //   get_perm_graph<SM>(nvals_var, row_ids_var, col_ids_var, vals_var,
+  //                        perm_rabbit);
+  //   SM::itype perm[adj.nrows()];
+  //   for (SM::ntype p_i = 0; p_i < adj.nrows(); p_i++) {
+  //     perm[p_i] = (SM::itype)perm_rabbit[p_i];
+  //   }
+  //   rowReorderToTorch(&adj, &input_emb, &train_mask, &valid_mask, &test_mask,
+  //                &labels, perm);
+  // }
 
   std::vector<SM *> tiled_adj;
   tiled_adj.push_back(&adj);
@@ -493,21 +617,7 @@ int main(int argc, char **argv) {
   double start_init, end_init;
   cudaDeviceSynchronize();
   start_init = get_time();
-  bool directed = true;
-  // TICM
-  auto options = torch::TensorOptions()
-                     .dtype(torch::kFloat)
-                     .requires_grad(false)
-                     .device(torch::kCUDA, 0);
-  auto t_ones = torch::ones({nrows, 1}, options);
-  torch::Tensor t_degree =
-      gather_forward_gcn(t_ones, t_offsets, t_cols, t_vals, total_bounds, nrows,
-                         segments, directed);
-  t_degree = torch::pow(t_degree, -0.5).detach();
-  torch::Tensor t_sp_vals =
-      edge_forward_gcn(t_degree, t_degree, t_offsets, t_cols, t_vals,
-                       total_bounds, nrows, segments, directed);
-  auto net = std::make_shared<GCN>(emb_size, 32, classes, directed);
+  auto net = std::make_shared<GCN>(emb_size, n_hidden, classes, false, n_layers);
   cudaDeviceSynchronize();
   end_init = get_time();
 
@@ -515,14 +625,15 @@ int main(int argc, char **argv) {
 
   net->to(device);
 
-  // Instantiate an SGD optimization algorithm to update our Net's
-  // parameters.
+  // std::cout << "Initial Memory Usage: " << std::endl;
+  // printMemoryUsage();
+
+  // Instantiate an SGD optimization algorithm to update our Net's parameters.
   torch::optim::Adam optimizer(
       net->parameters(), torch::optim::AdamOptions(1e-2).weight_decay(5e-4));
 
   double start, end;
   double start_train, end_train;
-  val_t randVal;
   std::vector<double> times_arr, times_arr_train;
   for (size_t epoch = 1; epoch <= num_iters; ++epoch) {
     // Reset gradients.
@@ -530,11 +641,14 @@ int main(int argc, char **argv) {
     // Execute the model on the input data.
     cudaDeviceSynchronize();
     start = get_time();
-    torch::Tensor prediction = net->forward(
-        t_iden, t_offsets, t_cols, t_sp_vals, total_bounds, nrows, segments)[0];
+    torch::Tensor prediction = net->forward(t_iden, t_offsets, t_cols, t_vals,
+                                            total_bounds, nrows, segments)[0];
 
     cudaDeviceSynchronize();
     end = get_time();
+
+    // std::cout << "After forward: " << std::endl;
+    // printMemoryUsage();
 
     cudaDeviceSynchronize();
     start_train = get_time();
@@ -551,6 +665,9 @@ int main(int argc, char **argv) {
 
     cudaDeviceSynchronize();
     end_train = get_time();
+
+    // std::cout << "After backward: " << std::endl;
+    // printMemoryUsage();
 
     torch::Tensor prediction_test = prediction.index({t_test_mask});
     torch::Tensor labels_test = t_labs.index({t_test_mask});

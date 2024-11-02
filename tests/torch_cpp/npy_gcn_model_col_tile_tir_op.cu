@@ -246,6 +246,8 @@ struct GCN : torch::nn::Module {
     global_nrows = nrows;
     global_segments = segments;
 
+    // double start, end;
+
     auto options = torch::TensorOptions()
                        .dtype(torch::kFloat)
                        .requires_grad(false)
@@ -257,17 +259,35 @@ struct GCN : torch::nn::Module {
 
     degree = torch::pow(degree, -0.5);
 
+    // cudaDeviceSynchronize();
+    // start = get_time();
     torch::Tensor res = fc1->forward(input_dense);
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Forward 1:" << (end - start) * 1000 << std::endl;
     res = degree * res;
+    // cudaDeviceSynchronize();
+    // start = get_time();
     res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
                                bounds);
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Gather 1:" << (end - start) * 1000 << std::endl;
     res = degree * res;
     res = torch::relu(res);
-    res = degree * res;
-    res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
-                               bounds);
-    res = degree * res;
-    res = fc2->forward(res);
+    if (hidden_feat_size > out_feat_size){
+      res = fc2->forward(res);
+      res = degree * res;
+      res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
+                                bounds);
+      res = degree * res;
+    } else {
+      res = degree * res;
+      res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
+                                bounds);
+      res = degree * res;
+      res = fc2->forward(res);
+    }
     return {torch::log_softmax(res, /*dim=*/1)};
   }
 
@@ -478,6 +498,9 @@ int main(int argc, char **argv) {
 
   net->to(device);
 
+  std::cout << "Initial Memory Usage: " << std::endl;
+  printMemoryUsage();
+
   // Instantiate an SGD optimization algorithm to update our Net's parameters.
   torch::optim::Adam optimizer(
       net->parameters(), torch::optim::AdamOptions(1e-2).weight_decay(5e-4));
@@ -498,6 +521,9 @@ int main(int argc, char **argv) {
     cudaDeviceSynchronize();
     end = get_time();
 
+    std::cout << "After forward: " << std::endl;
+    printMemoryUsage();
+
     cudaDeviceSynchronize();
     start_train = get_time();
 
@@ -513,6 +539,9 @@ int main(int argc, char **argv) {
 
     cudaDeviceSynchronize();
     end_train = get_time();
+
+    std::cout << "After backward: " << std::endl;
+    printMemoryUsage();
 
     torch::Tensor prediction_test = prediction.index({t_test_mask});
     torch::Tensor labels_test = t_labs.index({t_test_mask});

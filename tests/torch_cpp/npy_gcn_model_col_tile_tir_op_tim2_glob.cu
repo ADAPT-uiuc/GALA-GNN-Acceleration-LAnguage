@@ -259,18 +259,33 @@ struct GCN : torch::nn::Module {
     if (ep % mod_v == 0) {
       torch::Tensor res = fc1->forward(input_dense);
       res = torch::relu(res);
-      res = degree * res;
-      res = GatherForward::apply(res, 0);
-      res = degree * res;
-      res = fc2->forward(res);
+      if (hidden_feat_size > out_feat_size){
+        res = fc2->forward(res);
+        res = degree * res;
+        res = GatherForward::apply(res, 0);
+        res = degree * res;
+      } else {
+        res = degree * res;
+        res = GatherForward::apply(res, 0);
+        res = degree * res;
+        res = fc2->forward(res);
+      }
       return {torch::log_softmax(res, /*dim=*/1)};
     } else {
       torch::Tensor res = fc1->forward(input_dense);
       res = torch::relu(res);
-      res = degree * res;
-      res = GatherForward::apply(res, 2);
-      res = degree * res;
-      res = fc2->forward(res);
+      if (hidden_feat_size > out_feat_size){
+        res = fc2->forward(res);
+        res = degree * res;
+        res = GatherForward::apply(res, 2);
+        res = degree * res;
+      } else {
+        res = degree * res;
+        res = GatherForward::apply(res, 2);
+        res = degree * res;
+        res = fc2->forward(res);
+
+      }
       return {torch::log_softmax(res, /*dim=*/1)};
     }
   }
@@ -292,6 +307,9 @@ int main(int argc, char **argv) {
 
   // Column tiling
   iT cols_per_tile = stoi(string(argv[3]));
+
+  // Column tiling
+  iT cols_per_tile_b = stoi(string(argv[4]));
 
   // Const settings
   int skip_cache_warmup = 5;
@@ -402,7 +420,7 @@ int main(int argc, char **argv) {
   torch::Tensor total_bounds_1b;
   // Can have individual tiles here
   std::vector<iT> tile_offsets_1b =
-      static_ord_col_breakpoints<SM>(adj_1b, cols_per_tile);
+      static_ord_col_breakpoints<SM>(adj_1b, cols_per_tile_b);
   iT segments_1b = tile_offsets_1b.size() - 1;
   // The first and last value of this should also give the offsets for the
   // columns and vals
@@ -442,7 +460,7 @@ int main(int argc, char **argv) {
   torch::Tensor total_bounds_2b;
   // Can have individual tiles here
   std::vector<iT> tile_offsets_2b =
-      static_ord_col_breakpoints<SM>(adj_2b, cols_per_tile);
+      static_ord_col_breakpoints<SM>(adj_2b, cols_per_tile_b);
   iT segments_2b = tile_offsets_2b.size() - 1;
   // The first and last value of this should also give the offsets for the
   // columns and vals
@@ -663,9 +681,12 @@ int main(int argc, char **argv) {
                          segments, directed);
   t_degree = torch::pow(t_degree, -0.5).detach();
   torch::Tensor norm_input = t_degree * t_iden;
+  // norm_input =
+  //     gather_forward_gcn(norm_input, t_offsets_1f, t_cols_1f, t_vals_1f,
+  //                        total_bounds_1f, nrows, segments_1f, directed);
   norm_input =
-      gather_forward_gcn(norm_input, t_offsets_1f, t_cols_1f, t_vals_1f,
-                         total_bounds_1f, nrows, segments_1f, directed);
+      gather_forward_gcn(norm_input, t_offsets, t_cols, t_vals,
+                         total_bounds, nrows, segments, directed);
   norm_input = (t_degree * norm_input).detach();
   auto net = std::make_shared<GCN>(emb_size, 32, classes, directed);
   cudaDeviceSynchronize();
@@ -674,6 +695,10 @@ int main(int argc, char **argv) {
   std::cout << "Initialization time: " << end_init - start_init << std::endl;
 
   net->to(device);
+
+  std::cout << "Initial Memory Usage: " << std::endl;
+  printMemoryUsage();
+
 
   // Instantiate an SGD optimization algorithm to update our Net's parameters.
   torch::optim::Adam optimizer(
@@ -698,6 +723,10 @@ int main(int argc, char **argv) {
     cudaDeviceSynchronize();
     end = get_time();
 
+    std::cout << "After forward: " << std::endl;
+    printMemoryUsage();
+
+
     cudaDeviceSynchronize();
     start_train = get_time();
 
@@ -713,6 +742,10 @@ int main(int argc, char **argv) {
 
     cudaDeviceSynchronize();
     end_train = get_time();
+
+    std::cout << "After backward: " << std::endl;
+    printMemoryUsage();
+
 
     if (epoch % mod_v == 0) {
       torch::Tensor prediction_test = prediction.index({t_test_mask});
@@ -750,4 +783,5 @@ int main(int argc, char **argv) {
             << calc_std(times_arr) << std::endl;
   std::cout << "Train: " << calc_mean(times_arr_train) << ","
             << calc_std(times_arr_train) << std::endl;
+  std::cout << "Total: " << calc_mean(times_arr) + calc_mean(times_arr_train) << std::endl;
 }
