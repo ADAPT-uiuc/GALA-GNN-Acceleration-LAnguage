@@ -474,19 +474,38 @@ public:
                                torch::Tensor columns_graph,
                                torch::Tensor value_graph,
                                torch::Tensor bounds) {
+    // double start, end;
+    // cudaDeviceSynchronize();
+    // start = get_time();
     torch::Tensor val_exp = torch::exp(value_graph);
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Softmax internal exp:" << (end - start) * 1000 << std::endl;
+    // cudaDeviceSynchronize();
+    // start = get_time();
     torch::Tensor row_sum = node_spmv_backward_of_sddmm(
         offset_graph, columns_graph, val_exp, bounds, global_nrows,
         global_segments, global_is_directed);
-    // std::cout << "D1" << std::endl;
-    // for (int i = 0; i < 100; i++){
-    //   std::cout << i << ": " << row_sum[i].item<float>() << std::endl;;
-    // }
-    value_graph = inplace_softmax_sddvv(row_sum, offset_graph, columns_graph,
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Softmax internal sum:" << (end - start) * 1000 << std::endl;
+    auto options = torch::TensorOptions()
+                       .dtype(torch::kFloat)
+                       .requires_grad(true)
+                       .device(torch::kCUDA, 0);
+    // val_exp = torch::ones({val_exp.sizes()[0]}, options);
+    // row_sum = torch::ones({row_sum.sizes()[0]}, options);
+    // cudaDeviceSynchronize();
+    // start = get_time();
+    row_sum = torch::reciprocal(row_sum);
+    val_exp = inplace_softmax_sddvv(row_sum, offset_graph, columns_graph,
                                     val_exp, bounds, global_nrows,
                                     global_segments, global_is_directed);
-    ctx->save_for_backward({offset_graph, columns_graph, value_graph, bounds});
-    return value_graph;
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Softmax internal div:" << (end - start) * 1000 << std::endl;
+    ctx->save_for_backward({offset_graph, columns_graph, val_exp, bounds});
+    return val_exp;
   }
 
   static torch::autograd::tensor_list
@@ -955,10 +974,10 @@ int main(int argc, char **argv) {
 
     auto correct = torch::sum(pred_idx == labels_test);
 
-    std::cout << "Epoch " << epoch << " Loss: " << d_loss.item<val_t>()
-              << " Accuracy: "
-              << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])
-              << std::endl;
+    // std::cout << "Epoch " << epoch << " Loss: " << d_loss.item<val_t>()
+    //           << " Accuracy: "
+    //           << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])
+    //           << std::endl;
 
     if (epoch >= skip_cache_warmup) {
       times_arr.push_back(end - start);

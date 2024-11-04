@@ -357,6 +357,7 @@ void readSM_npy32(std::string path, SM *adj) {
     vT *adj_vals = (vT *) aligned_alloc(64, (adj_nvals) * sizeof(vT));
 //    std::memset(adj_vals, 1, adj_nvals);
 
+    // adj->build(adj_nrows, adj_ncols, adj_nvals, adj_col_ids, adj_row_ids, adj_vals, CSRC_TYPE::CSR);
     adj->build(adj_nrows, adj_ncols, adj_nvals, adj_row_ids, adj_col_ids, adj_vals, CSRC_TYPE::CSR);
     adj->set_all(1);
     data_adj_dst.clear();

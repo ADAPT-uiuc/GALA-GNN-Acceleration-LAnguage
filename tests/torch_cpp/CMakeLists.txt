@@ -24,8 +24,6 @@ link_libraries("${TORCH_LIBRARIES}" cudart cusparse)
 
 message("Compiler: COMILER_ID is ${CMAKE_CXX_COMPILER_ID}")
 
-
-
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qopt-report=0  -march=native -xCORE-AVX512 -O3 -DICC -restrict")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-as-needed -lpthread -lm -ldl")
 set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} -lnuma")
@@ -42,7 +40,7 @@ message("CMAKE_CXX_FLAGS - ${CMAKE_CXX_FLAGS}")
 message("CMAKE_EXE_LINKER_FLAGS - ${CMAKE_EXE_LINKER_FLAGS}")
 message("CMAKE_CXX_STANDARD_LIBRARIES - ${CMAKE_CXX_STANDARD_LIBRARIES}")
 
-add_compile_options(-Xcompiler -fopenmp)
+add_compile_options(-Xcompiler -fopenmp -march=native -O3)
 
 # Define our library target
 add_compile_definitions(GALA_TORCH)

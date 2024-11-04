@@ -283,10 +283,20 @@ struct GCN : torch::nn::Module {
       res = degree * res;
     } else {
       res = degree * res;
+      // cudaDeviceSynchronize();
+      // start = get_time();
       res = GatherForward::apply(res, offset_graph, columns_graph, value_graph,
                                 bounds);
+      // cudaDeviceSynchronize();
+      // end = get_time();
+      // std::cout << "Gather 2:" << (end - start) * 1000 << std::endl;
       res = degree * res;
+      // cudaDeviceSynchronize();
+      // start = get_time();
       res = fc2->forward(res);
+      // cudaDeviceSynchronize();
+      // end = get_time();
+      // std::cout << "Forward 2:" << (end - start) * 1000 << std::endl;
     }
     return {torch::log_softmax(res, /*dim=*/1)};
   }
@@ -521,8 +531,8 @@ int main(int argc, char **argv) {
     cudaDeviceSynchronize();
     end = get_time();
 
-    std::cout << "After forward: " << std::endl;
-    printMemoryUsage();
+    // std::cout << "After forward: " << std::endl;
+    // printMemoryUsage();
 
     cudaDeviceSynchronize();
     start_train = get_time();
@@ -540,8 +550,8 @@ int main(int argc, char **argv) {
     cudaDeviceSynchronize();
     end_train = get_time();
 
-    std::cout << "After backward: " << std::endl;
-    printMemoryUsage();
+    // std::cout << "After backward: " << std::endl;
+    // printMemoryUsage();
 
     torch::Tensor prediction_test = prediction.index({t_test_mask});
     torch::Tensor labels_test = t_labs.index({t_test_mask});
@@ -554,6 +564,7 @@ int main(int argc, char **argv) {
               << " Accuracy: "
               << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])
               << std::endl;
+
 
     if (epoch >= skip_cache_warmup) {
       times_arr.push_back(end - start);

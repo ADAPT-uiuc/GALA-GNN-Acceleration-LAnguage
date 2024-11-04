@@ -730,7 +730,6 @@ int main(int argc, char **argv) {
   global_segments.push_back(segments_2b);
 
   directed = true;
-  auto net = std::make_shared<GCN>(emb_size, 32, classes, directed);
   // global_bounds = total_bounds;
   // global_offset_graph = t_offsets;
   // global_value_graph = t_vals;
@@ -753,8 +752,8 @@ int main(int argc, char **argv) {
                        total_bounds_2f, nrows, segments_2f, directed);
   global_value_graph[5] = edge_forward_gcn(t_degree, t_degree, t_offsets_2b, t_cols_2b, global_value_graph[5],
                        total_bounds_2b, nrows, segments_2b, directed);
-  norm_input =
-      gather_forward_gcn(norm_input, t_offsets, t_cols, t_sp_vals,
+  torch::Tensor norm_input =
+      gather_forward_gcn(t_iden, t_offsets, t_cols, t_sp_vals,
                          total_bounds, nrows, segments, directed);
   auto net = std::make_shared<GCN>(emb_size, 32, classes, directed);
   cudaDeviceSynchronize();

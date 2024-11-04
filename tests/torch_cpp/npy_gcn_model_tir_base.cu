@@ -315,7 +315,9 @@ int main(int argc, char **argv) {
   auto net = std::make_shared<GCN>(emb_size, 32, classes, false);
   cudaDeviceSynchronize();
   end_init = get_time();
-
+  
+  // std::cout << "offsets:" << t_offsets << std::endl;
+  std::cout << "cols:" << t_cols << std::endl;
   std::cout << "Initialization time: " << end_init - start_init << std::endl;
 
   net->to(device);

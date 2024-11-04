@@ -256,6 +256,12 @@ torch::Tensor inplace_softmax_sddvv(torch::Tensor row_val,
                                                   stream1>>>(
         &val_ptr[start_vals], &offset_ptr[i1 * (nrows + 1)], row_val_ptr,
         &col_ptr[start_vals], nrows);
+    // dim3 gridDim_rem(((int)(nrows - 1) / 4) + 1);
+    // dim3 blockDim_rem(32, 4);
+    // default_function_kernel_softmax_sddvv_undir_4<<<gridDim_rem, blockDim_rem, 0,
+    //                                               stream1>>>(
+    //     &val_ptr[start_vals], &offset_ptr[i1 * (nrows + 1)], row_val_ptr,
+    //     &col_ptr[start_vals], nrows);
   }
 
   return value_graph;
@@ -474,19 +480,38 @@ public:
                                torch::Tensor columns_graph,
                                torch::Tensor value_graph,
                                torch::Tensor bounds) {
+    // double start, end;
+    // cudaDeviceSynchronize();
+    // start = get_time();
     torch::Tensor val_exp = torch::exp(value_graph);
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Softmax internal exp:" << (end - start) * 1000 << std::endl;
+    // cudaDeviceSynchronize();
+    // start = get_time();
     torch::Tensor row_sum = node_spmv_backward_of_sddmm(
         offset_graph, columns_graph, val_exp, bounds, global_nrows,
         global_segments, global_is_directed);
-    // std::cout << "D1" << std::endl;
-    // for (int i = 0; i < 100; i++){
-    //   std::cout << i << ": " << row_sum[i].item<float>() << std::endl;;
-    // }
-    value_graph = inplace_softmax_sddvv(row_sum, offset_graph, columns_graph,
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Softmax internal sum:" << (end - start) * 1000 << std::endl;
+    auto options = torch::TensorOptions()
+                       .dtype(torch::kFloat)
+                       .requires_grad(true)
+                       .device(torch::kCUDA, 0);
+    // val_exp = torch::ones({val_exp.sizes()[0]}, options);
+    // row_sum = torch::ones({row_sum.sizes()[0]}, options);
+    // cudaDeviceSynchronize();
+    // start = get_time();
+    row_sum = torch::reciprocal(row_sum);
+    val_exp = inplace_softmax_sddvv(row_sum, offset_graph, columns_graph,
                                     val_exp, bounds, global_nrows,
                                     global_segments, global_is_directed);
-    ctx->save_for_backward({offset_graph, columns_graph, value_graph, bounds});
-    return value_graph;
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Softmax internal div:" << (end - start) * 1000 << std::endl;
+    ctx->save_for_backward({offset_graph, columns_graph, val_exp, bounds});
+    return val_exp;
   }
 
   static torch::autograd::tensor_list
@@ -504,8 +529,10 @@ public:
     // torch::Tensor nan_indices = nan_mask.nonzero();
     // for (int i = 0; i < std::min((int)nan_indices.size(0), 10); ++i) {
     //     auto index = nan_indices[i];
-    //     std::cout << "Nan at index (" << index[0].item<int>() << ", " << index[1].item<int>() << "): "
-    //               << d_value_graph.index({index[0], index[1]}).item<float>() << std::endl;
+    //     std::cout << "Nan at index (" << index[0].item<int>() << ", " <<
+    //     index[1].item<int>() << "): "
+    //               << d_value_graph.index({index[0], index[1]}).item<float>()
+    //               << std::endl;
     // }
 
     torch::Tensor sds = value_graph * d_value_graph; // e x 1
@@ -525,8 +552,10 @@ public:
     // nan_indices = nan_mask.nonzero();
     // for (int i = 0; i < std::min((int)nan_indices.size(0), 10); ++i) {
     //     auto index = nan_indices[i];
-    //     std::cout << "Nan at index (" << index[0].item<int>() << ", " << index[1].item<int>() << "): "
-    //               << res.index({index[0], index[1]}).item<float>() << std::endl;
+    //     std::cout << "Nan at index (" << index[0].item<int>() << ", " <<
+    //     index[1].item<int>() << "): "
+    //               << res.index({index[0], index[1]}).item<float>() <<
+    //               std::endl;
     // }
     // res = d_value_graph;
 
@@ -566,16 +595,16 @@ struct GAT : torch::nn::Module {
 
   void apply_xavier_initialization() {
     // Xavier uniform initialization for Linear layers
-    torch::NoGradGuard no_grad;  // Disable gradient tracking for initialization
-    for (auto& module : modules(/*include_self=*/false)) {
-      if (auto* linear = dynamic_cast<torch::nn::LinearImpl*>(module.get())) {
+    torch::NoGradGuard no_grad; // Disable gradient tracking for initialization
+    for (auto &module : modules(/*include_self=*/false)) {
+      if (auto *linear = dynamic_cast<torch::nn::LinearImpl *>(module.get())) {
         // Apply Xavier uniform initialization to weights
         torch::nn::init::xavier_uniform_(linear->weight);
         // torch::nn::init::kaiming_uniform_(linear->weight);
 
         // You may also want to initialize the biases to zero (optional)
         if (linear->bias.defined()) {
-            torch::nn::init::zeros_(linear->bias);
+          torch::nn::init::zeros_(linear->bias);
         }
       }
     }
@@ -593,131 +622,83 @@ struct GAT : torch::nn::Module {
     torch::nn::LeakyReLU leaky_relu(
         torch::nn::LeakyReLUOptions().negative_slope(slope));
 
-    torch::Tensor res = fc1->forward(input_dense);
+    // double start, end;
 
+    // cudaDeviceSynchronize();
+    // start = get_time();
+    torch::Tensor res = fc1->forward(input_dense);
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Forward 1:" << (end - start) * 1000 << std::endl;
     // Edge-level attention calculation
+    // cudaDeviceSynchronize();
+    // start = get_time();
     torch::Tensor attn_l = al1->forward(res);
     torch::Tensor attn_r = ar1->forward(res);
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Edge Attn 1:" << (end - start) * 1000 << std::endl;
 
-    // torch::Tensor attn = value_graph;
-    torch::Tensor attn = EdgeAggregate::apply(attn_l, attn_r, offset_graph, columns_graph,
-                                value_graph, bounds);
-    // std::cout << "A" << std::endl;
-    // for (int i = 0; i < 100; i++){
-    //   int j_s = offset_graph[i].item<int>();
-    //   int j_e = offset_graph[i + 1].item<int>();
-    //   std::cout << i << ": ";
-    //   for (int j = j_s; j < j_e; j++){
-    //     std::cout << attn[j].item<float>() <<  ",";
-    //   }
-    //   std::cout << std::endl;
-    // }
+    // cudaDeviceSynchronize();
+    // start = get_time();
+    torch::Tensor attn = EdgeAggregate::apply(
+        attn_l, attn_r, offset_graph, columns_graph, value_graph, bounds);
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Edge aggr 1:" << (end - start) * 1000 << std::endl;
+    // cudaDeviceSynchronize();
+    // start = get_time();
     attn = leaky_relu->forward(attn);
-    // std::cout << "B" << std::endl;
-    // for (int i = 0; i < 100; i++){
-    //   int j_s = offset_graph[i].item<int>();
-    //   int j_e = offset_graph[i + 1].item<int>();
-    //   std::cout << i << ": ";
-    //   for (int j = j_s; j < j_e; j++){
-    //     std::cout << attn[j].item<float>() <<  ",";
-    //   }
-    //   std::cout << std::endl;
-    // }
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Edge relu 1:" << (end - start) * 1000 << std::endl;
+    // cudaDeviceSynchronize();
+    // start = get_time();
     attn = EdgeSoftmax::apply(offset_graph, columns_graph, attn, bounds);
-    // std::cout << "D" << std::endl;
-    // for (int i = 0; i < 100; i++){
-    //   int j_s = offset_graph[i].item<int>();
-    //   int j_e = offset_graph[i + 1].item<int>();
-    //   std::cout << i << ": ";
-    //   for (int j = j_s; j < j_e; j++){
-    //     std::cout << attn[j].item<float>() <<  ",";
-    //   }
-    //   std::cout << std::endl;
-    // }
-    // std::cout << attn << std::endl;
-    attn = torch::clamp(attn, 1e-7, 0.5);  
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Edge Softmax 1:" << (end - start) * 1000 << std::endl;
+    // attn = torch::clamp(attn, 1e-7, 0.5);
+    // cudaDeviceSynchronize();
+    // start = get_time();
     res = NodeAggregate::apply(res, offset_graph, columns_graph, attn, bounds);
-
-    // std::cout << "Before nodes" << std::endl;
-    // torch::Tensor inf_mask1 = torch::isinf(res);
-    // torch::Tensor inf_indices1 = inf_mask1.nonzero();
-    // for (int i = 0; i < std::min((int)inf_indices1.size(0), 10); ++i) {
-    //     auto index = inf_indices1[i];
-    //     std::cout << "Inf at index (" << index[0].item<int>() << ", " << index[1].item<int>() << "): "
-    //               << res.index({index[0], index[1]}).item<float>() << std::endl;
-    // }
-    // torch::Tensor nan_mask1 = torch::isnan(res);
-    // torch::Tensor nan_indices1 = nan_mask1.nonzero();
-    // for (int i = 0; i < std::min((int)nan_indices1.size(0), 10); ++i) {
-    //     auto index = nan_indices1[i];
-    //     std::cout << "Nan at index (" << index[0].item<int>() << ", " << index[1].item<int>() << "): "
-    //               << res.index({index[0], index[1]}).item<float>() << std::endl;
-    // }
-
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Node Aggr 1:" << (end - start) * 1000 << std::endl;
     res = torch::relu(res);
 
+    // cudaDeviceSynchronize();
+    // start = get_time();
     res = fc2->forward(res);
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Forward 2:" << (end - start) * 1000 << std::endl;
     // Edge-level attention calculation
+    // cudaDeviceSynchronize();
+    // start = get_time();
     attn_l = al2->forward(res);
     attn_r = ar2->forward(res);
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Edge Attn 2:" << (end - start) * 1000 << std::endl;
+
+    // cudaDeviceSynchronize();
+    // start = get_time();
     attn = EdgeAggregate::apply(attn_l, attn_r, offset_graph, columns_graph,
                                 attn, bounds);
-    // std::cout << "A2" << std::endl;
-    // for (int i = 0; i < 100; i++){
-    //   int j_s = offset_graph[i].item<int>();
-    //   int j_e = offset_graph[i + 1].item<int>();
-    //   std::cout << i << ": ";
-    //   for (int j = j_s; j < j_e; j++){
-    //     std::cout << attn[j].item<float>() <<  ",";
-    //   }
-    //   std::cout << std::endl;
-    // }
     attn = leaky_relu->forward(attn);
-    // std::cout << "C2" << std::endl;
-    // for (int i = 0; i < 100; i++){
-    //   int j_s = offset_graph[i].item<int>();
-    //   int j_e = offset_graph[i + 1].item<int>();
-    //   std::cout << i << ": ";
-    //   for (int j = j_s; j < j_e; j++){
-    //     std::cout << attn[j].item<float>() <<  ",";
-    //   }
-    //   std::cout << std::endl;
-    // }
     attn = EdgeSoftmax::apply(offset_graph, columns_graph, attn, bounds);
-    attn = torch::clamp(attn, 1e-7, 0.5);  
-    // std::cout << "D2" << std::endl;
-    // for (int i = 0; i < 100; i++){
-    //   int j_s = offset_graph[i].item<int>();
-    //   int j_e = offset_graph[i + 1].item<int>();
-    //   std::cout << i << ": ";
-    //   for (int j = j_s; j < j_e; j++){
-    //     std::cout << attn[j].item<float>() <<  ",";
-    //   }
-    //   std::cout << std::endl;
-    // }
-
-    res = NodeAggregate::apply(res, offset_graph, columns_graph, attn,
-                               bounds);
-    // std::cout << "In the end" << std::endl;
-    // torch::Tensor inf_mask = torch::isinf(res);
-    // torch::Tensor inf_indices = inf_mask.nonzero();
-    // for (int i = 0; i < std::min((int)inf_indices.size(0), 10); ++i) {
-    //     auto index = inf_indices[i];
-    //     std::cout << "Inf at index (" << index[0].item<int>() << ", " << index[1].item<int>() << "): "
-    //               << res.index({index[0], index[1]}).item<float>() << std::endl;
-    // }
-    // torch::Tensor nan_mask = torch::isnan(res);
-    // torch::Tensor nan_indices = nan_mask.nonzero();
-    // for (int i = 0; i < std::min((int)nan_indices.size(0), 10); ++i) {
-    //     auto index = nan_indices[i];
-    //     std::cout << "Nan at index (" << index[0].item<int>() << ", " << index[1].item<int>() << "): "
-    //               << res.index({index[0], index[1]}).item<float>() << std::endl;
-    // }
-
-
-
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Edge Aggr + Softmax 2:" << (end - start) * 1000 << std::endl;
+    // attn = torch::clamp(attn, 1e-7, 0.5);
+    // cudaDeviceSynchronize();
+    // start = get_time();
+    res = NodeAggregate::apply(res, offset_graph, columns_graph, attn, bounds);
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Node Aggr 2:" << (end - start) * 1000 << std::endl;
     return {torch::log_softmax(res, /*dim=*/1)};
-    // return {res};
   }
 
   // Use one of many "standard library" modules.
@@ -954,10 +935,10 @@ int main(int argc, char **argv) {
 
     auto correct = torch::sum(pred_idx == labels_test);
 
-    std::cout << "Epoch " << epoch << " Loss: " << d_loss.item<val_t>()
-              << " Accuracy: "
-              << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])
-              << std::endl;
+    // std::cout << "Epoch " << epoch << " Loss: " << d_loss.item<val_t>()
+    //           << " Accuracy: "
+    //           << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])
+    //           << std::endl;
 
     if (epoch >= skip_cache_warmup) {
       times_arr.push_back(end - start);

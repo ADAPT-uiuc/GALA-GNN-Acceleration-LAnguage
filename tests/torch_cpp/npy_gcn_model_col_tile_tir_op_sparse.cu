@@ -559,10 +559,10 @@ int main(int argc, char **argv) {
 
     auto correct = torch::sum(pred_idx == labels_test);
 
-    std::cout << "Epoch " << epoch << " Loss: " << d_loss.item<val_t>()
-              << " Accuracy: "
-              << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])
-              << std::endl;
+    // std::cout << "Epoch " << epoch << " Loss: " << d_loss.item<val_t>()
+    //           << " Accuracy: "
+    //           << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])
+    //           << std::endl;
 
     if (epoch >= skip_cache_warmup) {
       times_arr.push_back(end - start);

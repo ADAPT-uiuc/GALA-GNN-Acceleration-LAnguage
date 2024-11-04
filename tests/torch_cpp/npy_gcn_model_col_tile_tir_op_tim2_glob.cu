@@ -723,8 +723,8 @@ int main(int argc, char **argv) {
     cudaDeviceSynchronize();
     end = get_time();
 
-    std::cout << "After forward: " << std::endl;
-    printMemoryUsage();
+    // std::cout << "After forward: " << std::endl;
+    // printMemoryUsage();
 
 
     cudaDeviceSynchronize();
@@ -743,8 +743,8 @@ int main(int argc, char **argv) {
     cudaDeviceSynchronize();
     end_train = get_time();
 
-    std::cout << "After backward: " << std::endl;
-    printMemoryUsage();
+    // std::cout << "After backward: " << std::endl;
+    // printMemoryUsage();
 
 
     if (epoch % mod_v == 0) {

@@ -402,10 +402,12 @@ class NodeAggregate : public torch::autograd::Function<NodeAggregate> {
 public:
   static torch::Tensor
   forward(torch::autograd::AutogradContext *ctx, torch::Tensor input_dense,
-          torch::Tensor offset_graph, torch::Tensor columns_graph,
-          torch::Tensor value_graph, torch::Tensor bounds) {
-    ctx->save_for_backward(
-        {offset_graph, columns_graph, value_graph, bounds, input_dense});
+          torch::Tensor value_graph, int li) {
+    ctx->saved_data["li"] = li;
+    torch::Tensor offset_graph = global_offset_graph[2 * li];
+    torch::Tensor bounds = global_bounds[2 * li];
+    int segments = global_segments[2 * li];
+    ctx->save_for_backward({value_graph, input_dense});
     return gather_forward_gcn(input_dense, offset_graph, columns_graph,
                               value_graph, bounds, global_nrows,
                               global_segments, global_is_directed);
@@ -416,11 +418,13 @@ public:
            torch::autograd::tensor_list grad_outputs) {
     torch::Tensor dZ = grad_outputs[0];
     auto saved = ctx->get_saved_variables();
-    torch::Tensor offset_graph = saved[0];
-    torch::Tensor columns_graph = saved[1];
-    torch::Tensor value_graph = saved[2];
-    torch::Tensor bounds = saved[3];
-    torch::Tensor X = saved[4];
+    torch::Tensor value_graph = saved[0];
+    torch::Tensor X = saved[1];
+    int li = ctx->saved_data["li"].toInt();
+    torch::Tensor offset_graph = global_offset_graph[2 * li + 1];
+    torch::Tensor columns_graph = global_columns_graph[2 * li + 1];
+    torch::Tensor bounds = global_bounds[2 * li + 1];
+    int segments = global_segments[2 * li + 1];
 
     // TODO: You can use ctx to see if a certain input requires a grad at all.
     // THEN calcuate the grad without always doing it.
@@ -428,7 +432,6 @@ public:
     return {gather_forward_gcn(dZ, offset_graph, columns_graph, value_graph,
                                bounds, global_nrows, global_segments,
                                global_is_directed),
-            torch::Tensor(), torch::Tensor(),
             edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,
                        global_nrows, global_segments, global_is_directed),
             torch::Tensor()};
@@ -479,19 +482,38 @@ public:
                                torch::Tensor columns_graph,
                                torch::Tensor value_graph,
                                torch::Tensor bounds) {
+    // double start, end;
+    // cudaDeviceSynchronize();
+    // start = get_time();
     torch::Tensor val_exp = torch::exp(value_graph);
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Softmax internal exp:" << (end - start) * 1000 << std::endl;
+    // cudaDeviceSynchronize();
+    // start = get_time();
     torch::Tensor row_sum = node_spmv_backward_of_sddmm(
         offset_graph, columns_graph, val_exp, bounds, global_nrows,
         global_segments, global_is_directed);
-    // std::cout << "D1" << std::endl;
-    // for (int i = 0; i < 100; i++){
-    //   std::cout << i << ": " << row_sum[i].item<float>() << std::endl;;
-    // }
-    value_graph = inplace_softmax_sddvv(row_sum, offset_graph, columns_graph,
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Softmax internal sum:" << (end - start) * 1000 << std::endl;
+    auto options = torch::TensorOptions()
+                       .dtype(torch::kFloat)
+                       .requires_grad(true)
+                       .device(torch::kCUDA, 0);
+    // val_exp = torch::ones({val_exp.sizes()[0]}, options);
+    // row_sum = torch::ones({row_sum.sizes()[0]}, options);
+    // cudaDeviceSynchronize();
+    // start = get_time();
+    // row_sum = torch::reciprocal(row_sum);
+    val_exp = inplace_softmax_sddvv(row_sum, offset_graph, columns_graph,
                                     val_exp, bounds, global_nrows,
                                     global_segments, global_is_directed);
-    ctx->save_for_backward({offset_graph, columns_graph, value_graph, bounds});
-    return value_graph;
+    // cudaDeviceSynchronize();
+    // end = get_time();
+    // std::cout << "Softmax internal div:" << (end - start) * 1000 << std::endl;
+    ctx->save_for_backward({offset_graph, columns_graph, val_exp, bounds});
+    return val_exp;
   }
 
   static torch::autograd::tensor_list

@@ -1353,8 +1353,46 @@ extern "C" __global__ void __launch_bounds__(256)
          j += 32) {
       C[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] =
           C[(j +
-             J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] /
+             J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] *
           (A[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
+    }
+  }
+}
+extern "C" __global__ void __launch_bounds__(256)
+    default_function_kernel_softmax_sddvv_undir_4(
+        float *__restrict__ C,           // output (values)
+        int *__restrict__ J_indptr_data, // index pointer
+        float *__restrict__ A,           // input A
+        int *__restrict__ J_indices_data, int nrows) {
+  if (((((int)blockIdx.x) * 4) + ((int)threadIdx.y)) < nrows) { // This is fine
+    for (int j = (int)threadIdx.x; // Not fine. This should increase by 32
+         j <
+         (J_indptr_data[(((((int)blockIdx.x) * 4) + ((int)threadIdx.y)) + 1)] -
+          J_indptr_data[((((int)blockIdx.x) * 4) + ((int)threadIdx.y))]);
+         j += 32) {
+      C[(j + J_indptr_data[((((int)blockIdx.x) * 4) + ((int)threadIdx.y))])] =
+          C[(j +
+             J_indptr_data[((((int)blockIdx.x) * 4) + ((int)threadIdx.y))])] *
+          (A[((((int)blockIdx.x) * 4) + ((int)threadIdx.y))]);
+    }
+  }
+}
+extern "C" __global__ void __launch_bounds__(256)
+    default_function_kernel_softmax_sddvv_undir_1(
+        float *__restrict__ C,           // output (values)
+        int *__restrict__ J_indptr_data, // index pointer
+        float *__restrict__ A,           // input A
+        int *__restrict__ J_indices_data, int nrows) {
+  if (((((int)blockIdx.x))) < nrows) { // This is fine
+    for (int j = (int)threadIdx.x; // Not fine. This should increase by 32
+         j <
+         (J_indptr_data[(((((int)blockIdx.x))) + 1)] -
+          J_indptr_data[((((int)blockIdx.x)))]);
+         j += 32) {
+      C[(j + J_indptr_data[((((int)blockIdx.x)))])] =
+          C[(j +
+             J_indptr_data[((((int)blockIdx.x)))])] *
+          (A[((((int)blockIdx.x)))]);
     }
   }
 }
