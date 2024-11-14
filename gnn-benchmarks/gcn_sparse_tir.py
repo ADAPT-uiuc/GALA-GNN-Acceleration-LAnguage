@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from torch.utils.dlpack import to_dlpack as th_to_dlpack
 from torch.utils.dlpack import from_dlpack as th_from_dlpack
 
+import time
 from utils import get_dataset
 import tvm
 import tvm.testing
@@ -82,7 +83,7 @@ def csr2ell_index_map(i, j):
 
 kernels = {}
 kernel_args = {}
-
+forward_pass_times = []
 
 class SpMM(torch.autograd.Function):
     @staticmethod
@@ -123,7 +124,7 @@ class GraphConv(nn.Module):
         self.fc_neigh = nn.Linear(self._in_src_feats, out_feats, bias=False)
         self._norm = norm
         self._weight = nn.Parameter(torch.Tensor(in_feats, out_feats))
-        self._bias = nn.Parameter(torch.Tensor(out_feats))
+        #self._bias = nn.Parameter(torch.Tensor(out_feats))
         self._activation = activation
         self.reset_parameters()
 
@@ -176,17 +177,17 @@ class GraphConv(nn.Module):
                 if weight is not None:
                     feat_src = torch.matmul(feat_src, weight)
                 graph.srcdata["h"] = feat_src
-                graph.update_all(aggregate_fn, fn.sum(msg="m", out="h"))
-                #rst = SpMM.apply(feat_src) # <--- sparsetir integration 
-                rst = graph.dstdata["h"]
-                #graph.dstdata["h"] = rst
+                #graph.update_all(aggregate_fn, fn.sum(msg="m", out="h"))
+                rst = SpMM.apply(feat_src) # <--- sparsetir integration 
+                #rst = graph.dstdata["h"]
+                graph.dstdata["h"] = rst
             else:
                 # aggregate first then mult W
                 graph.srcdata["h"] = feat_src
-                graph.update_all(aggregate_fn, fn.sum(msg="m", out="h"))
-                #rst = SpMM.apply(feat_src) # <--- sparstir integration
-                rst = graph.dstdata["h"]
-                #graph.dstdata["h"] = rst
+                #graph.update_all(aggregate_fn, fn.sum(msg="m", out="h"))
+                rst = SpMM.apply(feat_src) # <--- sparstir integration
+                #rst = graph.dstdata["h"]
+                graph.dstdata["h"] = rst
                 if weight is not None:
                     rst = torch.matmul(rst, weight)
 
@@ -200,12 +201,12 @@ class GraphConv(nn.Module):
                 norm = torch.reshape(norm, shp)
                 rst = rst * norm
 
-            if self._bias is not None:
-                rst = rst + self._bias
+            #if self._bias is not None:
+                #rst = rst + self._bias
 
             if self._activation is not None:
                 rst = self._activation(rst)
-
+            
             return rst
 
 class GCN(nn.Module):
@@ -214,14 +215,14 @@ class GCN(nn.Module):
 
         self.graph = g
         self.layers = nn.ModuleList()
-        self.bns = nn.ModuleList()
+        #self.bns = nn.ModuleList()
         # input layer
         self.layers.append(GraphConv(in_feats, hidden_feats))
-        self.bns.append(nn.BatchNorm1d(hidden_feats))
+        #self.bns.append(nn.BatchNorm1d(hidden_feats))
         # hidden layers
         for _ in range(num_layers - 2):
             self.layers.append(GraphConv(hidden_feats, hidden_feats))
-            self.bns.append(nn.BatchNorm1d(hidden_feats))
+            #self.bns.append(nn.BatchNorm1d(hidden_feats))
         # output layer
         self.layers.append(GraphConv(hidden_feats, out_feats))
         self.dropout = nn.Dropout(p=dropout)
@@ -229,16 +230,21 @@ class GCN(nn.Module):
     def reset_parameters(self):
         for layer in self.layers:
             layer.reset_parameters()
-        for bn in self.bns:
-            bn.reset_parameters()
+        #for bn in self.bns:
+            #bn.reset_parameters()
 
     def forward(self, x):
+        torch.cuda.synchronize()
+        start = time.time()
         for i, layer in enumerate(self.layers[:-1]):
             x = layer(x,self.graph)
-            x = self.bns[i](x)
+            #print(time.time()-start)
+            #x = self.bns[i](x)
             x = F.relu(x)
-            x = self.dropout(x)
+            #x = self.dropout(x)
         x = self.layers[-1](x,self.graph)
+        torch.cuda.synchronize()
+        forward_pass_times.append(time.time()-start)
 
         return x.log_softmax(dim=-1)
 
@@ -248,10 +254,14 @@ def train(dataset, model, feats, y_true, train_idx, optimizer,graph):
 
     optimizer.zero_grad()
     out = model(feats)[train_idx]
+    '''
     if dataset == "ppi":
         loss = F.binary_cross_entropy_with_logits(out, y_true[train_idx])
     else:
         loss = F.nll_loss(out, y_true[train_idx])
+    '''
+    criterion = nn.CrossEntropyLoss()
+    loss = criterion(out, y_true[train_idx])
     loss.backward()
     optimizer.step()
 
@@ -421,6 +431,8 @@ bucketing_config = {
     "cora": [1, 2, 4],
     "citeseer": [1, 2, 4],
     "reddit": [1, 2, 4, 8, 16, 32, 64, 128, 256, 512],
+    "products": [1, 2, 4, 8, 16, 32],
+    "corafull": [1, 2, 4, 8, 16, 32, 64],
 }
 
 col_part = {
@@ -431,6 +443,8 @@ col_part = {
     "citeseer": 1,
     "ppi": 8,
     "reddit": 8,
+    "products": 16,
+    "corafull": 4,
 }
 
 
@@ -459,17 +473,17 @@ def main():
 
     create_kernels(
         g,
-        [feats.shape[-1], 128, num_classes],
+        [feats.shape[-1], 32, num_classes],
         bucketing_config[args.dataset],
         col_part[args.dataset],
     )
 
     model = GCN(
         in_feats=feats.size(-1),
-        hidden_feats=128,
+        hidden_feats=32,
         out_feats=num_classes,
-        num_layers=3,
-        dropout=0.5,
+        num_layers=2,
+        dropout=0,
         g=g,
     ).to(device)
 
@@ -485,11 +499,17 @@ def main():
     end_event = torch.cuda.Event(enable_timing=True)
     start_event.record()
     for _ in range(active):
-        loss = train(args.dataset, model, feats, labels, train_idx, optimizer, g)
+        # loss = train(args.dataset, model, feats, labels, train_idx, optimizer, g)
+        model.eval()
+        _ = model(feats)
     end_event.record()
     torch.cuda.synchronize()
     dur = start_event.elapsed_time(end_event) / active
+    print("---------------GCN---dataset: {}------SparseTIR---------------".format(args.dataset))
     print("Training time: {} ms/epoch".format(dur))
+    print("Forward Pass (training) time: {}".format(np.mean(np.array(forward_pass_times[1:]))*1000))
+    print("----------------------------------------------")
+
 
 
 if __name__ == "__main__":
