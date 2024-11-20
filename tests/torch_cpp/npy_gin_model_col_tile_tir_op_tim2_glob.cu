@@ -252,17 +252,29 @@ struct GIN : torch::nn::Module {
       torch::Tensor res = (1 + eps1) * input_dense + aggr_input_dense;
       res = fc1->forward(res);
       res = torch::relu(res);
-      torch::Tensor res_n = GatherForward::apply(res, 0);
-      res = (1 + eps2) * res + res_n;
-      res = fc2->forward(res);
+      if (hidden_feat_size > out_feat_size){
+        res = fc2->forward(res);
+        torch::Tensor res_n = GatherForward::apply(res, 0);
+        res = (1 + eps2) * res + res_n;
+      } else {
+        torch::Tensor res_n = GatherForward::apply(res, 0);
+        res = (1 + eps2) * res + res_n;
+        res = fc2->forward(res);
+      }
       return {torch::log_softmax(res, /*dim=*/1)};
     } else {
       torch::Tensor res = (1 + eps1) * input_dense + aggr_input_dense;
       res = fc1->forward(res);
       res = torch::relu(res);
-      torch::Tensor res_n = GatherForward::apply(res, 2);
-      res = (1 + eps2) * res + res_n;
-      res = fc2->forward(res);
+      if (hidden_feat_size > out_feat_size){
+        res = fc2->forward(res);
+        torch::Tensor res_n = GatherForward::apply(res, 2);
+        res = (1 + eps2) * res + res_n;
+      } else {
+        torch::Tensor res_n = GatherForward::apply(res, 2);
+        res = (1 + eps2) * res + res_n;
+        res = fc2->forward(res);
+      }
       return {torch::log_softmax(res, /*dim=*/1)};
     }
   }
@@ -649,8 +661,8 @@ int main(int argc, char **argv) {
   global_segments.push_back(segments_2f);
   global_segments.push_back(segments_2b);
   torch::Tensor aggr_res = gather_forward_gcn(t_iden, t_offsets, t_cols, t_vals,
-                         total_bounds, nrows, segments, directed);
-  auto net = std::make_shared<GIN>(emb_size, 32, classes, directed, 0);
+                         total_bounds, nrows, segments, directed).detach();
+  auto net = std::make_shared<GIN>(emb_size, 32, classes, directed, 0.1);
   cudaDeviceSynchronize();
   end_init = get_time();
 

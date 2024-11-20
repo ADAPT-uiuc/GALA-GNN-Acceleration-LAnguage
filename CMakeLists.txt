@@ -236,10 +236,10 @@ if (DSL)
 #    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ltorch -ltorch_cpu -lc10")
 endif ()
 
-if (TORCH_CUDA)
-    include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
-    link_libraries("${TORCH_LIBRARIES}" cudart cusparse)
-endif ()
+# if (TORCH_CUDA)
+#     include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+#     link_libraries("${TORCH_LIBRARIES}" cudart cusparse)
+# endif ()
 
 # Check include files
 INCLUDE(CheckIncludeFiles)
@@ -290,7 +290,7 @@ endif ()
 
 # Common compiler libraries
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-as-needed -lpthread -lm -ldl")
-set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} -lnuma")
+# set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} -lnuma")
 
 # Set compiler flags based on the use or not mkl
 if (USE_MKL)

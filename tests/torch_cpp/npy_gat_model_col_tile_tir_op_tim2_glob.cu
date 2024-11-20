@@ -486,6 +486,7 @@ public:
     // cudaDeviceSynchronize();
     // start = get_time();
     torch::Tensor val_exp = torch::exp(value_graph);
+    val_exp = torch::clamp(val_exp, 0.0, 1e12);
     // cudaDeviceSynchronize();
     // end = get_time();
     // std::cout << "Softmax internal exp:" << (end - start) * 1000 << std::endl;
@@ -505,7 +506,8 @@ public:
     // row_sum = torch::ones({row_sum.sizes()[0]}, options);
     // cudaDeviceSynchronize();
     // start = get_time();
-    // row_sum = torch::reciprocal(row_sum);
+    row_sum = row_sum + 1e-12;
+    row_sum = torch::reciprocal(row_sum);
     val_exp = inplace_softmax_sddvv(row_sum, offset_graph, columns_graph,
                                     val_exp, bounds, global_nrows,
                                     global_segments, global_is_directed);

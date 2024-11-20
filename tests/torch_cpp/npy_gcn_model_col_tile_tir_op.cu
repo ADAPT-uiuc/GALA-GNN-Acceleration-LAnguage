@@ -469,6 +469,16 @@ int main(int argc, char **argv) {
       torch::from_blob(dA_csrOffsets, {(nrows + 1) * segments}, options_cu_int);
   torch::Tensor t_cols = torch::from_blob(dA_columns, {nvals}, options_cu_int);
 
+
+  torch::Tensor t_offsets_x0 = t_offsets.slice(0, 0, nrows);
+  torch::Tensor t_offsets_x1 = t_offsets.slice(0, 1, nrows + 1);
+  torch::Tensor diff_offset = t_offsets_x1 - t_offsets_x0;
+   torch::Tensor float_tensor = diff_offset.to(torch::kFloat);
+  torch::Tensor max_val = torch::max(float_tensor);
+  torch::Tensor std_val = torch::std(float_tensor);
+  std::cout << "Max: " << max_val.item<float>() << ", std: " << std_val.item<float>() << std::endl; 
+  std::cout << "Min: " << torch::min(float_tensor).item<float>() << ", avg: " << nvals/nrows << std::endl; 
+
   auto options_cu_long =
       torch::TensorOptions().dtype(torch::kLong).device(torch::kCUDA, 0);
   torch::Tensor t_labs = torch::from_blob(dL, {nrows}, options_cu_long);
@@ -518,6 +528,8 @@ int main(int argc, char **argv) {
   double start, end;
   double start_train, end_train;
   val_t randVal;
+  float max_acc = 0;
+
   std::vector<double> times_arr, times_arr_train;
   for (size_t epoch = 1; epoch <= num_iters; ++epoch) {
     // Reset gradients.
@@ -560,6 +572,11 @@ int main(int argc, char **argv) {
 
     auto correct = torch::sum(pred_idx == labels_test);
 
+    float acc = (correct.item<val_t>() * 100.0 / labels_test.sizes()[0]);
+    if (max_acc<acc){
+      max_acc = acc;
+    }
+
     std::cout << "Epoch " << epoch << " Loss: " << d_loss.item<val_t>()
               << " Accuracy: "
               << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])
@@ -585,4 +602,6 @@ int main(int argc, char **argv) {
             << calc_std(times_arr) << std::endl;
   std::cout << "Train: " << calc_mean(times_arr_train) << ","
             << calc_std(times_arr_train) << std::endl;
+  std::cout << "Accuracy: " << max_acc << std::endl;
+  
 }

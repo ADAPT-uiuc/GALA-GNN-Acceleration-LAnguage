@@ -682,6 +682,7 @@ int main(int argc, char **argv) {
 
   double start, end;
   double start_train, end_train;
+  float max_acc = 0;
   val_t randVal;
   std::vector<double> times_arr, times_arr_train;
   for (size_t epoch = 1; epoch <= num_iters; ++epoch) {
@@ -720,6 +721,11 @@ int main(int argc, char **argv) {
 
     auto correct = torch::sum(pred_idx == labels_test);
 
+    float acc = (correct.item<val_t>() * 100.0 / labels_test.sizes()[0]);
+    if (max_acc<acc){
+      max_acc = acc;
+    }
+
     std::cout << "Epoch " << epoch << " Loss: " << d_loss.item<val_t>()
               << " Accuracy: "
               << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])
@@ -744,4 +750,5 @@ int main(int argc, char **argv) {
             << calc_std(times_arr) << std::endl;
   std::cout << "Train: " << calc_mean(times_arr_train) << ","
             << calc_std(times_arr_train) << std::endl;
+  std::cout << "Accuracy: " << max_acc << std::endl;
 }

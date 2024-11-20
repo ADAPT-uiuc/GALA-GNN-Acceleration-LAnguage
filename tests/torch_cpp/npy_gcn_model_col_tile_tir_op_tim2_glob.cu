@@ -135,6 +135,120 @@ torch::Tensor gather_forward_gcn(torch::Tensor input_dense,
         }
       }
     } else {
+      // if (((int)dcols / 1408) && ((int)dcols % 1408 < 32)){
+      //   cudaStreamCreate(&stream1);
+      //   dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 1024);
+      //   dim3 blockDim(32, 8);
+      //   default_function_kernel64_undir<<<gridDim, blockDim, 0, stream1>>>(
+      //       oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+      //       &col_ptr[start_vals], nrows, dcols);
+      //   if ((dcols % 32) > 0) {
+      //       cudaStreamCreate(&stream3);
+      //       dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+      //       dim3 blockDim_rem(dcols % 32, 8);
+      //       default_function_kernel_rem_undir<<<gridDim_rem, blockDim_rem, 0,
+      //                                           stream3>>>(
+      //           oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+      //           &col_ptr[start_vals], nrows, dcols,
+      //           (((int)dcols / 1024) * 1024));
+      //   }
+
+      // }
+      // if (((int)dcols / 1024) && ((int)dcols % 1024 < 32)){
+      //   cudaStreamCreate(&stream1);
+      //   dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 1024);
+      //   dim3 blockDim(32, 8);
+      //   default_function_kernel64_undir<<<gridDim, blockDim, 0, stream1>>>(
+      //       oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+      //       &col_ptr[start_vals], nrows, dcols);
+      //   if ((dcols % 32) > 0) {
+      //       cudaStreamCreate(&stream3);
+      //       dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+      //       dim3 blockDim_rem(dcols % 32, 8);
+      //       default_function_kernel_rem_undir<<<gridDim_rem, blockDim_rem, 0,
+      //                                           stream3>>>(
+      //           oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+      //           &col_ptr[start_vals], nrows, dcols,
+      //           (((int)dcols / 1024) * 1024));
+      //   }
+
+      // }
+      // else if (((int)dcols / 576) && ((int)dcols % 576 < 32)){
+      //   cudaStreamCreate(&stream1);
+      //   dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 576);
+      //   dim3 blockDim(32, 8);
+      //   default_function_kernel64_undir<<<gridDim, blockDim, 0, stream1>>>(
+      //       oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+      //       &col_ptr[start_vals], nrows, dcols);
+      //   if ((dcols % 32) > 0) {
+      //       cudaStreamCreate(&stream3);
+      //       dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+      //       dim3 blockDim_rem(dcols % 32, 8);
+      //       default_function_kernel_rem_undir<<<gridDim_rem, blockDim_rem, 0,
+      //                                           stream3>>>(
+      //           oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+      //           &col_ptr[start_vals], nrows, dcols,
+      //           (((int)dcols / 576) * 576));
+      //   }
+
+      // }
+      // else if (((int)dcols / 512) && ((int)dcols % 512 < 32)){
+      //   cudaStreamCreate(&stream1);
+      //   dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 512);
+      //   dim3 blockDim(32, 8);
+      //   default_function_kernel64_undir<<<gridDim, blockDim, 0, stream1>>>(
+      //       oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+      //       &col_ptr[start_vals], nrows, dcols);
+      //   if ((dcols % 32) > 0) {
+      //       cudaStreamCreate(&stream3);
+      //       dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+      //       dim3 blockDim_rem(dcols % 32, 8);
+      //       default_function_kernel_rem_undir<<<gridDim_rem, blockDim_rem, 0,
+      //                                           stream3>>>(
+      //           oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+      //           &col_ptr[start_vals], nrows, dcols,
+      //           (((int)dcols / 512) * 512));
+      //   }
+
+      // }
+      // else if (((int)dcols / 256) && ((int)dcols % 256 == 0)){
+      //   cudaStreamCreate(&stream1);
+      //   dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 256);
+      //   dim3 blockDim(32, 8);
+      //   default_function_kernel64_undir<<<gridDim, blockDim, 0, stream1>>>(
+      //       oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+      //       &col_ptr[start_vals], nrows, dcols);
+
+      // }
+      // else if (((int)dcols / 128) && ((int)dcols % 128 == 0)){
+      //   cudaStreamCreate(&stream1);
+      //   dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 128);
+      //   dim3 blockDim(32, 8);
+      //   default_function_kernel64_undir<<<gridDim, blockDim, 0, stream1>>>(
+      //       oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+      //       &col_ptr[start_vals], nrows, dcols);
+
+      // }
+      // else 
+    //  if (((int)dcols / 128) && ((int)dcols % 128 < 32)){
+    //     cudaStreamCreate(&stream1);
+    //     dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 128);
+    //     dim3 blockDim(32, 8);
+    //     default_function_kernel64_undir<<<gridDim, blockDim, 0, stream1>>>(
+    //         oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+    //         &col_ptr[start_vals], nrows, dcols);
+    //     if ((dcols % 32) > 0) {
+    //         cudaStreamCreate(&stream3);
+    //         dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1, 1);
+    //         dim3 blockDim_rem(dcols % 32, 8);
+    //         default_function_kernel_rem_undir<<<gridDim_rem, blockDim_rem, 0,
+    //                                             stream3>>>(
+    //             oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr,
+    //             &col_ptr[start_vals], nrows, dcols,
+    //             (((int)dcols / 128) * 128));
+    //     }
+    //   }
+    //   else 
       if ((int)dcols / 64) {
         cudaStreamCreate(&stream1);
         dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 64);
@@ -284,7 +398,6 @@ struct GCN : torch::nn::Module {
         res = GatherForward::apply(res, 2);
         res = degree * res;
         res = fc2->forward(res);
-
       }
       return {torch::log_softmax(res, /*dim=*/1)};
     }
@@ -367,7 +480,7 @@ int main(int argc, char **argv) {
   nT nvals1 = adj_2f->nvals();
   end_pre = get_time();
   std::cout << "Preprocess time: " << end_pre - start_pre << std::endl;
-  //------------------------------------------------------------
+   //------------------------------------------------------------
   // -------------- Tiling the input graph --------------------
   auto options_int =
       torch::TensorOptions().dtype(torch::kInt).requires_grad(false);
@@ -473,6 +586,10 @@ int main(int argc, char **argv) {
   iT *offset_ptr_2b = total_offsets_2b.data_ptr<iT>();
   iT *col_ptr_2b = total_cols_2b.data_ptr<iT>();
   vT *val_ptr_2b = total_vals_2b.data_ptr<vT>();
+
+  end_pre = get_time();
+  std::cout << "Preprocess time: " << end_pre - start_pre << std::endl;
+ 
   global_bounds.push_back(total_bounds);
   global_bounds.push_back(total_bounds);
   global_bounds.push_back(total_bounds_1f);
@@ -692,7 +809,9 @@ int main(int argc, char **argv) {
   cudaDeviceSynchronize();
   end_init = get_time();
 
-  std::cout << "Initialization time: " << end_init - start_init << std::endl;
+  double init_time = (end_init - start_init)/1000;
+
+  std::cout << "Initialization time: " << end_init - start_init << " " << init_time << std::endl;
 
   net->to(device);
 
@@ -706,7 +825,6 @@ int main(int argc, char **argv) {
 
   double start, end;
   double start_train, end_train;
-  val_t randVal;
   std::vector<double> times_arr, times_arr_train;
 
   int mod_v = 5;
@@ -783,5 +901,8 @@ int main(int argc, char **argv) {
             << calc_std(times_arr) << std::endl;
   std::cout << "Train: " << calc_mean(times_arr_train) << ","
             << calc_std(times_arr_train) << std::endl;
+ 
+  // std::cout << "Total: " << calc_mean(times_arr) + calc_mean(times_arr_train) + init_time << std::endl;
+  
   std::cout << "Total: " << calc_mean(times_arr) + calc_mean(times_arr_train) << std::endl;
 }

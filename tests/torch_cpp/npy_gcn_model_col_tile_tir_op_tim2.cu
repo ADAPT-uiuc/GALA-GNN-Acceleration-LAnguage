@@ -489,6 +489,9 @@ int main(int argc, char **argv) {
     cudaDeviceSynchronize();
     end_train = get_time();
 
+    std::cout << "After backward: " << std::endl;
+    printMemoryUsage();
+
     torch::Tensor prediction_test = prediction.index({t_test_mask});
     torch::Tensor labels_test = t_labs.index({t_test_mask});
 
@@ -520,4 +523,5 @@ int main(int argc, char **argv) {
             << calc_std(times_arr) << std::endl;
   std::cout << "Train: " << calc_mean(times_arr_train) << ","
             << calc_std(times_arr_train) << std::endl;
+  std::cout << "Total: " << calc_mean(times_arr) + calc_mean(times_arr_train) << std::endl;
 }

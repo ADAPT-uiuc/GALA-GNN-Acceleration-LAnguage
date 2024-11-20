@@ -464,7 +464,7 @@ int main(int argc, char **argv) {
   double start_init, end_init;
   cudaDeviceSynchronize();
   start_init = get_time();
-  auto net = std::make_shared<GIN>(emb_size, 32, classes, false, 0);
+  auto net = std::make_shared<GIN>(emb_size, 32, classes, false, 0.1);
   cudaDeviceSynchronize();
   end_init = get_time();
 
@@ -538,4 +538,5 @@ int main(int argc, char **argv) {
             << calc_std(times_arr) << std::endl;
   std::cout << "Train: " << calc_mean(times_arr_train) << ","
             << calc_std(times_arr_train) << std::endl;
+  std::cout << "Total: " << calc_mean(times_arr) + calc_mean(times_arr_train) << std::endl;
 }

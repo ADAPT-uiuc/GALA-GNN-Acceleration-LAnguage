@@ -451,15 +451,12 @@ public:
     torch::Tensor offset_graph = saved[0];
     torch::Tensor columns_graph = saved[1];
     torch::Tensor bounds = saved[2];
-    return {node_spmv_backward_of_sddmm(
+    torch::Tensor back_res = node_spmv_backward_of_sddmm(
                 offset_graph, columns_graph, // This should be the reverse graph
                 d_value_graph, bounds, global_nrows, global_segments,
-                global_is_directed),
-            node_spmv_backward_of_sddmm(
-                offset_graph,
-                columns_graph, // This should be the original graph
-                d_value_graph, bounds, global_nrows, global_segments,
-                global_is_directed),
+                global_is_directed);
+    return {back_res,
+            back_res,
             torch::Tensor(),
             torch::Tensor(),
             torch::Tensor(),
@@ -478,6 +475,7 @@ public:
     // cudaDeviceSynchronize();
     // start = get_time();
     torch::Tensor val_exp = torch::exp(value_graph);
+    val_exp = torch::clamp(val_exp, 0.0, 1e12);
     // cudaDeviceSynchronize();
     // end = get_time();
     // std::cout << "Softmax internal exp:" << (end - start) * 1000 << std::endl;
@@ -497,6 +495,7 @@ public:
     // row_sum = torch::ones({row_sum.sizes()[0]}, options);
     // cudaDeviceSynchronize();
     // start = get_time();
+    // row_sum = row_sum + 1e-12;
     row_sum = torch::reciprocal(row_sum);
     val_exp = inplace_softmax_sddvv(row_sum, offset_graph, columns_graph,
                                     val_exp, bounds, global_nrows,
@@ -974,10 +973,10 @@ int main(int argc, char **argv) {
 
     auto correct = torch::sum(pred_idx == labels_test);
 
-    // std::cout << "Epoch " << epoch << " Loss: " << d_loss.item<val_t>()
-    //           << " Accuracy: "
-    //           << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])
-    //           << std::endl;
+    std::cout << "Epoch " << epoch << " Loss: " << d_loss.item<val_t>()
+              << " Accuracy: "
+              << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])
+              << std::endl;
 
     if (epoch >= skip_cache_warmup) {
       times_arr.push_back(end - start);
@@ -998,4 +997,5 @@ int main(int argc, char **argv) {
             << calc_std(times_arr) << std::endl;
   std::cout << "Train: " << calc_mean(times_arr_train) << ","
             << calc_std(times_arr_train) << std::endl;
+  std::cout << "Total: " << calc_mean(times_arr) + calc_mean(times_arr_train) << std::endl;
 }
