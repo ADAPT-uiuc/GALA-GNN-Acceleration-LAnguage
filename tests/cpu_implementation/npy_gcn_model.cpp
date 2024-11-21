@@ -63,8 +63,9 @@ torch::Tensor gather_forward_gcn(torch::Tensor input_dense,
   int *col_ptr = columns_graph.data_ptr<int>();
   float *val_ptr = value_graph.data_ptr<float>();
 
+  auto wsum_aggr = wsumAgg<val_t, val_t, ind2_t>;
   // Add SpMM call here
-
+  gSpMM_torch(iden_ptr, offset_ptr, col_ptr, val_ptr, oden_array, (int)nrows, (int)dcols, wsum_aggr);
   return output_dense;
 }
 
@@ -153,8 +154,8 @@ int main(int argc, char **argv) {
   // Timing configs
   int num_iters = stoi(string(argv[2]));
 
-  // Column tiling
-  iT cols_per_tile = stoi(string(argv[3]));
+//  // Column tiling
+//  iT cols_per_tile = stoi(string(argv[3]));
 
   // Const settings
   int skip_cache_warmup = 5;

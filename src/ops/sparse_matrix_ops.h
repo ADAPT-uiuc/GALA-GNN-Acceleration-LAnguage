@@ -1410,6 +1410,36 @@ void gSpMM(const SM *A, const DM *B, DM *out, Function aggregator) {
 //    free(tempArr);
 }
 
+template<typename iT, typename nT, typename vT, class Function>
+void gSpMM_torch(vT* input_dense,
+				nT* offset_graph,
+				iT* columns_graph,
+				vT* value_graph,
+                vT* output_dense,
+                iT A_rows,
+                iT B_cols,
+                Function aggregator) {
+    //Generalized SpMM.
+    //The output dense matrix line is used as an accumulator for the aggregated neighbour vectors.
+#pragma omp parallel for schedule(static, 8)
+    // iterate over all vertices
+    for (iT v = 0; v < A_rows; v++) {
+        nT row_offset1 = (nT) v * B_cols;
+        vT *base1 = output_dense + row_offset1;
+        nT first_node_edge = offset_graph[v];
+        nT last_node_edge = offset_graph[v + 1];
+
+        // iterate over all edges (adjucent)
+        for (nT e = first_node_edge; e < last_node_edge; e++) {
+            vT A_val = value_graph[e];
+            iT u = columns_graph[e];
+            nT row_offset2 = (nT) u * B_cols;
+            vT *base2 = input_dense + row_offset2;
+            aggregator(base1, base2, A_val, B_cols);
+        }
+    }
+}
+
 template<class DM, class SM, class Function>
 void gSpMM_skip(const SM *A, const DM *B, DM *out, Function aggregator, typename SM::itype skip_v) {
     //Generalized SpMM.
