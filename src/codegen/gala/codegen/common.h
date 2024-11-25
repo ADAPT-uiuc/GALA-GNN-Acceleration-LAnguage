@@ -10,18 +10,22 @@
 #include <fstream>
 #include <iostream>
 
+// Specify the target device
 enum Device{
     CPU_DEVICE,
     GPU_DEVICE
 };
 
+// The distrubuted environment the GNN will operate on
 enum Environment{
-    SINGLE_NODE_SINGLE,
-    SINGLE_NODE_MULTI,
-    MULTI_NODE_SINGLE,
-    MULTI_NODE_MULTI
+    SINGLE_NODE_SINGLE, // Single node with a single CPU/GPU
+    SINGLE_NODE_MULTI, // Single node with multiple CPUs/GPUs (Like the A100x4 Server)
+    MULTI_NODE_SINGLE, // Distributed multi-node setting, each with a single CPU/GPU
+    MULTI_NODE_MULTI // Distributed multi-node setting, each with multiple CPUs/GPUs
 };
 
+// Context of the execution used by GALA
+// TODO: How to support heterogenous execution? Use multiple contexts for each function?
 class GALAContext{
 private:
     Device device;
@@ -31,36 +35,38 @@ public:
         this->device = dev;
         this->env = env;
     }
-
+    // Get the target device
     Device getDevice(){
         return this->device;
     }
+    // Get the environment in terms of distribution
     Environment getEnv(){
         return this->env;
     }
 };
 
-class PyCodeLine{
-private:
-    int indentLevel;
-    std::string codeLine;
-public:
-    PyCodeLine(std::string &code){
-        this->indentLevel = 0;
-        this->codeLine = code;
-    }
-    PyCodeLine(int level, std::string &code){
-        this->indentLevel = level;
-        this->codeLine = code;
-    }
-
-    int getIndent(){
-        return this->indentLevel;
-    }
-    std::string* getCode(){
-        return &this->codeLine;
-    }
-};
+// Python code generation (Removed for now)
+//class PyCodeLine{
+//private:
+//    int indentLevel;
+//    std::string codeLine;
+//public:
+//    PyCodeLine(std::string &code){
+//        this->indentLevel = 0;
+//        this->codeLine = code;
+//    }
+//    PyCodeLine(int level, std::string &code){
+//        this->indentLevel = level;
+//        this->codeLine = code;
+//    }
+//
+//    int getIndent(){
+//        return this->indentLevel;
+//    }
+//    std::string* getCode(){
+//        return &this->codeLine;
+//    }
+//};
 
 // TODO -- For now both CmakeCode and KernelCode have the same operations
 //  Separate this out. CMake is common for all, but the kernel code would also have

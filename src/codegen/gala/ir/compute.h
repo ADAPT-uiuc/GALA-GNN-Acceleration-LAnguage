@@ -9,6 +9,19 @@
 //#include <memory>
 #include "data.h"
 
+enum NonLnrOp {
+    ReLU_OP,
+    LeakyReLU_OP
+}
+
+enum OpType {
+    POINTWISE, // Pointwise update of data
+    AGGREGATE_EDGE, // Edge aggregation operation (SDDMM-based)
+    AGGREGATE_NODE, // Node aggregation operation (SpMM-based)
+    UPDATE_EDGE, // Edge update operation (Edge softmax)
+    UPDATE_NODE, // Node update operation (NN, Non-linear op)
+}
+
 enum ComputeOp {
     LOAD_OP,
     DEGREES_OP,
