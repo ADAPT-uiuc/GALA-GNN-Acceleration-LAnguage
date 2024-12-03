@@ -1,5 +1,15 @@
 # GNN-Acceleration-Language
 
+## Prerequisites
+* Flex
+* Bison
+### Installation (Linux/Ubuntu)
+```angular2html
+sudo apt-get update
+sudo apt-get install flex
+sudo apt-get install bison
+```
+
 ## Data
 Scripts necessary for downloading data can be found in `scripts/data`.
 
