@@ -14,8 +14,8 @@
 
 #include <torch/torch.h>
 
-#include "../../src/matrix/csrc_matrix.h"
-#include "../../src/matrix/dense_matrix.h"
+#include "../../src/formats/csrc_matrix.h"
+#include "../../src/formats/dense_matrix.h"
 #include "../../src/ops/aggregators.h"
 #include "../../src/ops/sparse_matrix_ops.h"
 #include "../../src/ops/tiling.h"

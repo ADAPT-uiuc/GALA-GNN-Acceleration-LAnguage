@@ -4,8 +4,10 @@
 #include "../src/utils/mtx_io.h"
 #include "../src/utils/threading_utils.h"
 
-#include "../src/matrix/csrc_matrix.h"
-#include "../src/matrix/coo_matrix.h"
+#include "../src/formats/csrc_matrix.h"
+#include "../src/formats/coo_matrix.h"
+
+#include "../src/ops/aggregators.h"
 
 #include "../src/third_party/libnpy/npy.hpp"
 
@@ -19,7 +21,7 @@
 template<class SM, class DM>
 void getMaskSubgraphs(SM* adj, DM* mask, int layers, std::vector<SM *> &forward_vec, std::vector<SM *> &backward_vec){
     typedef typename SM::itype iT;
-    typedef typename SM::ntype nT; 
+    typedef typename SM::ntype nT;
     typedef typename SM::vtype vT;
 
     typedef typename DM::vtype dvT;
@@ -42,16 +44,16 @@ void getMaskSubgraphs(SM* adj, DM* mask, int layers, std::vector<SM *> &forward_
 
 #pragma omp parallel for schedule(dynamic, 1)
         for (iT i = 0; i < nrows; i++){
-            // new_offset[i + 1] = src_offset[i+1] - src_offset[i]; 
+            // new_offset[i + 1] = src_offset[i+1] - src_offset[i];
             if (mask_ptr[i] > 0){
-                new_offset[i + 1] = src_offset[i+1] - src_offset[i]; 
+                new_offset[i + 1] = src_offset[i+1] - src_offset[i];
             } else {
                 new_offset[i + 1] = 0;
-            }         
+            }
         }
 
         for (iT i = 0; i < nrows; i++){
-            new_offset[i + 1] = new_offset[i + 1] + new_offset[i]; 
+            new_offset[i + 1] = new_offset[i + 1] + new_offset[i];
         }
 
         nT new_nvals = new_offset[nrows];
@@ -69,9 +71,9 @@ void getMaskSubgraphs(SM* adj, DM* mask, int layers, std::vector<SM *> &forward_
             nT src_e_start = src_offset[i];
             nT src_e_end = src_offset[i + 1];
 
-            // std::cout << "i: " << i << std::endl; 
-            // std::cout << "i1: " << local_e_start << " " << local_e_end << std::endl; 
-            // std::cout << "i2: " << src_e_start << " " << src_e_end << std::endl; 
+            // std::cout << "i: " << i << std::endl;
+            // std::cout << "i1: " << local_e_start << " " << local_e_end << std::endl;
+            // std::cout << "i2: " << src_e_start << " " << src_e_end << std::endl;
 
             for (nT j = 0; j < (local_e_end - local_e_start); j++){
                 new_ids[local_e_start + j] = src_ids[src_e_start + j];
@@ -89,7 +91,7 @@ void getMaskSubgraphs(SM* adj, DM* mask, int layers, std::vector<SM *> &forward_
                     new_offset);
 
         forward_vec.push_back(new_adj);
-        
+
         SM *new_trans = new SM();
         buildTranspose(new_adj, new_trans);
         backward_vec.push_back(new_trans);

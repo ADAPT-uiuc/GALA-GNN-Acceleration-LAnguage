@@ -25,4 +25,4 @@
 #     add_executable(cuda_troch_gcn gcn_model.cu)
 # endif ()
 
-add_executable(spade_cpu_spmm_impl spade_cpu_spmm_impl.cpp)
+add_executable(gcn_test_ir gcn_test_IR.cpp)
