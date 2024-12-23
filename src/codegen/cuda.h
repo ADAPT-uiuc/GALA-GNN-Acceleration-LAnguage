@@ -30,7 +30,7 @@ public:
             "add_compile_definitions(ST_0)\n"
             "add_compile_definitions(A_ALLOC)";
         std::string cmakeExecutable = "add_executable(gala_model gala.cu)\n"
-            "target_compile_features(gala PRIVATE cxx_std_14)";
+            "target_compile_features(gala_model PRIVATE cxx_std_14)";
         cmakeCode.addCode(cmakeCudaBase);
         cmakeCode.addCode(cmakeExecutable);
     }

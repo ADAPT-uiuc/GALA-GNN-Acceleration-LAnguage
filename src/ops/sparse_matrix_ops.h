@@ -1,10 +1,10 @@
 //Matrix operations library based on the adopted abstraction.
 
 #include <omp.h>
-#include "../matrix/csrc_matrix.h"
-#include "../matrix/coo_matrix.h"
-#include "../matrix/dense_matrix.h"
-#include "../matrix/matrix_prop.h"
+#include "../formats/csrc_matrix.h"
+#include "../formats/coo_matrix.h"
+#include "../formats/dense_matrix.h"
+#include "../formats/matrix_prop.h"
 #include "../utils/threading_utils.h"
 
 #include "uelw_ops.h"
