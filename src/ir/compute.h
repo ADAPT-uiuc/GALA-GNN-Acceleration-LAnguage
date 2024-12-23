@@ -55,6 +55,9 @@ enum CompOptimization {
 // TODO - Add node / edge aggregation types.
 
 class CIRNode{
+public:
+    CIRNode() {};
+    virtual ~CIRNode() {};
 };
 
 class ComputeNode : public CIRNode {
@@ -67,6 +70,8 @@ private:
     std::vector<DataNode*> inputData;
     std::vector<DataNode*> outputData;
     std::vector<std::pair<CompOptimization, float>> opts;
+
+    std::string kernelName;
 
     // Points in the program are commented out for now
 //    // Program start point
@@ -81,6 +86,7 @@ public:
 
     // Op -- Also used to identify between the
     ComputeOp getOp() { return this->op;}
+    OpType getOpType() { return this->opType;}
 
 
     // Get opts
@@ -101,6 +107,9 @@ public:
     //  TODO it can change if any data transformationsare done on it.
     void addInputData(DataNode *new_input) { this->inputData.push_back(new_input); }
     void addOutputData(DataNode *new_output) { this->outputData.push_back(new_output); }
+
+    void setKernelName(std::string name) { this->kernelName = name; }
+    std::string getKernelName() { return this->kernelName; }
 };
 
 class ForwardNode : public ComputeNode {
@@ -137,6 +146,8 @@ public:
     int getIter() { return this->numIter; }
     int getValidStep() { return this->stepValid; }
     int getTestStep() { return this->stepTest; }
+    LossFunction getLossFunc() { return this->lossFunc; }
+    NNOptimizer getOptimizer() { return this->optimizer; }
 
     void clearLoopNodes() { this->loop.clear(); }
     void addLoopNode(ForwardNode *newNode) { this->loop.push_back(newNode); }

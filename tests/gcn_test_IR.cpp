@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
 	program.push_back(&trainingLoop);
 
 	auto ctx = new GALAContext(GPU_DEVICE, SINGLE_NODE_SINGLE);
-	std::string outputPath = "./";
+	std::string outputPath = "../test-codegen/";
 	auto genCode = CUDAGenerator(ctx, outputPath);
 	genCode.writeCode(program);
 
