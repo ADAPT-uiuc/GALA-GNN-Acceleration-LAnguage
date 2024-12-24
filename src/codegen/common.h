@@ -371,7 +371,7 @@ public:\n\
 };";
                         kernelCallCode.addCode(tempAutoGradFunction);
 
-                        std::string tempForwardAggrCall = "res = GatherForward::apply(res, offset_graph, columns_graph, value_graph);"
+                        std::string tempForwardAggrCall = "res = GatherForward::apply(res, offset_graph, columns_graph, value_graph);";
                         model.getForward()->addCode(tempForwardAggrCall);
                     } else if (cNode->getOpType() == UPDATE_NODE)
                     {
