@@ -328,7 +328,7 @@ forward(torch::Tensor input_dense,   // B\n\
       int nrows){";
                 model.getForwardCall()->addCode(tempFowradCall);
 
-                std::string resInit = "torch::Tensor res;";
+                std::string resInit = "torch::Tensor res = input_dense;";
                 model.getForward()->addCode(resInit);
 
                 auto loopNode = dynamic_cast<TrainingLoopNode*>(outNode);
@@ -370,6 +370,9 @@ public:\n\
     }\n\
 };";
                         kernelCallCode.addCode(tempAutoGradFunction);
+
+                        std::string tempForwardAggrCall = "res = GatherForward::apply(res, offset_graph, columns_graph, value_graph);"
+                        model.getForward()->addCode(tempForwardAggrCall);
                     } else if (cNode->getOpType() == UPDATE_NODE)
                     {
                         if (fcCount == 0)
