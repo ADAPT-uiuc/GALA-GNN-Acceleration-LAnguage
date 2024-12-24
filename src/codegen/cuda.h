@@ -58,25 +58,25 @@ public:
         importCode.addCode(importBase);
 
 
-        std::string cudaInitFunctions = ""
-"#define CUDA_CHECK(func)\n\
-  do {\n\
-    cudaError_t status = (func);\n\
-    if (status != cudaSuccess) {\n\
-      printf(\"CUDA API failed at line %d with error: %s (%d)\\n\", __LINE__,\n\
-             cudaGetErrorString(status), status);\n\
-      exit(EXIT_FAILURE);\n\
-    }\n\
-  } while (0)\n\
+        std::string cudaInitFunctions = "\n"
+"#define CUDA_CHECK(func)\\\n\
+  do {\\\n\
+    cudaError_t status = (func);\\\n\
+    if (status != cudaSuccess) {\\\n\
+      printf(\"CUDA API failed at line %d with error: %s (%d)\\n\", __LINE__,\\\n\
+             cudaGetErrorString(status), status);\\\n\
+      exit(EXIT_FAILURE);\\\n\
+    }\\\n\
+  } while (0)\\\n\
 \n\
-#define CUSPARSE_CHECK(func)\n\
-  do {\n\
-    cusparseStatus_t status = (func);\n\
-    if (status != CUSPARSE_STATUS_SUCCESS) {\n\
-      printf(\"CUSPARSE failed at line %d with error: %s (%d)\\n\", __LINE__,\n\
-             cusparseGetErrorString(status), status);\n\
-      exit(EXIT_FAILURE);\n\
-    }\n\
+#define CUSPARSE_CHECK(func)\\\n\
+  do {\\\n\
+    cusparseStatus_t status = (func);\\\n\
+    if (status != CUSPARSE_STATUS_SUCCESS) {\\\n\
+      printf(\"CUSPARSE failed at line %d with error: %s (%d)\\n\", __LINE__,\\\n\
+             cusparseGetErrorString(status), status);\\\n\
+      exit(EXIT_FAILURE);\\\n\
+    }\\\n\
   } while (0)";
         kernelCode.addCode(cudaInitFunctions);
 
