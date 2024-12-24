@@ -347,7 +347,7 @@ extern \"C\" __global__ void __launch_bounds__(256)\n\
         // TODO make the transfer based on the data and the transformations applied
         std::string tempTransferCode = "torch::Device device(torch::kCUDA);\n\
   int *dA_csrOffsets, *dA_columns, *dL;\n\
-  float *dA_values, *dB, *dw0, *dw1;\n\
+  float *dA_values, *dB;\n\
   bool *d_train_mask, *d_valid_mask, *d_test_mask;\n\
 \n\
   CUDA_CHECK(cudaMalloc((void **)&dA_csrOffsets, (nrows + 1) * sizeof(int)));\n\
