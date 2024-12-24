@@ -414,7 +414,7 @@ public:\n\
                 model.getInitCall()->addCode(closeInitCall);
 
                 // TODO Change the embedding sizes based on the
-                std::string tempModelInit = "auto net = std::make_shared<GALAGNN>(emb_size, classes, false);";
+                std::string tempModelInit = "auto net = std::make_shared<GALAGNN>(emb_size, classes);";
                 model.getUse()->addCode(tempModelInit);
 
                 std::string modelTransfer = "net->to(device);";
