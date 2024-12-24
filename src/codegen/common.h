@@ -269,8 +269,7 @@ public:
                 if (oNode->getOp() == LOAD_OP)
                 {
                     // TODO Change path based on the data
-                    std::string fileLoadCode = "std::string filename;\n\
-    SM adj;\n\
+                    std::string fileLoadCode = "    SM adj;\n\
     std::string filename = \"" + oNode->getParam(0) +  "\";\n\
     readSM_npy32<SM>(filename, &adj);\n\
 \n\
@@ -333,6 +332,10 @@ forward(torch::Tensor input_dense,   // B\n\
                 model.getForward()->addCode(resInit);
 
                 auto loopNode = dynamic_cast<TrainingLoopNode*>(outNode);
+
+                std::string numIterCode = "int num_iters = " + std::to_string(loopNode->getIter()) + ";";
+                preCode.addCode(numIterCode);
+
                 for (int ix = 0; ix < loopNode->getLoopNodeNum(); ix++)
                 {
                     CIRNode* inNode = loopNode->getNode(ix);
@@ -377,7 +380,7 @@ public:\n\
                             std::string inSize2 = "int size" + std::to_string(fcCount + 1);
                             model.getInitCall()->addCode(inSize2);
 
-                            std::string fcDef = "torch::nn::Linear fc" + std::to_string(fcCount) + "{nullptr}";
+                            std::string fcDef = "torch::nn::Linear fc" + std::to_string(fcCount) + "{nullptr};";
                             model.getDef()->addCode(fcDef);
 
                             std::string fcInit = "fc" + std::to_string(fcCount) + " = register_module(\"fc"
