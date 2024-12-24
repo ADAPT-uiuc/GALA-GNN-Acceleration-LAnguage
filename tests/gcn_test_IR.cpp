@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
     std::vector<CIRNode*> program;
 
     auto loadDataset = ForwardNode(POINTWISE, LOAD_OP);
-    loadDataset.addParam("Reddit");
+    loadDataset.addParam("/shared/damitha2/gala_npy/RedditDataset/");
     // Graph
     auto graphInfo = DataInfo(CSR_STYPE, false, false);
     auto rootGraphLevel = DataLevel(&graphInfo, true);
