@@ -314,7 +314,7 @@ public:
 
                 this->dataPrep(program);
 
-                std::string modelDef = "struct GALAGGNN : torch::nn::Module {";
+                std::string modelDef = "struct GALAGNN : torch::nn::Module {";
                 model.getDef()->addCode(modelDef);
                 std::string modelCall =  "GALAGNN(";
                 model.getInitCall()->addCode(modelCall);
@@ -481,7 +481,7 @@ net->parameters(), torch::optim::AdamOptions(1e-2).weight_decay(5e-4));";
     }
 
     void writeCode(Code &code, std::ofstream &outStream, const std::string &end = "\n", bool skipFirstEnd = false,
-        bool skipLastEnd = false){
+        bool skip2ndLastEnd = false){
         for (int ix = 0; ix < code.getNum(); ix++){
             auto codeLine = code.atLine(ix);
             outStream << *codeLine;
@@ -489,7 +489,7 @@ net->parameters(), torch::optim::AdamOptions(1e-2).weight_decay(5e-4));";
             if (skipFirstEnd and ix == 0)
             {
                 continue;
-            } else if (skipLastEnd and ix == code.getNum() - 1)
+            } else if (skip2ndLastEnd and ix >= code.getNum() - 2)
             {
                 continue;
             } else
