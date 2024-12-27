@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
 	auto originalRootGraphLevel = graphData.getData(); // Returns pointer
 	auto originalGraphInfo = originalRootGraphLevel->next(); // Returns pointer
 	auto transformedGraphInfo = DataInfo(CSR_STYPE, true, true);
-	transformedGraphInfo.addOpt(COL_TILE_DOPT, 65000);
+	transformedGraphInfo.addOpt(COL_TILE_DOPT, "65000");
 	auto transformedTileGraphLevel = DataLevel(&transformedGraphInfo, false);
 	auto transformedRootGraphLevel = DataLevel(&transformedTileGraphLevel, true);
 	auto transformedGraph = DataNode("Graph-Tile", graphData.getIType(), graphData.getNType(),
@@ -80,9 +80,11 @@ int main(int argc, char **argv) {
 	// Association between graph and features
 	auto trgrapgFeatAssociation = RelationEdge(&transformedGraph, ALL_RELATION, &featData, ROWS_RELATIOM);
 	associations.push_back(&graphFeatAssociation);
-	// TODO Transformation!!! CHANGE!!! between the original graph and the transformed graph
-	auto graphTrgraph = RelationEdge(&graphData, ALL_RELATION, &transformedGraph, ALL_RELATION);
-	dependencies.push_back(&graphTrgraph);
+	auto tileTransformation = TransformData(COL_TILE_DOPT);
+	tileTransformation.addParam("65000");
+	auto graphTrgraph = TransformEdge(&graphData, &transformedGraph);
+	graphTrgraph.addTransformation(&tileTransformation);
+	transforms.push_back(&graphTrgraph);
 	auto trainingLoop = TrainingLoopNode(100);
 
     // Add aggregate operation

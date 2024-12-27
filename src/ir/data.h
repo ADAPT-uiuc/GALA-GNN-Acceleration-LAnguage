@@ -92,7 +92,7 @@ class DataItem {
 class DataInfo: virtual public DataItem {
 private:
   DataFormat format;
-  std::vector<std::pair<DataOptimization, float>> opts;
+  std::vector<std::pair<DataOptimization, string>> opts;
   bool isDirected;
   bool isWeighted;
   int dimRow;
@@ -111,11 +111,11 @@ public:
   };
 
   // Get opts
-  std::vector<std::pair<DataOptimization, float>>* getOpts() {
+  std::vector<std::pair<DataOptimization, string>>* getOpts() {
     return &opts;
   };
   // Add opts
-  void addOpt(DataOptimization opt, float param) {
+  void addOpt(DataOptimization opt, string param) {
     opts.push_back(std::make_pair(opt, param));
   };
 
