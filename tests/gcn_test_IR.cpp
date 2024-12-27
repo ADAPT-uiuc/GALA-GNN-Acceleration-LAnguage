@@ -48,6 +48,9 @@ int main(int argc, char **argv) {
 
     // Init point counter
     std::vector<CIRNode*> program;
+	std::vector<RelationEdge*> dependencies;
+	std::vector<RelationEdge*> associations;
+	std::vector<TransformEdge*> transforms;
 
     auto loadDataset = ForwardNode(POINTWISE, LOAD_OP);
     loadDataset.addParam("/shared/damitha2/gala_npy/RedditDataset/");
@@ -61,12 +64,25 @@ int main(int argc, char **argv) {
     auto rootFeatLevel = DataLevel(&featInfo, true);
     auto featData = DataNode("Feat", INT32, INT32, F32, &rootFeatLevel);
 
+	auto graphFeatAssociation = RelationEdge(&graphData, ALL_RELATION, &featData, ROWS_RELATIOM);
+	associations.push_back(&graphFeatAssociation);
+	loadDataset.addOutputData(&graphData);
+	loadDataset.addOutputData(&featData);
 
-    // TODO Add relations between data
-
-    loadDataset.addOutputData(&graphData);
-    loadDataset.addOutputData(&featData);
-
+	auto originalRootGraphLevel = graphData.getData(); // Returns pointer
+	auto originalGraphInfo = originalRootGraphLevel->next(); // Returns pointer
+	auto transformedGraphInfo = DataInfo(CSR_STYPE, true, true);
+	transformedGraphInfo.addOpt(COL_TILE_DOPT, 65000);
+	auto transformedTileGraphLevel = DataLevel(&transformedGraphInfo, false);
+	auto transformedRootGraphLevel = DataLevel(&transformedTileGraphLevel, true);
+	auto transformedGraph = DataNode("Graph-Tile", graphData.getIType(), graphData.getNType(),
+		graphData.getVType(), &transformedRootGraphLevel);
+	// Association between graph and features
+	auto trgrapgFeatAssociation = RelationEdge(&transformedGraph, ALL_RELATION, &featData, ROWS_RELATIOM);
+	associations.push_back(&graphFeatAssociation);
+	// TODO Transformation!!! CHANGE!!! between the original graph and the transformed graph
+	auto graphTrgraph = RelationEdge(&graphData, ALL_RELATION, &transformedGraph, ALL_RELATION);
+	dependencies.push_back(&graphTrgraph);
 	auto trainingLoop = TrainingLoopNode(100);
 
     // Add aggregate operation
@@ -75,10 +91,11 @@ int main(int argc, char **argv) {
     outputInfo.setDims(-1, 605); // -1=N=232965, the number of nodes in the graph
     auto rootOutputLevel = DataLevel(&outputInfo, true);
     auto outputData = DataNode("Out1", INT32, INT32, F32, &rootOutputLevel);
-    aggregate.addInputData(&graphData);
+    aggregate.addInputData(&transformedGraph);
     aggregate.addInputData(&featData);
     aggregate.addOutputData(&outputData);
     trainingLoop.addLoopNode(&aggregate);
+	// Depen
 
     // Add weight operation
     auto ffn = ForwardNode(UPDATE_NODE, FFN_OP);

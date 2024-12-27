@@ -38,11 +38,11 @@ enum RelationDim {
     ALL_RELATION // Point-wise relation
 };
 
-enum RelationType {
-  DEPENDENCY_RELATION, // Data dependency
-  TRANSFORMATION_RELATION, // Data transformations
-  ASSOCIATION_RELATION // Associaitons between data (ex -  rows of dense input matrix to rows/cols of a graph)
-};
+// enum RelationType {
+//   DEPENDENCY_RELATION, // Data dependency
+//   TRANSFORMATION_RELATION, // Data transformations
+//   ASSOCIATION_RELATION // Associaitons between data (ex -  rows of dense input matrix to rows/cols of a graph)
+// };
 
 enum DataOptimization {
     COL_TILE_DOPT, // Column tile a graph (TODO or slice a tensor?)
@@ -210,6 +210,12 @@ private:
 
     // Hierarchical data items
     DataLevel *rootLevel;
+
+    // TODO Having all the dependencies as a separate edge list might be better
+    // // Relations
+    // std::vector<std::pair<DataNode*, RelationDim>> dependencyNodes; // from the
+    // std::vector<std::pair<DataNode*, RelationDim>> transformationNodes; // from the transformed data
+    // std::vector<std::pair<DataNode*, RelationDim>> associationNodes; // bi-directional
 
 public:
     // Constructors
