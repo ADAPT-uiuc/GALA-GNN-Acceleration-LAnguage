@@ -46,6 +46,8 @@ int main(int argc, char **argv) {
     //   1. Get the basic compute running.
     //   2. Add transformations to the model (Add a data transformation for now -- Tiling)
 
+	/** RULES -- res input is always the 1st input for a computaiton op */
+
     // Init point counter
     std::vector<CIRNode*> program;
 	std::vector<RelationEdge*> dependencies;
@@ -64,10 +66,11 @@ int main(int argc, char **argv) {
     auto rootFeatLevel = DataLevel(&featInfo, true);
     auto featData = DataNode("Feat", INT32, INT32, F32, &rootFeatLevel);
 
+	// Association between graph and features
 	auto graphFeatAssociation = RelationEdge(&graphData, ALL_RELATION, &featData, ROWS_RELATIOM);
 	associations.push_back(&graphFeatAssociation);
-	loadDataset.addOutputData(&graphData);
 	loadDataset.addOutputData(&featData);
+	loadDataset.addOutputData(&graphData);
 
 	auto originalRootGraphLevel = graphData.getData(); // Returns pointer
 	auto originalGraphInfo = originalRootGraphLevel->next(); // Returns pointer
@@ -88,27 +91,47 @@ int main(int argc, char **argv) {
 	auto trainingLoop = TrainingLoopNode(100);
 
     // Add aggregate operation
-    auto aggregate = ForwardNode(AGGREGATE_NODE, MUL_SUM_OP);
+    auto aggregate = ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
     auto outputInfo = DataInfo(RM_DTYPE);
     outputInfo.setDims(-1, 605); // -1=N=232965, the number of nodes in the graph
     auto rootOutputLevel = DataLevel(&outputInfo, true);
     auto outputData = DataNode("Out1", INT32, INT32, F32, &rootOutputLevel);
-    aggregate.addInputData(&transformedGraph);
-    aggregate.addInputData(&featData);
+	aggregate.addInputData(&featData);
+	aggregate.addInputData(&transformedGraph);
     aggregate.addOutputData(&outputData);
     trainingLoop.addLoopNode(&aggregate);
-	// Depen
+
+    // Dependency relation between the features and the aggregated output
+	auto inOutAggrRelationFeat = RelationEdge(&featData, ALL_RELATION, &outputData, ALL_RELATION);
+	// Dependency relation between the graph and the aggregated output
+	auto inOutAggrRelationGraph = RelationEdge(&transformedGraph, ALL_RELATION, &outputData, ROWS_RELATION);
+    dependencies.push_back(&inOutAggrRelationFeat);
+    dependencies.push_back(&inOutAggrRelationGraph);
 
     // Add weight operation
     auto ffn = ForwardNode(UPDATE_NODE, FFN_OP);
+    // Weight as a matrix in the DIR
+    auto weightInfo = DataInfo(CM_DTYPE);
+    weightInfo.setDims(605, 32); // -1=N=232965, the number of nodes in the graph
+    auto weightLevel = DataLevel(&weightInfo, true);
+    auto weightData = DataNode("Weight1", INT32, INT32, F32, &weightLevel);
+    // Res DIR
     auto resInfo = DataInfo(RM_DTYPE);
     resInfo.setDims(-1, 32); // -1=N=232965, the number of nodes in the graph
     auto rootResLevel = DataLevel(&outputInfo, true);
     auto resData = DataNode("Res1", INT32, INT32, F32, &rootResLevel);
     aggregate.addInputData(&outputData);
+    aggregate.addInputData(&weightData);
     aggregate.addOutputData(&resData);
     trainingLoop.addLoopNode(&ffn);
+    auto inOutWeightDepRelationFeat = RelationEdge(&outputData, ALL_RELATION, &resData, ALL_RELATION);
+    auto inOutWeightDepRelationWeight = RelationEdge(&weightData, COLS_RELATION, &resData, ROWS_RELATION);
+    dependencies.push_back(&inOutWeightDepRelationFeat);
+    dependencies.push_back(&inOutWeightDepRelationWeight);
+    auto inOutWeightAssociation = RelationEdge(&outputData, ROWS_RELATION, &weightData, COLS_RELATION);
+    associations.push_back(&inOutWeightAssociation);
 
+    // The entire program
     program.push_back(&loadDataset);
 	program.push_back(&trainingLoop);
 
@@ -116,7 +139,6 @@ int main(int argc, char **argv) {
 	std::string outputPath = "../test-codegen/";
 	auto genCode = CUDAGenerator(ctx, outputPath);
 	genCode.writeCode(program);
-
 
     // Should be enough for now
 	std::cout << "Works!" << std::endl;

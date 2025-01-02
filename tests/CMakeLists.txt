@@ -25,4 +25,5 @@
 #     add_executable(cuda_troch_gcn gcn_model.cu)
 # endif ()
 
-add_executable(gcn_test_ir gcn_test_IR.cpp)
+add_executable(gcn_test_ir gcn_test_IR.cpp
+        ../src/middle-end/middle-end.h)

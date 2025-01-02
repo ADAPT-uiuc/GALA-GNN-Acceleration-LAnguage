@@ -35,11 +35,11 @@ enum ComputeOp {
     DEGREES_OP,
     POWER_OP,
     APPLY_EDGES_OP, // SDDMM
-    AGGREGATE_OP, // SpMM
-    MUL_SUM_OP,
+    AGGREGATE_MUL_SUM_OP, // SpMM
     FFN_OP, // Can also be UPDATE
     BIAS_OP,
     NON_LNR_OP,
+    ROW_BROADCAST_OP,
     // Control statements
     IF_CONTROL,
     TRAIN_CONTROL,
@@ -104,9 +104,34 @@ public:
     std::string getParam(int ix) { return this->params.at(ix); }
 
     // Data items should be constant once added (No need to remove elements)
-    //  TODO it can change if any data transformationsare done on it.
+    //  TODO it can change if any data transformations are done on it.
     void addInputData(DataNode *new_input) { this->inputData.push_back(new_input); }
     void addOutputData(DataNode *new_output) { this->outputData.push_back(new_output); }
+
+    long getNumInputs()
+    {
+       return this->inputData.size();
+    }
+    DataNode* getInput(int ix)
+    {
+        return this->inputData[ix];
+    }
+    void setInputDataNode(int ix, DataNode* new_input)
+    {
+        this->inputData[ix] = new_input;
+    }
+    long getNumOutputs()
+    {
+        return this->outputData.size();
+    }
+    DataNode* getOutput(int ix)
+    {
+        return this->outputData[ix];
+    }
+    void setOutputDataNode(int ix, DataNode* new_input)
+    {
+        this->outputData[ix] = new_input;
+    }
 
     void setKernelName(std::string name) { this->kernelName = name; }
     std::string getKernelName() { return this->kernelName; }
@@ -155,6 +180,7 @@ public:
 
     std::vector<ForwardNode *> *getLoopNodes() { return &loop; }
     ComputeNode *getNode(int i) { return this->loop.at(i); }
+    void swapNodes(int i, int j) { std::swap(this->loop[i], this->loop[j]); }
 };
 
 //class TrainingLoopNode : public ComputeNode {

@@ -268,7 +268,6 @@ public:
             {
                 if (oNode->getOp() == LOAD_OP)
                 {
-                    // TODO Change path based on the data
                     std::string fileLoadCode = "    SM adj;\n\
     std::string filename = \"" + oNode->getParam(0) +  "\";\n\
     readSM_npy32<SM>(filename, &adj);\n\
@@ -311,6 +310,9 @@ public:
                 }
             } else {
                 int fcCount = 0;
+
+                // TODO add data transformations before data preparation.
+                //  Should come from a middle end transformation.
 
                 this->dataPrep(program);
 

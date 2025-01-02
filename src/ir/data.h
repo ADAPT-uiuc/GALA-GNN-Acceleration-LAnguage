@@ -245,6 +245,19 @@ public:
     NumTypes getNType() { return this->edgeType; }
 
     NumTypes getVType() { return this->valueType; }
+
+    DataInfo* getDataInfo()
+    {
+        // Loop till you get the data info
+        DataItem* nextLevel = this->rootLevel;
+        auto currentLevel = dynamic_cast<DataLevel*>(this->rootLevel);
+        while (currentLevel)
+        {
+            nextLevel = currentLevel->next();
+            currentLevel = dynamic_cast<DataLevel*>(nextLevel);
+        }
+        return dynamic_cast<DataInfo*>(nextLevel);
+    }
 };
 
 // How to access an edge?
