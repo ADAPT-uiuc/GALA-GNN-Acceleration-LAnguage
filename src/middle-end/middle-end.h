@@ -94,6 +94,9 @@ public:
         std::vector<RelationEdge*>& associations,
         std::vector<TransformEdge*>& transforms)
     {
+        // Iterate through the list of operations till you hit a learned operation
+
+        // Move all the non-learned ops in the training loop to initialization
 
     }
 
