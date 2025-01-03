@@ -121,77 +121,95 @@ public:
                     // TODO leave alone for now. To be completed in the when implementing TIM
                 } else
                 {
-                    for (int ix = 0; ix < lNode->getLoopNodeNum(); ix++)
+                    do
                     {
-                        CIRNode* inNode = lNode->getNode(ix);
-                        auto cNode = dynamic_cast<ComputeNode*>(inNode);
-                        if (cNode->getOp() == FFN_OP)
+                        for (int ix = 0; ix < lNode->getLoopNodeNum(); ix++)
                         {
-                            DataNode* output = cNode->getOutput(0);
-                            DataNode* input = cNode->getInput(0);
-
-                            // If the output is larger than the input then move as far head as possible
-                            if (output->getDataInfo()->getDimCol() > input->getDataInfo()->getDimCol())
+                            CIRNode* inNode = lNode->getNode(ix);
+                            auto cNode = dynamic_cast<ComputeNode*>(inNode);
+                            if (cNode->getOp() == FFN_OP)
                             {
-                                // Check next operation and get the complexity
-                                if (lNode->getLoopNodeNum() <= (ix + 1))
+                                DataNode* output = cNode->getOutput(0);
+                                DataNode* input = cNode->getInput(0);
+
+                                // If the output is larger than the input then move as far head as possible
+                                if (output->getDataInfo()->getDimCol() > input->getDataInfo()->getDimCol())
                                 {
-                                    continue;
-                                }
+                                    // Check next operation and get the complexity
+                                    if (lNode->getLoopNodeNum() <= (ix + 1))
+                                    {
+                                        continue;
+                                    }
 
-                                // Next node
-                                auto nextNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix + 1));
-                                if (nextNode->getOP() == AGGREGATE_MUL_SUM_OP ||
-                                    nextNode->getOP() == ROW_BROADCAST_OP)
+                                    // Next node
+                                    auto nextNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix + 1));
+                                    if (nextNode->getOP() == AGGREGATE_MUL_SUM_OP ||
+                                        nextNode->getOP() == ROW_BROADCAST_OP)
+                                    {
+                                        changed = true;
+
+                                        // Swap the nodes in the CIR
+                                        lNode->swapNodes(ix, ix + 1);
+
+                                        // Change the data for the DIR
+                                        // The res input to the current FFN should be the res input to the next op
+                                        auto nextInput = nextNode->getInput(0);
+                                        auto nextOutput = nextNode->getOutput(0);
+                                        cNode->setInputDataNode(0, nextInput);
+                                        nextNode->setInputDataNode(0, input);
+
+                                        // Change the dependency graph
+                                        auto inOutDepIndex = getEdgeIndex(dependencies, input, nextInput);
+                                        dependencies.erase(dependencies.begin() + inOutDepIndex);
+                                        auto updatedDependency = RelationEdge(nextInput, ALL_RELATION, input, ALL_RELATION);
+                                        dependencies.push_back(&updatedDependency);
+                                        // Swap dependency for new output
+                                        auto outResDepIndex = getEdgeIndex(dependencies, nextInput, nextOutput);
+                                        dependencies.erase(dependencies.begin() + outResDepIndex);
+                                        auto updatedResDependency = RelationEdge(input, ALL_RELATION, nextOutput, ALL_RELATION);
+                                        dependencies.push_back(&updatedResDependency);
+                                    }
+                                } else if (output->getDataInfo()->getDimCol() < input->getDataInfo()->getDimCol())
                                 {
-                                    // Swap the nodes in the CIR
-                                    lNode->swapNodes(ix, ix + 1);
+                                    // Check next operation and get the complexity
+                                    if (0 > (ix - 1))
+                                    {
+                                        continue;
+                                    }
 
-                                    // Change the data for the DIR
-                                    // The res input to the current FFN should be the res input to the next op
-                                    auto nextInput = nextNode->getInput(0);
-                                    cNode->setInputDataNode(0, nextInput);
-                                    nextNode->setInputDataNode(0, input);
+                                    // Next node
+                                    auto prevNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix - 1));
+                                    if (prevNode->getOP() == AGGREGATE_MUL_SUM_OP ||
+                                        prevNode->getOP() == ROW_BROADCAST_OP)
+                                    {
+                                        changed = true;
 
-                                    // // TODO Update this along with the other input
-                                    // // Change the dependency graph
-                                    // auto inOutDepIndex = getEdgeIndex(dependencies, input, nextInput);
-                                    // dependencies.erase(dependencies.begin() + inOutDepIndex);
-                                }
-                            } else if (output->getDataInfo()->getDimCol() < input->getDataInfo()->getDimCol())
-                            {
-                                // Check next operation and get the complexity
-                                if (0 > (ix - 1))
-                                {
-                                    continue;
-                                }
+                                        // Swap the nodes in the CIR
+                                        lNode->swapNodes(ix, ix - 1);
 
-                                // Next node
-                                auto prevNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix - 1));
-                                if (prevNode->getOP() == AGGREGATE_MUL_SUM_OP ||
-                                    prevNode->getOP() == ROW_BROADCAST_OP)
-                                {
-                                    // Swap the nodes in the CIR
-                                    lNode->swapNodes(ix, ix - 1);
+                                        // Change the data for the DIR
+                                        // The res input to the current FFN should be the res input to the next op
+                                        auto prevInput = prevNode->getInput(0);
+                                        auto prevOutput = prevNode->getOutput(0);
+                                        cNode->setInputDataNode(0, prevInput);
+                                        prevNode->setInputDataNode(0, input);
 
-                                    // Change the data for the DIR
-                                    // The res input to the current FFN should be the res input to the next op
-                                    auto prevInput = prevNode->getInput(0);
-                                    cNode->setInputDataNode(0, prevInput);
-                                    prevNode->setInputDataNode(0, input);
-
-                                    // // TODO Update this along with the other input
-                                    // // Change the dependency graph
-                                    // auto inOutDepIndex = getEdgeIndex(dependencies, input, prevInput);
-                                    // dependencies.erase(dependencies.begin() + inOutDepIndex);
+                                        // Change the dependency graph
+                                        auto inOutDepIndex = getEdgeIndex(dependencies, prevInput, input);
+                                        dependencies.erase(dependencies.begin() + inOutDepIndex);
+                                        auto updatedDependency = RelationEdge(input, ALL_RELATION, prevInput, ALL_RELATION);
+                                        dependencies.push_back(&updatedDependency);
+                                        // Swap dependency for new output
+                                        auto outResDepIndex = getEdgeIndex(dependencies, prevInput, prevOutput);
+                                        dependencies.erase(dependencies.begin() + outResDepIndex);
+                                        auto updatedResDependency = RelationEdge(input, ALL_RELATION, prevOutput, ALL_RELATION);
+                                        dependencies.push_back(&updatedResDependency);
+                                    }
                                 }
                             }
                         }
-                    }
-
+                    } while (changed);
                 }
-
-
             }
         }
     }
