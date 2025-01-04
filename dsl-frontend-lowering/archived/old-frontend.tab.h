@@ -35,8 +35,8 @@
    especially those whose name start with YY_ or yy_.  They are
    private implementation details that can be changed or removed.  */
 
-#ifndef YY_YY_FRONTEND_TAB_H_INCLUDED
-# define YY_YY_FRONTEND_TAB_H_INCLUDED
+#ifndef YY_YY_OLD_FRONTEND_TAB_H_INCLUDED
+# define YY_YY_OLD_FRONTEND_TAB_H_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -62,7 +62,7 @@ extern int yydebug;
     SEMICOLON = 263,               /* SEMICOLON  */
     QUOTE = 264,                   /* QUOTE  */
     COMMENT = 265,                 /* COMMENT  */
-    MODEL_W = 266,                 /* MODEL_W  */
+    MODEL = 266,                   /* MODEL  */
     EVAL = 267,                    /* EVAL  */
     TRAIN = 268,                   /* TRAIN  */
     LAYER = 269,                   /* LAYER  */
@@ -71,58 +71,50 @@ extern int yydebug;
     ITERS = 272,                   /* ITERS  */
     VAL_STEP = 273,                /* VAL_STEP  */
     RMSE_LOSS = 274,               /* RMSE_LOSS  */
-    ADAM_T = 275,                  /* ADAM_T  */
-    AGGR_INIT = 276,               /* AGGR_INIT  */
-    FN_ARG = 277,                  /* FN_ARG  */
-    MUL_SUM = 278,                 /* MUL_SUM  */
-    DSL_FN = 279,                  /* DSL_FN  */
-    DSL_DOT = 280,                 /* DSL_DOT  */
-    FFN_OUT = 281,                 /* FFN_OUT  */
-    SIZE_FN = 282,                 /* SIZE_FN  */
-    RELAXNLN = 283,                /* RELAXNLN  */
-    QUANT = 284,                   /* QUANT  */
-    GRAPH_ATTR = 285,              /* GRAPH_ATTR  */
-    FEAT_ATTR = 286,               /* FEAT_ATTR  */
-    RELU = 287,                    /* RELU  */
-    LABEL_ATTR = 288,              /* LABEL_ATTR  */
-    RABBIT_REORDER_OP = 289,       /* RABBIT_REORDER_OP  */
-    SAMPLE_RANDOM_OP = 290,        /* SAMPLE_RANDOM_OP  */
-    COLTILE = 291,                 /* COLTILE  */
-    AGGR = 292,                    /* AGGR  */
-    INTEGER = 293,                 /* INTEGER  */
-    FLOAT = 294,                   /* FLOAT  */
-    LBRACE = 295,                  /* LBRACE  */
-    RBRACE = 296,                  /* RBRACE  */
-    LSQBRA = 297,                  /* LSQBRA  */
-    RSQBRA = 298,                  /* RSQBRA  */
-    DOT = 299,                     /* DOT  */
-    COMMA = 300,                   /* COMMA  */
-    IF = 301,                      /* IF  */
-    ELSE = 302,                    /* ELSE  */
-    DO = 303,                      /* DO  */
-    WHILE = 304,                   /* WHILE  */
-    TRUE = 305,                    /* TRUE  */
-    FALSE = 306,                   /* FALSE  */
-    NOT = 307,                     /* NOT  */
-    AND = 308,                     /* AND  */
-    OR = 309,                      /* OR  */
-    NOTEQ = 310,                   /* NOTEQ  */
-    EQ = 311,                      /* EQ  */
-    GREATER = 312,                 /* GREATER  */
-    LESS = 313,                    /* LESS  */
-    GREATEREQ = 314,               /* GREATEREQ  */
-    LESSEQ = 315,                  /* LESSEQ  */
-    PLUS = 316,                    /* PLUS  */
-    MINUS = 317,                   /* MINUS  */
-    MULTIPLY = 318,                /* MULTIPLY  */
-    DIVIDE = 319,                  /* DIVIDE  */
-    FFN = 320,                     /* FFN  */
-    DATASET = 321,                 /* DATASET  */
-    NONLN = 322,                   /* NONLN  */
-    SENSEI_OP = 323,               /* SENSEI_OP  */
-    INT = 324,                     /* INT  */
-    NEW = 325,                     /* NEW  */
-    NULL_KEY = 326                 /* NULL_KEY  */
+    ADAM = 275,                    /* ADAM  */
+    RELAXNLN = 276,                /* RELAXNLN  */
+    QUANT = 277,                   /* QUANT  */
+    GRAPH_ATTR = 278,              /* GRAPH_ATTR  */
+    FEAT_ATTR = 279,               /* FEAT_ATTR  */
+    RELU = 280,                    /* RELU  */
+    RABBIT_REORDER_OP = 281,       /* RABBIT_REORDER_OP  */
+    SAMPLE_RANDOM_OP = 282,        /* SAMPLE_RANDOM_OP  */
+    COLTILE = 283,                 /* COLTILE  */
+    AGGR = 284,                    /* AGGR  */
+    INTEGER = 285,                 /* INTEGER  */
+    FLOAT = 286,                   /* FLOAT  */
+    LBRACE = 287,                  /* LBRACE  */
+    RBRACE = 288,                  /* RBRACE  */
+    LSQBRA = 289,                  /* LSQBRA  */
+    RSQBRA = 290,                  /* RSQBRA  */
+    DOT = 291,                     /* DOT  */
+    COMMA = 292,                   /* COMMA  */
+    IF = 293,                      /* IF  */
+    ELSE = 294,                    /* ELSE  */
+    DO = 295,                      /* DO  */
+    WHILE = 296,                   /* WHILE  */
+    TRUE = 297,                    /* TRUE  */
+    FALSE = 298,                   /* FALSE  */
+    NOT = 299,                     /* NOT  */
+    AND = 300,                     /* AND  */
+    OR = 301,                      /* OR  */
+    NOTEQ = 302,                   /* NOTEQ  */
+    EQ = 303,                      /* EQ  */
+    GREATER = 304,                 /* GREATER  */
+    LESS = 305,                    /* LESS  */
+    GREATEREQ = 306,               /* GREATEREQ  */
+    LESSEQ = 307,                  /* LESSEQ  */
+    PLUS = 308,                    /* PLUS  */
+    MINUS = 309,                   /* MINUS  */
+    MULTIPLY = 310,                /* MULTIPLY  */
+    DIVIDE = 311,                  /* DIVIDE  */
+    FFN = 312,                     /* FFN  */
+    DATASET = 313,                 /* DATASET  */
+    NONLN = 314,                   /* NONLN  */
+    SENSEI_OP = 315,               /* SENSEI_OP  */
+    INT = 316,                     /* INT  */
+    NEW = 317,                     /* NEW  */
+    NULL_KEY = 318                 /* NULL_KEY  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -131,16 +123,14 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 23 "frontend.y"
+#line 16 "old-frontend.y"
 
     int ival;
     float fval;
     char *sval;
     FrontendIRNode *irNode;
-    ForwardNode* forwardNode;
-    TrainingLoopNode* trainingLoopNode;
 
-#line 144 "frontend.tab.h"
+#line 134 "old-frontend.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -155,4 +145,4 @@ extern YYSTYPE yylval;
 int yyparse (void);
 
 
-#endif /* !YY_YY_FRONTEND_TAB_H_INCLUDED  */
+#endif /* !YY_YY_OLD_FRONTEND_TAB_H_INCLUDED  */

@@ -9,12 +9,34 @@
 //#include <memory>
 #include "data.h"
 
-enum ComputeOp{
+enum LossFunction {
+  CROSS_ENTROPY,
+};
+
+enum NNOptimizer {
+  ADAM,
+};
+
+enum NonLnrOp {
+    ReLU_OP,
+    LeakyReLU_OP
+};
+
+enum OpType {
+    POINTWISE, // Pointwise update of data
+    AGGREGATE_EDGE, // Edge aggregation operation (SDDMM-based)
+    AGGREGATE_NODE, // Node aggregation operation (SpMM-based)
+    UPDATE_EDGE, // Edge update operation (Edge softmax)
+    UPDATE_NODE, // Node update operation (NN, Non-linear op)
+};
+
+enum ComputeOp {
     LOAD_OP,
     DEGREES_OP,
     POWER_OP,
     APPLY_EDGES_OP, // SDDMM
     AGGREGATE_OP, // SpMM
+    MUL_SUM_OP,
     FFN_OP, // Can also be UPDATE
     BIAS_OP,
     NON_LNR_OP,
@@ -25,164 +47,157 @@ enum ComputeOp{
     TRANSFORM_OP
 };
 
+enum CompOptimization {
+    COARSE_COPT, // Thread coarsening
+    SAMPLE_COPT, // Sample an aggregation kernel
+};
+
 // TODO - Add node / edge aggregation types.
 
-class ComputeNode{
+class CIRNode{
+};
+
+class ComputeNode : public CIRNode {
 private:
+  	OpType opType;
     ComputeOp op;
 
-    // Program start point
-    int point;
-public:
-    ComputeNode(ComputeOp op, int point){
-        this->op = op;
-        this->point = point;
-    }
-
-    // Op shouldn't change
-
-    // Point
-    int getPoint(){
-        return this->point;
-    }
-    void setPoint(int new_point){
-        this->point = new_point;
-    }
-
-    // Op -- Also used to identify between the
-    ComputeOp getOp(){
-        return this->op;
-    }
-};
-
-class StatementNode: public ComputeNode{
-private:
-    // Parameters to be passed along to the function
     std::vector<std::string> params;
 
-    // Can't have an array with templatized arguments.
-    //  Just store the pointers for the multiple data objects?
-    //  Then just convert to the correct type when you're using it.
-    //  Still need to know the type of the matrices that you're lowering to
-//    std::vector<std::any*> inputData;
-//    std::vector<std::any*> outputData;
+    std::vector<DataNode*> inputData;
+    std::vector<DataNode*> outputData;
+    std::vector<std::pair<CompOptimization, float>> opts;
 
-    std::vector<BaseData*> inputData;
-    std::vector<BaseData*> outputData;
+    // Points in the program are commented out for now
+//    // Program start point
+//    int point;
 public:
-    StatementNode(ComputeOp op, int point) : ComputeNode(op, point){
+    ComputeNode(OpType opType, ComputeOp op) {
+        this->op = op;
+        this->opType = opType;
     }
 
-    // Op shouldn't change
+    // Op and the type shouldn't change
+
+    // Op -- Also used to identify between the
+    ComputeOp getOp() { return this->op;}
+
+
+    // Get opts
+  	std::vector<std::pair<CompOptimization, float>>* getOpts() {
+    	return &opts;
+  	};
+  	// Add opts
+  	void addOpt(CompOptimization opt, float param) {
+    	opts.push_back(std::make_pair(opt, param));
+  	};
 
     // Params can only add new (No need to remove any)
-    void addParam(std::string new_param){
-        this->params.push_back(new_param);
-    }
+    void addParam(std::string new_param) { this->params.push_back(new_param); }
     // At Nihility's(IX) end
-    std::string getParam(int ix){
-        return this->params.at(ix);
-    }
+    std::string getParam(int ix) { return this->params.at(ix); }
 
     // Data items should be constant once added (No need to remove elements)
-    void addInputData(BaseData* new_input){
-        this->inputData.push_back(new_input);
-    }
-    void addOutputData(BaseData* new_output){
-        this->outputData.push_back(new_output);
-    }
+    //  TODO it can change if any data transformationsare done on it.
+    void addInputData(DataNode *new_input) { this->inputData.push_back(new_input); }
+    void addOutputData(DataNode *new_output) { this->outputData.push_back(new_output); }
 };
 
-// TODO Need to have methods to manage control flow -- Not sure if this node will be used or not. (Archive for now?)
-//  Have separate classes for the control structures
-class IfNode: public ComputeNode{
-private:
-    std::string condition;
-    std::vector<ComputeNode*> truePath;
-    std::vector<ComputeNode*> elsePath;
+class ForwardNode : public ComputeNode {
+  private:
+    ComputeNode* backward;
+  public:
+    ForwardNode(OpType opType, ComputeOp op): ComputeNode(opType, op) {};
 
-public:
-    IfNode(int point, std::string condition) : ComputeNode(IF_CONTROL, point){
-        this->condition = condition;
-    }
-
-    std::string getCondition(){
-        return condition;
-    }
-
-    void addTrue(ComputeNode* newNode){
-        this->truePath.push_back(newNode);
-    }
-    void addElse(ComputeNode* newNode){
-        this->elsePath.push_back(newNode);
-    }
+    // Backward getter and setters
+    ComputeNode* getBackward() { return this->backward; }
+    void setBackward(ComputeNode* new_backward) { this->backward = new_backward; }
 };
 
-class TrainingLoopNode : public ComputeNode {
+class TrainingLoopNode : public CIRNode  {
 private:
     int numIter;
-    int stepValid; // The steps in the program validation happens. If not specified the numIter.
+    int stepValid;
+    int stepTest;
+    LossFunction lossFunc;
+    NNOptimizer optimizer;
+    // The steps in the program validation happens. If not specified the numIter.
     // TODO need an easy way to find a node by an ID and then return + remove it.
     //  temp solution - Remove everything and then add everything back
-    std::vector<ComputeNode*> loop;
+    std::vector<ForwardNode *> loop;
 public:
-    TrainingLoopNode(int point, int numIter) : ComputeNode(TRAIN_CONTROL, point){
+    TrainingLoopNode(int numIter, LossFunction lossFunc = CROSS_ENTROPY, NNOptimizer optimizer = ADAM, int stepValid = 0, int stepTest = 0){
         this->numIter = numIter;
-        this->stepValid = numIter;
-    }
-    TrainingLoopNode(int point, int numIter, int stepValid) : ComputeNode(TRAIN_CONTROL, point){
-        this->numIter = numIter;
+        this->lossFunc = lossFunc;
+        this->optimizer = optimizer;
         this->stepValid = stepValid;
+        this->stepTest = stepTest;
     }
 
-    int getIter(){
-        return this->numIter;
-    }
-    int getValidStep(){
-        return this->stepValid;
-    }
+    int getIter() { return this->numIter; }
+    int getValidStep() { return this->stepValid; }
+    int getTestStep() { return this->stepTest; }
 
-    void clearLoopNodes(){
-        this->loop.clear();
-    }
-    void addLoopNode(ComputeNode* newNode){
-        this->loop.push_back(newNode);
-    }
-    int getLoopNodeNum(){
-       return this->loop.size();
-    }
-    std::vector<ComputeNode*>* getLoopNodes(){
-        return &loop;
-    }
-    ComputeNode* getNode(int i){
-        return this->loop.at(i);
-    }
+    void clearLoopNodes() { this->loop.clear(); }
+    void addLoopNode(ForwardNode *newNode) { this->loop.push_back(newNode); }
+    int getLoopNodeNum() { return this->loop.size(); }
+
+    std::vector<ForwardNode *> *getLoopNodes() { return &loop; }
+    ComputeNode *getNode(int i) { return this->loop.at(i); }
 };
 
-class TransformOpNode : public ComputeNode{
-private:
-    TransformEdge* transformData;
-public:
-    TransformOpNode(int point, TransformEdge* trEdge): ComputeNode(TRANSFORM_OP, point){
-        this->transformData = trEdge;
-    }
+//class TrainingLoopNode : public ComputeNode {
+//private:
+//    int numIter;
+//    int stepValid; // The steps in the program validation happens. If not specified the numIter.
+//    // TODO need an easy way to find a node by an ID and then return + remove it.
+//    //  temp solution - Remove everything and then add everything back
+//    std::vector<ComputeNode *> loop;
+//public:
+//    TrainingLoopNode(int point, int numIter) : ComputeNode(TRAIN_CONTROL, point) {
+//        this->numIter = numIter;
+//        this->stepValid = numIter;
+//    }
+//
+//    TrainingLoopNode(int point, int numIter, int stepValid) : ComputeNode(TRAIN_CONTROL, point) {
+//        this->numIter = numIter;
+//        this->stepValid = stepValid;
+//    }
+//
+//    int getIter() { return this->numIter; }
+//
+//    int getValidStep() { return this->stepValid; }
+//
+//    void clearLoopNodes() { this->loop.clear(); }
+//
+//    void addLoopNode(ComputeNode *newNode) { this->loop.push_back(newNode); }
+//
+//    int getLoopNodeNum() { return this->loop.size(); }
+//
+//    std::vector<ComputeNode *> *getLoopNodes() { return &loop; }
+//
+//    ComputeNode *getNode(int i) { return this->loop.at(i); }
+//};
 
-    TransformEdge* getTransformations(){
-        return this->transformData;
-    }
-};
-
-class PointCounter{
-private:
-    int point;
-public:
-    PointCounter(){
-        this->point = 0;
-    }
-    int getPoint(){
-        return this->point++;
-    }
-};
+//class TransformOpNode : public ComputeNode {
+//private:
+//    TransformEdge *transformData;
+//public:
+//    TransformOpNode(int point, TransformEdge *trEdge) : ComputeNode(TRANSFORM_OP, point) {
+//        this->transformData = trEdge;
+//    }
+//
+//    TransformEdge *getTransformations() { return this->transformData; }
+//};
+//
+//class PointCounter {
+//private:
+//    int point;
+//public:
+//    PointCounter() { this->point = 0; }
+//
+//    int getPoint() { return this->point++; }
+//};
 
 
 #endif //GNN_ACCELERATION_LANGUAGE_COMPUTE_H

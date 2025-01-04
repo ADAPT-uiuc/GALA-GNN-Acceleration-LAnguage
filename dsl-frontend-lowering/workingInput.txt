@@ -13,6 +13,6 @@ M1 = model(NonLn non_ln) {
 m1 = M1(G, dsl.nln.ReLU);
 m1.train(loss=dsl.nn.loss.RMSE, optimizer=dsl.nn.optmz.ADAM, iters = 100, validation_step=5);
 res = m1.eval();
-// hello
+// need comment after evaluating model 
 g_graph = G.graph;
 g_feat = G.feat;

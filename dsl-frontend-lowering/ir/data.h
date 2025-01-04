@@ -20,28 +20,51 @@ enum DataFormat {
     CSC_STYPE, // Compressed sparse column
     DCSR_STYPE, // Double compressed sparse row
     COO_STYPE, // Coordinate
-    //Dense
+    // Tensor
     RM_DTYPE, // Row major
     CM_DTYPE, // Column major
     // High-level - Notify the existence of multiple levels in the IR
     Graph, // Graph/Sparse objects
-    Dense // Features/Dense objects
+    Tensor, // Features/Dense objects
+  	// Scalar / Constant values
+  	STR, // String
+  	NUM, // Number
 };
 
 // Relation between dimensions of the data representations
 enum RelationDim {
-    ROW_RELATION,
-    COL_RELATION,
+    ROWS_RELATION,
+    COLS_RELATION,
     ALL_RELATION // Point-wise relation
 };
 
-enum TransformationTypes {
-    COL_TILE_TRNS, // Matrix - Can be either column tile or slicing
-    SAMPLE_TRNS, // Graph - Sample the input graph
-    PARTITION_TRNS, // Graph - Partition the graph
-    REORDER_TRNS, // Graph - Reorder the graph
-    BALANCE_TRNS, // Graph - Load balance the graph
-    FORMAT_TRNS, // Matrix - Change the data representation format of the matrix
+enum RelationType {
+  DEPENDENCY_RELATION, // Data dependency
+  TRANSFORMATION_RELATION, // Data transformations
+  ASSOCIATION_RELATION // Associaitons between data (ex -  rows of dense input matrix to rows/cols of a graph)
+};
+
+enum DataOptimization {
+    COL_TILE_DOPT, // Column tile a graph (TODO or slice a tensor?)
+    SAMPLE_DOPT, // Sample from a given graph
+    // TODO the optimization types below are planned but not implmeneted yet
+//    PARTITION_DOPT, // Graph - Partition the graph
+//    REORDER_DOPT, // Graph - Reorder the graph
+//    BALANCE_DOPT, // Graph - Load balance the graph
+};
+
+enum NumTypes {
+    // Ints
+    INT8,
+    INT16,
+    INT32,
+    INT64,
+    // UInts
+    UINT32,
+    UINT64,
+    // Floats
+    F32,
+    F64
 };
 
 /***
@@ -53,171 +76,185 @@ enum TransformationTypes {
  *      Based on the input / outputs to the computations.
  *      Traversal of the program happens based on the computation IR,
  *      any additional code added for transformations
- *  - TODO Remove templatization? Currently have multiple input types for dense data, dense labels, and sparse
+ *  - Remove templatization? Currently have multiple input types for dense data, dense labels, and sparse
  *      The current approach will need you to repeat a lot of things?
+ *     - Have a type attribute for now. Because templetazing would have issues with overrriding etc.
  */
 
-/***
- * TODO - Find a better name for this. dataNode is a sub element of dataList, but the name makes it sound otherwise
- * @tparam dM - data matrix type info (dense or sparse, with different number types (f32, f64, int, long))
- */
-class DataList {
+// A base abstract class that can either be a data info (gives information of a data node, is the final/leaf level in a data node
+class DataItem {
+ public:
+   // Function to get if the current data item is a data level or data info.
+   virtual bool isLevel() {return false;};
+};
+
+
+class DataInfo: virtual public DataItem {
+private:
+  DataFormat format;
+  std::vector<std::pair<DataOptimization, float>> opts;
+  bool isDirected;
+  bool isWeighted;
+  int dimRow;
+  int dimCol;
+public:
+  // Set the data informaiton
+  DataInfo(DataFormat format,
+           bool isDirected,
+           bool isWeighted){
+    this->format = format;
+    this->isDirected = isDirected;
+    this->isWeighted = isWeighted;
+  };
+  DataInfo(DataFormat format){
+    this->format = format;
+  };
+
+  // Get opts
+  std::vector<std::pair<DataOptimization, float>>* getOpts() {
+    return &opts;
+  };
+  // Add opts
+  void addOpt(DataOptimization opt, float param) {
+    opts.push_back(std::make_pair(opt, param));
+  };
+
+  // Get and set directed
+  bool getDirected() {
+    return this->isDirected;
+  }
+  void setDirected(bool directed) {
+    this->isDirected = directed;
+  }
+
+  // Get and set weighted
+  bool getWeighted() {
+    return this->isWeighted;
+  }
+  void setWeighted(bool weighted) {
+    this->isWeighted = weighted;
+  }
+
+  void setDims(int dimRow, int dimCol) {
+    this->dimRow = dimRow;
+    this->dimCol = dimCol;
+  }
+  int getDimRow() {
+    return this->dimRow;
+  }
+  int getDimCol() {
+    return this->dimCol;
+  }
+
+  // Information is not a level
+  bool isLevel(){
+    return false;
+  }
+};
+
+class DataLevel: virtual public DataItem {
 private:
     // If there is a next level, if not null
-    DataList *nextLevel;
-    // TODO moved the sharing meta-data feature to code generation.
-    // List all the data formats that are in the data list (multiple to supports things like ASpT)
-    std::vector<DataFormat> formats;
+    DataItem *nextItem;
     // If the data items are independent of one another
     bool independent;
 public:
     // Constructors
-    DataList(DataFormat initialFormat, bool independence) {
-        this->independent = independence;
-        this->formats.push_back(initialFormat);
-        this->nextLevel = nullptr;
+    DataLevel(DataItem* item, bool independence) {
+      this->nextItem = item;
+      this->independent = independence;
     }
 
-    DataList(bool independence) {
-        this->independent = independence;
+    // Data level is a data level
+    bool isLevel(){
+        return true;
     }
 
     // Control next level
     bool hasNext() {
-        if (this->nextLevel == nullptr) {
+        if (this->nextItem == nullptr) {
             return false;
         }
         return true;
     }
-
-    void setNext(DataList *newLevel) {
-        this->nextLevel = newLevel;
+    DataItem* next(){
+        if (this->hasNext()) {
+          return this->nextItem;
+        } else {
+          return nullptr;
+        }
     }
+    void setNext(DataItem *newLevel) { this->nextItem = newLevel; }
 
-    // Formats
-    void addFormat(DataFormat format) {
-        this->formats.push_back(format);
-    }
-
-    // You don't need to remove a single format unless you're making a mistake.
-    //  A ClearFormats is necessary when you are creating a new level in the data list.
-    void clearFormats() {
-        this->formats.clear();
-    }
 
     // Independence
     //  Shows the parallelization independence between data items in the current level.
-    bool getIndependence() {
-        return this->independent;
-    }
-    void setIndependence(bool independence) {
-        this->independent = independence;
-    }
+    bool getIndependence() { return this->independent; }
+    void setIndependence(bool independence) { this->independent = independence; }
 };
 
-class BaseData {
-};
-//class DataNode: public BaseData
+
 
 /***
  * Node in the DataIR
  * @tparam dM - data matrix type info (dense or sparse, with different number types (f32, f64, int, long))
  */
-template<class dM>
-class DataNode: public BaseData{
+class DataNode {
 private:
     // Name of the matrix
     std::string name;
 
-    // Hierarchical data items
-    DataList *dataList;
+    NumTypes indexType;
+    NumTypes edgeType;
+    NumTypes valueType;
 
-    int startPoint;
-    int endPoint;
+    // Hierarchical data items
+    DataLevel *rootLevel;
 
 public:
     // Constructors
-    DataNode(std::string name, int start, int end, DataList* newData) {
+    DataNode(std::string name, NumTypes iT, NumTypes nT, NumTypes vT, DataLevel *newData) {
         this->name = name;
-        this->startPoint = start;
-        this->endPoint = end;
-        this->dataList = newData;
-    }
-    DataNode(std::string name, int start, DataList* newData) {
-        this->name = name;
-        this->startPoint = start;
-        this->dataList = newData;
-    }
-    DataNode(std::string name, int start, int end) {
-        this->name = name;
-        this->startPoint = start;
-        this->endPoint = end;
+        this->rootLevel = newData;
+
+        this->indexType = iT;
+        this->edgeType = nT;
+        this->valueType = vT;
     }
 
-    DataNode(std::string name, int start) {
-        this->name = name;
-        this->startPoint = start;
-    }
-
-    DataNode(std::string name) {
-        this->name = name;
-    }
-
-    DataNode<dM> cloneData(){
-        return DataNode<dM>(this->name, this->startPoint, this->endPoint, this->dataList);
+    DataNode cloneData() {
+        return DataNode(this->name, this->indexType, this->edgeType, this->valueType,
+                        this->rootLevel);
     }
 
     // getters/setters
-    std::string getName() {
-        return this->name;
-    }
+    std::string getName() { return this->name; }
 
-    // Data list
-    DataList getData() {
-        return this->dataList;
-    }
+    // Data level
+    DataLevel* getData() { return this->rootLevel; }
+    void setData(DataLevel *newData) { this->rootLevel = newData; }
 
-    void setData(DataList* newData) {
-        this->dataList = newData;
-    }
+    NumTypes getIType() { return this->indexType; }
 
-    // Get the start and end points
-    int getStart() {
-        return this->startPoint;
-    }
+    NumTypes getNType() { return this->edgeType; }
 
-    int getEnd() {
-        return this->endPoint;
-    }
-
-    // Change the start and end points
-    void setStart(int newStart) {
-        this->startPoint = newStart;
-    }
-
-    void setEnd(int newEnd) {
-        this->endPoint = newEnd;
-    }
+    NumTypes getVType() { return this->valueType; }
 };
 
+// How to access an edge?
 class DataEdge {
 private:
-    BaseData *node1;
-    BaseData *node2;
+    DataNode *node1;
+    DataNode *node2;
 public:
-    DataEdge(BaseData *n1, BaseData *n2) {
+    DataEdge(DataNode *n1, DataNode *n2) {
         this->node1 = n1;
         this->node2 = n2;
     }
 
-    // No need for setters? The relation should not change at any time as time goes not
-    BaseData *getNode1() {
-        return node1;
-    }
-
-    BaseData *getNode2() {
-        return node2;
-    }
+    // No need for setters? The relation should not change at any time
+    DataNode *getNode1() { return node1; }
+    DataNode *getNode2() { return node2; }
 };
 
 class RelationEdge : public DataEdge {
@@ -225,133 +262,39 @@ private:
     RelationDim rel1;
     RelationDim rel2;
 public:
-    RelationEdge(BaseData *n1, RelationDim r1, BaseData *n2, RelationDim r2) : DataEdge(n1, n2) {
+    RelationEdge(DataNode *n1, RelationDim r1, DataNode *n2, RelationDim r2) : DataEdge(n1, n2) {
         this->rel1 = r1;
         this->rel2 = r2;
     }
 
     // Only have the getters for the relations
-    RelationDim getRelation1() {
-        return rel1;
-    }
-    RelationDim getRelation2() {
-        return rel2;
-    }
+    RelationDim getRelation1() { return rel1; }
+    RelationDim getRelation2() { return rel2; }
 };
 
 
-class TransformData{
+class TransformData {
 private:
-    TransformationTypes transformation;
+    DataOptimization transformation;
     std::vector<std::string> params;
 public:
-    TransformData(TransformationTypes trns){
-        this->transformation = trns;
-    }
+    TransformData(DataOptimization trns) { this->transformation = trns; }
 
-    TransformationTypes getTransformation(){
-        return this->transformation;
-    }
-    std::vector<std::string>* getParams(){
-        return &this->params;
-    }
+    DataOptimization getTransformation() { return this->transformation; }
 
-    void addParam(std::string param){
-        this->params.push_back(param);
-    }
+    std::vector<std::string> *getParams() { return &this->params; }
+
+    void addParam(std::string param) { this->params.push_back(param); }
 };
 
-class TransformEdge : public DataEdge{
+class TransformEdge : public DataEdge {
 private:
-    std::vector<TransformData*> transformations;
+    std::vector<TransformData *> transformations;
 public:
-    TransformEdge(BaseData *n1, BaseData *n2) : DataEdge(n1, n2) {
-    }
+    TransformEdge(DataNode *n1, DataNode *n2) : DataEdge(n1, n2) {}
 
     // Only have the getters for the relations
-    void addTransformation(TransformData* trns) {
-        transformations.push_back(trns);
-    }
+    void addTransformation(TransformData *trns) { transformations.push_back(trns); }
 };
-
-// ------------------- Pre-base class -------------------------
-//
-//template<class dM1, class dM2>
-//class DataEdge {
-//private:
-//    DataNode<dM1> *node1;
-//    DataNode<dM2> *node2;
-//public:
-//    DataEdge(DataNode<dM1> *n1, DataNode<dM2> *n2) {
-//        this->node1 = n1;
-//        this->node2 = n2;
-//    }
-//
-//    // No need for setters? The relation should not change at any time as time goes not
-//    DataNode<dM1> *getNode1() {
-//        return node1;
-//    }
-//
-//    DataNode<dM2> *getNode2() {
-//        return node2;
-//    }
-//};
-//
-//template<class dM1, class dM2>
-//class RelationEdge : public DataEdge<dM1, dM2> {
-//private:
-//    RelationDim rel1;
-//    RelationDim rel2;
-//public:
-//    RelationEdge(DataNode<dM1> *n1, RelationDim r1, DataNode<dM2> *n2, RelationDim r2) : DataEdge<dM1, dM2>(n1, n2) {
-//        this->rel1 = r1;
-//        this->rel2 = r2;
-//    }
-//
-//    // Only have the getters for the relations
-//    RelationDim getRelation1() {
-//        return rel1;
-//    }
-//    RelationDim getRelation2() {
-//        return rel2;
-//    }
-//};
-//
-//
-//class TransformData{
-//private:
-//    TransformationTypes transformation;
-//    std::vector<std::string> params;
-//public:
-//    TransformData(TransformationTypes trns){
-//        this->transformation = trns;
-//    }
-//
-//    TransformationTypes getTransformation(){
-//        return this->transformation;
-//    }
-//    std::vector<std::string>* getParams(){
-//        return &this->params;
-//    }
-//
-//    void addParam(std::string param){
-//        this->params.push_back(param);
-//    }
-//};
-//
-//template<class dM1>
-//class TransformEdge : public DataEdge<dM1, dM1> {
-//private:
-//    std::vector<TransformData*> transformations;
-//public:
-//    TransformEdge(DataNode<dM1> *n1, DataNode<dM1> *n2) : DataEdge<dM1, dM1>(n1, n2) {
-//    }
-//
-//    // Only have the getters for the relations
-//    void addTransformation(TransformData* trns) {
-//        transformations.push_back(trns);
-//    }
-//};
-
 
 #endif //GNN_ACCELERATION_LANGUAGE_DATA_H

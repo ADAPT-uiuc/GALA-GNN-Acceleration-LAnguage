@@ -1,9 +1,17 @@
 /* Definitions */
 %{
     extern int yylex();
+    #include "ir/data.h"
+    #include "ir/compute.h"
     #include "ir/frontendIR.h"
     #include "frontend.tab.h"
     using namespace std;
+    
+    /* if there ever ends up being a comment token, this is how you do it
+     \/\/.* { 
+        yylval.sval = strdup(yytext);
+        return COMMENT; 
+    } */
 %}
 
 /* Only one input file */
@@ -14,22 +22,32 @@
     not sure if line 19 is right?, part of sample_op
     add specific terminals for model_var, layer_var, model_spec, etc..
     confused about model_spec. 
+    chatgpt says to use /b(True|False)/b for bool token (/b does boundaries)
+       to avoid stuff like TTrue or Falsee
 */
 %%
-dsl.load { return LOAD; }
+load_dataset { return LOAD; }
+dsl.get_aggregate { return AGGR_INIT; }
+fn { return FN_ARG; }
+dsl.fn. { return DSL_FN; }
+mul_sum { return MUL_SUM; }
+dsl. {return DSL_DOT; }
 dsl.reorder.rabbit { return RABBIT_REORDER_OP; }
 dsl.sample.random  { return SAMPLE_RANDOM_OP; }
-dsl.nn.ffn { return FFN; }
-dsl.nln.ReLU { return RELU; }
+nn.ffn { return FFN; }
+out= { return FFN_OUT; }
+size { return SIZE_FN; }
+nln.ReLU { return RELU; }
 dsl.nn.loss.RMSE { return RMSE_LOSS; }
-dsl.nn.optmz.ADAM { return ADAM; }
+dsl.nn.optmz.ADAM { return ADAM_T; }
 DSL_Dataset { return DATASET; }
 NonLn { return NONLN; }
 aggregate { return AGGR; }
-model { return MODEL; }
+model { return MODEL_W; }
 layer { return LAYER; }
-graph { return GRAPH_ATTR; }
-feat { return FEAT_ATTR; }
+graphs { return GRAPH_ATTR; }
+feats { return FEAT_ATTR; }
+labels { return LABEL_ATTR; }
 eval { return EVAL; }
 train { return TRAIN; }
 loss { return LOSS; }
@@ -73,10 +91,7 @@ new { return NEW; }
 \/ { return DIVIDE; }
 \" { return QUOTE; }
 [ \t\r\n] {}
-\/\/.* { 
-    yylval.sval = strdup(yytext);
-    return COMMENT; 
-}
+\/\/.* {}
 [0-9]+\.[0-9]+ {
     yylval.sval = strdup(yytext);
     return FLOAT; 
