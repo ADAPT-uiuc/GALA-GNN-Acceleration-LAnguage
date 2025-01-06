@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
     auto graphData = DataNode("Graph", INT32, INT32, F32, &rootGraphLevel);
     // Feat
     auto featInfo = DataInfo(RM_DTYPE);
-    featInfo.setDims(232965, 605);
+    featInfo.setDims(-1, -2);
     auto rootFeatLevel = DataLevel(&featInfo, true);
     auto featData = DataNode("Feat", INT32, INT32, F32, &rootFeatLevel);
 
@@ -88,6 +88,9 @@ int main(int argc, char **argv) {
 	auto graphTrgraph = TransformEdge(&graphData, &transformedGraph);
 	graphTrgraph.addTransformation(&tileTransformation);
 	transforms.push_back(&graphTrgraph);
+
+	featInfo.setDims(-1, 605);
+
 	auto trainingLoop = TrainingLoopNode(100);
 
     // Add aggregate operation
@@ -112,17 +115,23 @@ int main(int argc, char **argv) {
     auto ffn = ForwardNode(UPDATE_NODE, FFN_OP);
     // Weight as a matrix in the DIR
     auto weightInfo = DataInfo(CM_DTYPE);
-    weightInfo.setDims(605, 32); // -1=N=232965, the number of nodes in the graph
+    weightInfo.setDims(-2, -3); // -2=input embedding dimension, -3=output classes
     auto weightLevel = DataLevel(&weightInfo, true);
     auto weightData = DataNode("Weight1", INT32, INT32, F32, &weightLevel);
     // Res DIR
     auto resInfo = DataInfo(RM_DTYPE);
-    resInfo.setDims(-1, 32); // -1=N=232965, the number of nodes in the graph
+    resInfo.setDims(-1, -3); // -1=N=232965, the number of nodes in the graph, -3=output classes
+
+    // set dimenions from the new schedule information
+    weightInfo.setDims(605, 41); //
+    resInfo.setDims(-1, 41); // -1=N=232965, the number of nodes in the graph
+
     auto rootResLevel = DataLevel(&outputInfo, true);
     auto resData = DataNode("Res1", INT32, INT32, F32, &rootResLevel);
     aggregate.addInputData(&outputData);
     aggregate.addInputData(&weightData);
     aggregate.addOutputData(&resData);
+    aggregate.addOpt(COARSE_COPT, 4);
     trainingLoop.addLoopNode(&ffn);
     auto inOutWeightDepRelationFeat = RelationEdge(&outputData, ALL_RELATION, &resData, ALL_RELATION);
     auto inOutWeightDepRelationWeight = RelationEdge(&weightData, COLS_RELATION, &resData, ROWS_RELATION);

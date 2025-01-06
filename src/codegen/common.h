@@ -531,7 +531,8 @@ net->parameters(), torch::optim::AdamOptions(1e-2).weight_decay(5e-4));";
     void commonPerCode(std::vector<CIRNode*>& program)
     {
         // Will not change for now
-        std::string stdCommon = "#include <algorithm>\n\
+        // TODO need to change the types based on the data
+        std::string tempStdCommon = "#include <algorithm>\n\
 typedef int ind1_t;\n\
 typedef int ind2_t;\n\
 typedef long lab_t;\n\
@@ -543,8 +544,16 @@ typedef DenseMatrix<ind1_t, ind2_t, val_t> DM;\n\
 typedef DenseMatrix<ind1_t, ind2_t, lab_t> DL;\n\
 typedef DenseMatrix<ind1_t, ind2_t, mask_load_t> DBL;\n\
 typedef DenseMatrix<ind1_t, ind2_t, mask_t> DB;\n\
-typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;";
-        importCode.addCode(stdCommon);
+typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;\n\
+int global_nrows;\n\
+std::vector<int> global_segments;\n\
+bool global_is_directed;\n\
+\n\
+std::vector<torch::Tensor> global_offset_graph;\n\
+std::vector<torch::Tensor> global_columns_graph;\n\
+std::vector<torch::Tensor> global_value_graph;\n\
+std::vector<torch::Tensor> global_bounds;";
+        importCode.addCode(tempStdCommon);
 
         std::string mainFuncCode  = "int main(int argc, char **argv) {\n\
   typedef typename SM::itype iT;\n\
@@ -582,60 +591,6 @@ typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;";
         this->writeCode(postCode, outStreamModel);
 
         this->closeStream();
-
-        //        // Kernel binding to PyTorch -- Architecture independent
-        //        for (const auto &kernel: this->kernelCode){
-        //            for (int ib = 0; ib < kernel->getNumBind(); ib++){
-        //                auto bindCodeLine = kernel->getBind(ib);
-        //                writePyLine(bindCodeLine);
-        //            }
-        //        }
-        //
-        //        // Model Def / Forward -- Prior to the main Python function
-        //        for (const auto &model: this->modelCode){
-        //            std::string modelNameStr("class " + *model->getName() + "(torch.nn.Module)");
-        //            auto modelNameLine = PyCodeLine(modelNameStr);
-        //            writePyLine(&modelNameLine);
-        //
-        //            for (int id = 0; id < model->getNumDef(); id++){
-        //                auto defCodeLine = model->atDef(id);
-        //                writePyLine(defCodeLine);
-        //            }
-        //
-        //            for (int ig = 0; ig < model->getNumForward(); ig++){
-        //                auto forCodeLine = model->atForward(ig);
-        //                writePyLine(forCodeLine);
-        //            }
-        //        }
-        //
-        //        // Code before model def and use (Ex - Load graph)
-        //        for (const auto &cde: this->preCode){
-        //            writePyLine(cde);
-        //        }
-        //
-        //        // Model Init / Train / Validation / Test Code
-        //        // Model Def / Forward -- Prior to the main Python function
-        //        for (const auto &model: this->modelCode){
-        //            for (int it = 0; it < model->getNumTraining(); it++){
-        //                auto trainCodeLine = model->atTraining(it);
-        //                writePyLine(trainCodeLine);
-        //            }
-        //
-        //            for (int iv = 0; iv < model->getNumTraining(); iv++){
-        //                auto validCodeLine = model->atValidation(iv);
-        //                writePyLine(validCodeLine);
-        //            }
-        //
-        //            for (int ig = 0; ig < model->getNumTesting(); ig++){
-        //                auto testCodeLine = model->atTesting(ig);
-        //                writePyLine(testCodeLine);
-        //            }
-        //        }
-        //
-        //        // Code after training (Ex - Evaluate correctness of results)
-        //        for (const auto &cde: this->postCode){
-        //            writePyLine(cde);
-        //        }
     }
 };
 
