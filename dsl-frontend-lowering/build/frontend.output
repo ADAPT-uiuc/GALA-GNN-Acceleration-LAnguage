@@ -1,0 +1,1910 @@
+Terminals unused in grammar
+
+    COMMENT
+    LOSS
+    OPTIMIZER
+    RMSE_LOSS
+    ADAM_T
+    RELAXNLN
+    QUANT
+    RABBIT_REORDER_OP
+    SAMPLE_RANDOM_OP
+    AGGR
+    FLOAT
+    LSQBRA
+    RSQBRA
+    IF
+    ELSE
+    DO
+    WHILE
+    NOT
+    AND
+    OR
+    NOTEQ
+    EQ
+    GREATER
+    LESS
+    GREATEREQ
+    LESSEQ
+    DATASET
+    NONLN
+    SENSEI_OP
+    INT
+    NEW
+
+
+State 3 conflicts: 1 shift/reduce
+State 8 conflicts: 1 shift/reduce
+State 27 conflicts: 1 shift/reduce
+
+
+Grammar
+
+    0 $accept: program $end
+
+    1 program: load_dataset algorithm schedules
+
+    2 load_dataset: IDENTIFIER ASSIGN LOAD LPAREN string RPAREN SEMICOLON
+
+    3 algorithm: ε
+    4          | statement algorithm
+    5          | layers model
+
+    6 statements: ε
+    7           | statements statement
+
+    8 statement: IDENTIFIER ASSIGN gnn_op SEMICOLON
+    9          | IDENTIFIER ASSIGN IDENTIFIER DOT GRAPH_ATTR SEMICOLON
+   10          | IDENTIFIER ASSIGN function_init SEMICOLON
+
+   11 layers: layer_def
+   12       | layers layer_def
+
+   13 layer_def: IDENTIFIER ASSIGN LAYER LPAREN args RPAREN LBRACE statements RBRACE
+
+   14 model: model_def model_init model_uses
+
+   15 model_def: IDENTIFIER ASSIGN MODEL_W LPAREN args RPAREN LBRACE layer_inits RBRACE
+
+   16 layer_inits: ε
+   17            | layer_inits layer_init
+
+   18 layer_init: IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON
+
+   19 model_init: IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON
+
+   20 model_uses: model_use model_use
+
+   21 model_use: IDENTIFIER ASSIGN IDENTIFIER DOT EVAL LPAREN args RPAREN SEMICOLON
+   22          | IDENTIFIER DOT TRAIN LPAREN train_args RPAREN SEMICOLON
+
+   23 gnn_op: data_var op data_var
+   24       | function
+
+   25 function: IDENTIFIER LPAREN data_var COMMA data_var RPAREN
+   26         | DSL_DOT update_op
+
+   27 update_op: FFN LPAREN data_var COMMA FFN_OUT data_var RPAREN
+   28          | RELU LPAREN data_var RPAREN
+
+   29 schedules: schedule
+   30          | schedules schedule
+
+   31 schedule: data_transform
+   32         | function_transform
+
+   33 data_transform: data_var ASSIGN data_var DOT SET_UNDIRECTED LPAREN bool RPAREN SEMICOLON
+   34               | data_var ASSIGN data_var DOT SET_UNWEIGHTED LPAREN bool RPAREN SEMICOLON
+   35               | FEAT_SIZE_ASSIGN LPAREN INTEGER RPAREN SEMICOLON
+   36               | LABEL_SIZE_ASSIGN LPAREN INTEGER RPAREN SEMICOLON
+   37               | data_var ASSIGN data_var DOT COLTILE LPAREN INTEGER RPAREN SEMICOLON
+
+   38 function_transform: data_var ASSIGN data_var DOT COARSEN LPAREN INTEGER RPAREN SEMICOLON
+
+   39 data_var: IDENTIFIER
+   40         | data_var DOT FEAT_ATTR
+   41         | data_var DOT GRAPH_ATTR
+   42         | data_var DOT LABEL_ATTR
+   43         | data_var DOT SIZE_FN LPAREN RPAREN
+
+   44 function_init: AGGR_INIT LPAREN FN_ARG ASSIGN DSL_FN semiring_op RPAREN
+
+   45 semiring_op: MUL_SUM
+
+   46 op: PLUS
+   47   | MINUS
+   48   | MULTIPLY
+   49   | DIVIDE
+
+   50 train_args: ε
+   51           | train_args train_arg
+
+   52 train_arg: ITERS ASSIGN INTEGER
+   53          | ITERS ASSIGN INTEGER COMMA
+   54          | VAL_STEP ASSIGN INTEGER
+   55          | VAL_STEP ASSIGN INTEGER COMMA
+
+   56 args: ε
+   57     | args arg
+
+   58 arg: INTEGER COMMA
+   59    | INTEGER
+   60    | NULL_KEY COMMA
+   61    | NULL_KEY
+   62    | data_var COMMA
+   63    | data_var
+   64    | RELU
+   65    | RELU COMMA
+
+   66 bool: TR
+   67     | FA
+
+   68 string: QUOTE IDENTIFIER QUOTE
+
+
+Terminals, with rules where they appear
+
+    $end (0) 0
+    error (256)
+    IDENTIFIER <sval> (258) 2 8 9 10 13 15 18 19 21 22 25 39 68
+    ASSIGN <sval> (259) 2 8 9 10 13 15 18 19 21 33 34 37 38 44 52 53 54 55
+    LOAD <sval> (260) 2
+    LPAREN <sval> (261) 2 13 15 18 19 21 22 25 27 28 33 34 35 36 37 38 43 44
+    RPAREN <sval> (262) 2 13 15 18 19 21 22 25 27 28 33 34 35 36 37 38 43 44
+    SEMICOLON <sval> (263) 2 8 9 10 18 19 21 22 33 34 35 36 37 38
+    QUOTE <sval> (264) 68
+    COMMENT <sval> (265)
+    SET_UNWEIGHTED <sval> (266) 34
+    SET_UNDIRECTED <sval> (267) 33
+    MODEL_W <sval> (268) 15
+    EVAL <sval> (269) 21
+    TRAIN <sval> (270) 22
+    LAYER <sval> (271) 13
+    LOSS <sval> (272)
+    OPTIMIZER <sval> (273)
+    ITERS <sval> (274) 52 53
+    VAL_STEP <sval> (275) 54 55
+    RMSE_LOSS <sval> (276)
+    ADAM_T <sval> (277)
+    AGGR_INIT <sval> (278) 44
+    FN_ARG <sval> (279) 44
+    MUL_SUM <sval> (280) 45
+    DSL_FN <sval> (281) 44
+    DSL_DOT <sval> (282) 26
+    FFN_OUT <sval> (283) 27
+    SIZE_FN <sval> (284) 43
+    RELAXNLN <sval> (285)
+    QUANT <sval> (286)
+    GRAPH_ATTR <sval> (287) 9 41
+    FEAT_ATTR <sval> (288) 40
+    RELU <sval> (289) 28 64 65
+    LABEL_ATTR <sval> (290) 42
+    RABBIT_REORDER_OP <sval> (291)
+    SAMPLE_RANDOM_OP <sval> (292)
+    COLTILE <sval> (293) 37
+    AGGR <sval> (294)
+    FEAT_SIZE_ASSIGN <sval> (295) 35
+    LABEL_SIZE_ASSIGN <sval> (296) 36
+    COARSEN <sval> (297) 38
+    INTEGER <sval> (298) 35 36 37 38 52 53 54 55 58 59
+    FLOAT <sval> (299)
+    LBRACE <sval> (300) 13 15
+    RBRACE <sval> (301) 13 15
+    LSQBRA <sval> (302)
+    RSQBRA <sval> (303)
+    DOT <sval> (304) 9 21 22 33 34 37 38 40 41 42 43
+    COMMA <sval> (305) 25 27 53 55 58 60 62 65
+    IF <sval> (306)
+    ELSE <sval> (307)
+    DO <sval> (308)
+    WHILE <sval> (309)
+    TR <sval> (310) 66
+    FA <sval> (311) 67
+    NOT <sval> (312)
+    AND <sval> (313)
+    OR <sval> (314)
+    NOTEQ <sval> (315)
+    EQ <sval> (316)
+    GREATER <sval> (317)
+    LESS <sval> (318)
+    GREATEREQ <sval> (319)
+    LESSEQ <sval> (320)
+    PLUS <sval> (321) 46
+    MINUS <sval> (322) 47
+    MULTIPLY <sval> (323) 48
+    DIVIDE <sval> (324) 49
+    FFN <sval> (325) 27
+    DATASET <sval> (326)
+    NONLN <sval> (327)
+    SENSEI_OP <sval> (328)
+    INT <sval> (329)
+    NEW <sval> (330)
+    NULL_KEY <sval> (331) 60 61
+
+
+Nonterminals, with rules where they appear
+
+    $accept (77)
+        on left: 0
+    program <irNode> (78)
+        on left: 1
+        on right: 0
+    load_dataset <forwardNode> (79)
+        on left: 2
+        on right: 1
+    algorithm <trainingLoopNode> (80)
+        on left: 3 4 5
+        on right: 1 4
+    statements <trainingLoopNode> (81)
+        on left: 6 7
+        on right: 7 13
+    statement <forwardNode> (82)
+        on left: 8 9 10
+        on right: 4 7
+    layers <trainingLoopNode> (83)
+        on left: 11 12
+        on right: 5 12
+    layer_def <trainingLoopNode> (84)
+        on left: 13
+        on right: 11 12
+    model <irNode> (85)
+        on left: 14
+        on right: 5
+    model_def <irNode> (86)
+        on left: 15
+        on right: 14
+    layer_inits <irNode> (87)
+        on left: 16 17
+        on right: 15 17
+    layer_init <irNode> (88)
+        on left: 18
+        on right: 17
+    model_init <irNode> (89)
+        on left: 19
+        on right: 14
+    model_uses <irNode> (90)
+        on left: 20
+        on right: 14
+    model_use <irNode> (91)
+        on left: 21 22
+        on right: 20
+    gnn_op <sval> (92)
+        on left: 23 24
+        on right: 8
+    function <sval> (93)
+        on left: 25 26
+        on right: 24
+    update_op <sval> (94)
+        on left: 27 28
+        on right: 26
+    schedules (95)
+        on left: 29 30
+        on right: 1 30
+    schedule <irNode> (96)
+        on left: 31 32
+        on right: 29 30
+    data_transform <irNode> (97)
+        on left: 33 34 35 36 37
+        on right: 31
+    function_transform <irNode> (98)
+        on left: 38
+        on right: 32
+    data_var <sval> (99)
+        on left: 39 40 41 42 43
+        on right: 23 25 27 28 33 34 37 38 40 41 42 43 62 63
+    function_init <forwardNode> (100)
+        on left: 44
+        on right: 10
+    semiring_op (101)
+        on left: 45
+        on right: 44
+    op (102)
+        on left: 46 47 48 49
+        on right: 23
+    train_args <irNode> (103)
+        on left: 50 51
+        on right: 22 51
+    train_arg <sval> (104)
+        on left: 52 53 54 55
+        on right: 51
+    args <irNode> (105)
+        on left: 56 57
+        on right: 13 15 18 19 21 57
+    arg <sval> (106)
+        on left: 58 59 60 61 62 63 64 65
+        on right: 57
+    bool <ival> (107)
+        on left: 66 67
+        on right: 33 34
+    string <sval> (108)
+        on left: 68
+        on right: 2
+
+
+State 0
+
+    0 $accept: • program $end
+
+    IDENTIFIER  shift, and go to state 1
+
+    program       go to state 2
+    load_dataset  go to state 3
+
+
+State 1
+
+    2 load_dataset: IDENTIFIER • ASSIGN LOAD LPAREN string RPAREN SEMICOLON
+
+    ASSIGN  shift, and go to state 4
+
+
+State 2
+
+    0 $accept: program • $end
+
+    $end  shift, and go to state 5
+
+
+State 3
+
+    1 program: load_dataset • algorithm schedules
+
+    IDENTIFIER  shift, and go to state 6
+
+    IDENTIFIER  [reduce using rule 3 (algorithm)]
+    $default    reduce using rule 3 (algorithm)
+
+    algorithm  go to state 7
+    statement  go to state 8
+    layers     go to state 9
+    layer_def  go to state 10
+
+
+State 4
+
+    2 load_dataset: IDENTIFIER ASSIGN • LOAD LPAREN string RPAREN SEMICOLON
+
+    LOAD  shift, and go to state 11
+
+
+State 5
+
+    0 $accept: program $end •
+
+    $default  accept
+
+
+State 6
+
+    8 statement: IDENTIFIER • ASSIGN gnn_op SEMICOLON
+    9          | IDENTIFIER • ASSIGN IDENTIFIER DOT GRAPH_ATTR SEMICOLON
+   10          | IDENTIFIER • ASSIGN function_init SEMICOLON
+   13 layer_def: IDENTIFIER • ASSIGN LAYER LPAREN args RPAREN LBRACE statements RBRACE
+
+    ASSIGN  shift, and go to state 12
+
+
+State 7
+
+    1 program: load_dataset algorithm • schedules
+
+    IDENTIFIER         shift, and go to state 13
+    FEAT_SIZE_ASSIGN   shift, and go to state 14
+    LABEL_SIZE_ASSIGN  shift, and go to state 15
+
+    schedules           go to state 16
+    schedule            go to state 17
+    data_transform      go to state 18
+    function_transform  go to state 19
+    data_var            go to state 20
+
+
+State 8
+
+    4 algorithm: statement • algorithm
+
+    IDENTIFIER  shift, and go to state 6
+
+    IDENTIFIER  [reduce using rule 3 (algorithm)]
+    $default    reduce using rule 3 (algorithm)
+
+    algorithm  go to state 21
+    statement  go to state 8
+    layers     go to state 9
+    layer_def  go to state 10
+
+
+State 9
+
+    5 algorithm: layers • model
+   12 layers: layers • layer_def
+
+    IDENTIFIER  shift, and go to state 22
+
+    layer_def  go to state 23
+    model      go to state 24
+    model_def  go to state 25
+
+
+State 10
+
+   11 layers: layer_def •
+
+    $default  reduce using rule 11 (layers)
+
+
+State 11
+
+    2 load_dataset: IDENTIFIER ASSIGN LOAD • LPAREN string RPAREN SEMICOLON
+
+    LPAREN  shift, and go to state 26
+
+
+State 12
+
+    8 statement: IDENTIFIER ASSIGN • gnn_op SEMICOLON
+    9          | IDENTIFIER ASSIGN • IDENTIFIER DOT GRAPH_ATTR SEMICOLON
+   10          | IDENTIFIER ASSIGN • function_init SEMICOLON
+   13 layer_def: IDENTIFIER ASSIGN • LAYER LPAREN args RPAREN LBRACE statements RBRACE
+
+    IDENTIFIER  shift, and go to state 27
+    LAYER       shift, and go to state 28
+    AGGR_INIT   shift, and go to state 29
+    DSL_DOT     shift, and go to state 30
+
+    gnn_op         go to state 31
+    function       go to state 32
+    data_var       go to state 33
+    function_init  go to state 34
+
+
+State 13
+
+   39 data_var: IDENTIFIER •
+
+    $default  reduce using rule 39 (data_var)
+
+
+State 14
+
+   35 data_transform: FEAT_SIZE_ASSIGN • LPAREN INTEGER RPAREN SEMICOLON
+
+    LPAREN  shift, and go to state 35
+
+
+State 15
+
+   36 data_transform: LABEL_SIZE_ASSIGN • LPAREN INTEGER RPAREN SEMICOLON
+
+    LPAREN  shift, and go to state 36
+
+
+State 16
+
+    1 program: load_dataset algorithm schedules •
+   30 schedules: schedules • schedule
+
+    IDENTIFIER         shift, and go to state 13
+    FEAT_SIZE_ASSIGN   shift, and go to state 14
+    LABEL_SIZE_ASSIGN  shift, and go to state 15
+
+    $default  reduce using rule 1 (program)
+
+    schedule            go to state 37
+    data_transform      go to state 18
+    function_transform  go to state 19
+    data_var            go to state 20
+
+
+State 17
+
+   29 schedules: schedule •
+
+    $default  reduce using rule 29 (schedules)
+
+
+State 18
+
+   31 schedule: data_transform •
+
+    $default  reduce using rule 31 (schedule)
+
+
+State 19
+
+   32 schedule: function_transform •
+
+    $default  reduce using rule 32 (schedule)
+
+
+State 20
+
+   33 data_transform: data_var • ASSIGN data_var DOT SET_UNDIRECTED LPAREN bool RPAREN SEMICOLON
+   34               | data_var • ASSIGN data_var DOT SET_UNWEIGHTED LPAREN bool RPAREN SEMICOLON
+   37               | data_var • ASSIGN data_var DOT COLTILE LPAREN INTEGER RPAREN SEMICOLON
+   38 function_transform: data_var • ASSIGN data_var DOT COARSEN LPAREN INTEGER RPAREN SEMICOLON
+   40 data_var: data_var • DOT FEAT_ATTR
+   41         | data_var • DOT GRAPH_ATTR
+   42         | data_var • DOT LABEL_ATTR
+   43         | data_var • DOT SIZE_FN LPAREN RPAREN
+
+    ASSIGN  shift, and go to state 38
+    DOT     shift, and go to state 39
+
+
+State 21
+
+    4 algorithm: statement algorithm •
+
+    $default  reduce using rule 4 (algorithm)
+
+
+State 22
+
+   13 layer_def: IDENTIFIER • ASSIGN LAYER LPAREN args RPAREN LBRACE statements RBRACE
+   15 model_def: IDENTIFIER • ASSIGN MODEL_W LPAREN args RPAREN LBRACE layer_inits RBRACE
+
+    ASSIGN  shift, and go to state 40
+
+
+State 23
+
+   12 layers: layers layer_def •
+
+    $default  reduce using rule 12 (layers)
+
+
+State 24
+
+    5 algorithm: layers model •
+
+    $default  reduce using rule 5 (algorithm)
+
+
+State 25
+
+   14 model: model_def • model_init model_uses
+
+    IDENTIFIER  shift, and go to state 41
+
+    model_init  go to state 42
+
+
+State 26
+
+    2 load_dataset: IDENTIFIER ASSIGN LOAD LPAREN • string RPAREN SEMICOLON
+
+    QUOTE  shift, and go to state 43
+
+    string  go to state 44
+
+
+State 27
+
+    9 statement: IDENTIFIER ASSIGN IDENTIFIER • DOT GRAPH_ATTR SEMICOLON
+   25 function: IDENTIFIER • LPAREN data_var COMMA data_var RPAREN
+   39 data_var: IDENTIFIER •
+
+    LPAREN  shift, and go to state 45
+    DOT     shift, and go to state 46
+
+    DOT       [reduce using rule 39 (data_var)]
+    $default  reduce using rule 39 (data_var)
+
+
+State 28
+
+   13 layer_def: IDENTIFIER ASSIGN LAYER • LPAREN args RPAREN LBRACE statements RBRACE
+
+    LPAREN  shift, and go to state 47
+
+
+State 29
+
+   44 function_init: AGGR_INIT • LPAREN FN_ARG ASSIGN DSL_FN semiring_op RPAREN
+
+    LPAREN  shift, and go to state 48
+
+
+State 30
+
+   26 function: DSL_DOT • update_op
+
+    RELU  shift, and go to state 49
+    FFN   shift, and go to state 50
+
+    update_op  go to state 51
+
+
+State 31
+
+    8 statement: IDENTIFIER ASSIGN gnn_op • SEMICOLON
+
+    SEMICOLON  shift, and go to state 52
+
+
+State 32
+
+   24 gnn_op: function •
+
+    $default  reduce using rule 24 (gnn_op)
+
+
+State 33
+
+   23 gnn_op: data_var • op data_var
+   40 data_var: data_var • DOT FEAT_ATTR
+   41         | data_var • DOT GRAPH_ATTR
+   42         | data_var • DOT LABEL_ATTR
+   43         | data_var • DOT SIZE_FN LPAREN RPAREN
+
+    DOT       shift, and go to state 39
+    PLUS      shift, and go to state 53
+    MINUS     shift, and go to state 54
+    MULTIPLY  shift, and go to state 55
+    DIVIDE    shift, and go to state 56
+
+    op  go to state 57
+
+
+State 34
+
+   10 statement: IDENTIFIER ASSIGN function_init • SEMICOLON
+
+    SEMICOLON  shift, and go to state 58
+
+
+State 35
+
+   35 data_transform: FEAT_SIZE_ASSIGN LPAREN • INTEGER RPAREN SEMICOLON
+
+    INTEGER  shift, and go to state 59
+
+
+State 36
+
+   36 data_transform: LABEL_SIZE_ASSIGN LPAREN • INTEGER RPAREN SEMICOLON
+
+    INTEGER  shift, and go to state 60
+
+
+State 37
+
+   30 schedules: schedules schedule •
+
+    $default  reduce using rule 30 (schedules)
+
+
+State 38
+
+   33 data_transform: data_var ASSIGN • data_var DOT SET_UNDIRECTED LPAREN bool RPAREN SEMICOLON
+   34               | data_var ASSIGN • data_var DOT SET_UNWEIGHTED LPAREN bool RPAREN SEMICOLON
+   37               | data_var ASSIGN • data_var DOT COLTILE LPAREN INTEGER RPAREN SEMICOLON
+   38 function_transform: data_var ASSIGN • data_var DOT COARSEN LPAREN INTEGER RPAREN SEMICOLON
+
+    IDENTIFIER  shift, and go to state 13
+
+    data_var  go to state 61
+
+
+State 39
+
+   40 data_var: data_var DOT • FEAT_ATTR
+   41         | data_var DOT • GRAPH_ATTR
+   42         | data_var DOT • LABEL_ATTR
+   43         | data_var DOT • SIZE_FN LPAREN RPAREN
+
+    SIZE_FN     shift, and go to state 62
+    GRAPH_ATTR  shift, and go to state 63
+    FEAT_ATTR   shift, and go to state 64
+    LABEL_ATTR  shift, and go to state 65
+
+
+State 40
+
+   13 layer_def: IDENTIFIER ASSIGN • LAYER LPAREN args RPAREN LBRACE statements RBRACE
+   15 model_def: IDENTIFIER ASSIGN • MODEL_W LPAREN args RPAREN LBRACE layer_inits RBRACE
+
+    MODEL_W  shift, and go to state 66
+    LAYER    shift, and go to state 28
+
+
+State 41
+
+   19 model_init: IDENTIFIER • ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON
+
+    ASSIGN  shift, and go to state 67
+
+
+State 42
+
+   14 model: model_def model_init • model_uses
+
+    IDENTIFIER  shift, and go to state 68
+
+    model_uses  go to state 69
+    model_use   go to state 70
+
+
+State 43
+
+   68 string: QUOTE • IDENTIFIER QUOTE
+
+    IDENTIFIER  shift, and go to state 71
+
+
+State 44
+
+    2 load_dataset: IDENTIFIER ASSIGN LOAD LPAREN string • RPAREN SEMICOLON
+
+    RPAREN  shift, and go to state 72
+
+
+State 45
+
+   25 function: IDENTIFIER LPAREN • data_var COMMA data_var RPAREN
+
+    IDENTIFIER  shift, and go to state 13
+
+    data_var  go to state 73
+
+
+State 46
+
+    9 statement: IDENTIFIER ASSIGN IDENTIFIER DOT • GRAPH_ATTR SEMICOLON
+
+    GRAPH_ATTR  shift, and go to state 74
+
+
+State 47
+
+   13 layer_def: IDENTIFIER ASSIGN LAYER LPAREN • args RPAREN LBRACE statements RBRACE
+
+    $default  reduce using rule 56 (args)
+
+    args  go to state 75
+
+
+State 48
+
+   44 function_init: AGGR_INIT LPAREN • FN_ARG ASSIGN DSL_FN semiring_op RPAREN
+
+    FN_ARG  shift, and go to state 76
+
+
+State 49
+
+   28 update_op: RELU • LPAREN data_var RPAREN
+
+    LPAREN  shift, and go to state 77
+
+
+State 50
+
+   27 update_op: FFN • LPAREN data_var COMMA FFN_OUT data_var RPAREN
+
+    LPAREN  shift, and go to state 78
+
+
+State 51
+
+   26 function: DSL_DOT update_op •
+
+    $default  reduce using rule 26 (function)
+
+
+State 52
+
+    8 statement: IDENTIFIER ASSIGN gnn_op SEMICOLON •
+
+    $default  reduce using rule 8 (statement)
+
+
+State 53
+
+   46 op: PLUS •
+
+    $default  reduce using rule 46 (op)
+
+
+State 54
+
+   47 op: MINUS •
+
+    $default  reduce using rule 47 (op)
+
+
+State 55
+
+   48 op: MULTIPLY •
+
+    $default  reduce using rule 48 (op)
+
+
+State 56
+
+   49 op: DIVIDE •
+
+    $default  reduce using rule 49 (op)
+
+
+State 57
+
+   23 gnn_op: data_var op • data_var
+
+    IDENTIFIER  shift, and go to state 13
+
+    data_var  go to state 79
+
+
+State 58
+
+   10 statement: IDENTIFIER ASSIGN function_init SEMICOLON •
+
+    $default  reduce using rule 10 (statement)
+
+
+State 59
+
+   35 data_transform: FEAT_SIZE_ASSIGN LPAREN INTEGER • RPAREN SEMICOLON
+
+    RPAREN  shift, and go to state 80
+
+
+State 60
+
+   36 data_transform: LABEL_SIZE_ASSIGN LPAREN INTEGER • RPAREN SEMICOLON
+
+    RPAREN  shift, and go to state 81
+
+
+State 61
+
+   33 data_transform: data_var ASSIGN data_var • DOT SET_UNDIRECTED LPAREN bool RPAREN SEMICOLON
+   34               | data_var ASSIGN data_var • DOT SET_UNWEIGHTED LPAREN bool RPAREN SEMICOLON
+   37               | data_var ASSIGN data_var • DOT COLTILE LPAREN INTEGER RPAREN SEMICOLON
+   38 function_transform: data_var ASSIGN data_var • DOT COARSEN LPAREN INTEGER RPAREN SEMICOLON
+   40 data_var: data_var • DOT FEAT_ATTR
+   41         | data_var • DOT GRAPH_ATTR
+   42         | data_var • DOT LABEL_ATTR
+   43         | data_var • DOT SIZE_FN LPAREN RPAREN
+
+    DOT  shift, and go to state 82
+
+
+State 62
+
+   43 data_var: data_var DOT SIZE_FN • LPAREN RPAREN
+
+    LPAREN  shift, and go to state 83
+
+
+State 63
+
+   41 data_var: data_var DOT GRAPH_ATTR •
+
+    $default  reduce using rule 41 (data_var)
+
+
+State 64
+
+   40 data_var: data_var DOT FEAT_ATTR •
+
+    $default  reduce using rule 40 (data_var)
+
+
+State 65
+
+   42 data_var: data_var DOT LABEL_ATTR •
+
+    $default  reduce using rule 42 (data_var)
+
+
+State 66
+
+   15 model_def: IDENTIFIER ASSIGN MODEL_W • LPAREN args RPAREN LBRACE layer_inits RBRACE
+
+    LPAREN  shift, and go to state 84
+
+
+State 67
+
+   19 model_init: IDENTIFIER ASSIGN • IDENTIFIER LPAREN args RPAREN SEMICOLON
+
+    IDENTIFIER  shift, and go to state 85
+
+
+State 68
+
+   21 model_use: IDENTIFIER • ASSIGN IDENTIFIER DOT EVAL LPAREN args RPAREN SEMICOLON
+   22          | IDENTIFIER • DOT TRAIN LPAREN train_args RPAREN SEMICOLON
+
+    ASSIGN  shift, and go to state 86
+    DOT     shift, and go to state 87
+
+
+State 69
+
+   14 model: model_def model_init model_uses •
+
+    $default  reduce using rule 14 (model)
+
+
+State 70
+
+   20 model_uses: model_use • model_use
+
+    IDENTIFIER  shift, and go to state 68
+
+    model_use  go to state 88
+
+
+State 71
+
+   68 string: QUOTE IDENTIFIER • QUOTE
+
+    QUOTE  shift, and go to state 89
+
+
+State 72
+
+    2 load_dataset: IDENTIFIER ASSIGN LOAD LPAREN string RPAREN • SEMICOLON
+
+    SEMICOLON  shift, and go to state 90
+
+
+State 73
+
+   25 function: IDENTIFIER LPAREN data_var • COMMA data_var RPAREN
+   40 data_var: data_var • DOT FEAT_ATTR
+   41         | data_var • DOT GRAPH_ATTR
+   42         | data_var • DOT LABEL_ATTR
+   43         | data_var • DOT SIZE_FN LPAREN RPAREN
+
+    DOT    shift, and go to state 39
+    COMMA  shift, and go to state 91
+
+
+State 74
+
+    9 statement: IDENTIFIER ASSIGN IDENTIFIER DOT GRAPH_ATTR • SEMICOLON
+
+    SEMICOLON  shift, and go to state 92
+
+
+State 75
+
+   13 layer_def: IDENTIFIER ASSIGN LAYER LPAREN args • RPAREN LBRACE statements RBRACE
+   57 args: args • arg
+
+    IDENTIFIER  shift, and go to state 13
+    RPAREN      shift, and go to state 93
+    RELU        shift, and go to state 94
+    INTEGER     shift, and go to state 95
+    NULL_KEY    shift, and go to state 96
+
+    data_var  go to state 97
+    arg       go to state 98
+
+
+State 76
+
+   44 function_init: AGGR_INIT LPAREN FN_ARG • ASSIGN DSL_FN semiring_op RPAREN
+
+    ASSIGN  shift, and go to state 99
+
+
+State 77
+
+   28 update_op: RELU LPAREN • data_var RPAREN
+
+    IDENTIFIER  shift, and go to state 13
+
+    data_var  go to state 100
+
+
+State 78
+
+   27 update_op: FFN LPAREN • data_var COMMA FFN_OUT data_var RPAREN
+
+    IDENTIFIER  shift, and go to state 13
+
+    data_var  go to state 101
+
+
+State 79
+
+   23 gnn_op: data_var op data_var •
+   40 data_var: data_var • DOT FEAT_ATTR
+   41         | data_var • DOT GRAPH_ATTR
+   42         | data_var • DOT LABEL_ATTR
+   43         | data_var • DOT SIZE_FN LPAREN RPAREN
+
+    DOT  shift, and go to state 39
+
+    $default  reduce using rule 23 (gnn_op)
+
+
+State 80
+
+   35 data_transform: FEAT_SIZE_ASSIGN LPAREN INTEGER RPAREN • SEMICOLON
+
+    SEMICOLON  shift, and go to state 102
+
+
+State 81
+
+   36 data_transform: LABEL_SIZE_ASSIGN LPAREN INTEGER RPAREN • SEMICOLON
+
+    SEMICOLON  shift, and go to state 103
+
+
+State 82
+
+   33 data_transform: data_var ASSIGN data_var DOT • SET_UNDIRECTED LPAREN bool RPAREN SEMICOLON
+   34               | data_var ASSIGN data_var DOT • SET_UNWEIGHTED LPAREN bool RPAREN SEMICOLON
+   37               | data_var ASSIGN data_var DOT • COLTILE LPAREN INTEGER RPAREN SEMICOLON
+   38 function_transform: data_var ASSIGN data_var DOT • COARSEN LPAREN INTEGER RPAREN SEMICOLON
+   40 data_var: data_var DOT • FEAT_ATTR
+   41         | data_var DOT • GRAPH_ATTR
+   42         | data_var DOT • LABEL_ATTR
+   43         | data_var DOT • SIZE_FN LPAREN RPAREN
+
+    SET_UNWEIGHTED  shift, and go to state 104
+    SET_UNDIRECTED  shift, and go to state 105
+    SIZE_FN         shift, and go to state 62
+    GRAPH_ATTR      shift, and go to state 63
+    FEAT_ATTR       shift, and go to state 64
+    LABEL_ATTR      shift, and go to state 65
+    COLTILE         shift, and go to state 106
+    COARSEN         shift, and go to state 107
+
+
+State 83
+
+   43 data_var: data_var DOT SIZE_FN LPAREN • RPAREN
+
+    RPAREN  shift, and go to state 108
+
+
+State 84
+
+   15 model_def: IDENTIFIER ASSIGN MODEL_W LPAREN • args RPAREN LBRACE layer_inits RBRACE
+
+    $default  reduce using rule 56 (args)
+
+    args  go to state 109
+
+
+State 85
+
+   19 model_init: IDENTIFIER ASSIGN IDENTIFIER • LPAREN args RPAREN SEMICOLON
+
+    LPAREN  shift, and go to state 110
+
+
+State 86
+
+   21 model_use: IDENTIFIER ASSIGN • IDENTIFIER DOT EVAL LPAREN args RPAREN SEMICOLON
+
+    IDENTIFIER  shift, and go to state 111
+
+
+State 87
+
+   22 model_use: IDENTIFIER DOT • TRAIN LPAREN train_args RPAREN SEMICOLON
+
+    TRAIN  shift, and go to state 112
+
+
+State 88
+
+   20 model_uses: model_use model_use •
+
+    $default  reduce using rule 20 (model_uses)
+
+
+State 89
+
+   68 string: QUOTE IDENTIFIER QUOTE •
+
+    $default  reduce using rule 68 (string)
+
+
+State 90
+
+    2 load_dataset: IDENTIFIER ASSIGN LOAD LPAREN string RPAREN SEMICOLON •
+
+    $default  reduce using rule 2 (load_dataset)
+
+
+State 91
+
+   25 function: IDENTIFIER LPAREN data_var COMMA • data_var RPAREN
+
+    IDENTIFIER  shift, and go to state 13
+
+    data_var  go to state 113
+
+
+State 92
+
+    9 statement: IDENTIFIER ASSIGN IDENTIFIER DOT GRAPH_ATTR SEMICOLON •
+
+    $default  reduce using rule 9 (statement)
+
+
+State 93
+
+   13 layer_def: IDENTIFIER ASSIGN LAYER LPAREN args RPAREN • LBRACE statements RBRACE
+
+    LBRACE  shift, and go to state 114
+
+
+State 94
+
+   64 arg: RELU •
+   65    | RELU • COMMA
+
+    COMMA  shift, and go to state 115
+
+    $default  reduce using rule 64 (arg)
+
+
+State 95
+
+   58 arg: INTEGER • COMMA
+   59    | INTEGER •
+
+    COMMA  shift, and go to state 116
+
+    $default  reduce using rule 59 (arg)
+
+
+State 96
+
+   60 arg: NULL_KEY • COMMA
+   61    | NULL_KEY •
+
+    COMMA  shift, and go to state 117
+
+    $default  reduce using rule 61 (arg)
+
+
+State 97
+
+   40 data_var: data_var • DOT FEAT_ATTR
+   41         | data_var • DOT GRAPH_ATTR
+   42         | data_var • DOT LABEL_ATTR
+   43         | data_var • DOT SIZE_FN LPAREN RPAREN
+   62 arg: data_var • COMMA
+   63    | data_var •
+
+    DOT    shift, and go to state 39
+    COMMA  shift, and go to state 118
+
+    $default  reduce using rule 63 (arg)
+
+
+State 98
+
+   57 args: args arg •
+
+    $default  reduce using rule 57 (args)
+
+
+State 99
+
+   44 function_init: AGGR_INIT LPAREN FN_ARG ASSIGN • DSL_FN semiring_op RPAREN
+
+    DSL_FN  shift, and go to state 119
+
+
+State 100
+
+   28 update_op: RELU LPAREN data_var • RPAREN
+   40 data_var: data_var • DOT FEAT_ATTR
+   41         | data_var • DOT GRAPH_ATTR
+   42         | data_var • DOT LABEL_ATTR
+   43         | data_var • DOT SIZE_FN LPAREN RPAREN
+
+    RPAREN  shift, and go to state 120
+    DOT     shift, and go to state 39
+
+
+State 101
+
+   27 update_op: FFN LPAREN data_var • COMMA FFN_OUT data_var RPAREN
+   40 data_var: data_var • DOT FEAT_ATTR
+   41         | data_var • DOT GRAPH_ATTR
+   42         | data_var • DOT LABEL_ATTR
+   43         | data_var • DOT SIZE_FN LPAREN RPAREN
+
+    DOT    shift, and go to state 39
+    COMMA  shift, and go to state 121
+
+
+State 102
+
+   35 data_transform: FEAT_SIZE_ASSIGN LPAREN INTEGER RPAREN SEMICOLON •
+
+    $default  reduce using rule 35 (data_transform)
+
+
+State 103
+
+   36 data_transform: LABEL_SIZE_ASSIGN LPAREN INTEGER RPAREN SEMICOLON •
+
+    $default  reduce using rule 36 (data_transform)
+
+
+State 104
+
+   34 data_transform: data_var ASSIGN data_var DOT SET_UNWEIGHTED • LPAREN bool RPAREN SEMICOLON
+
+    LPAREN  shift, and go to state 122
+
+
+State 105
+
+   33 data_transform: data_var ASSIGN data_var DOT SET_UNDIRECTED • LPAREN bool RPAREN SEMICOLON
+
+    LPAREN  shift, and go to state 123
+
+
+State 106
+
+   37 data_transform: data_var ASSIGN data_var DOT COLTILE • LPAREN INTEGER RPAREN SEMICOLON
+
+    LPAREN  shift, and go to state 124
+
+
+State 107
+
+   38 function_transform: data_var ASSIGN data_var DOT COARSEN • LPAREN INTEGER RPAREN SEMICOLON
+
+    LPAREN  shift, and go to state 125
+
+
+State 108
+
+   43 data_var: data_var DOT SIZE_FN LPAREN RPAREN •
+
+    $default  reduce using rule 43 (data_var)
+
+
+State 109
+
+   15 model_def: IDENTIFIER ASSIGN MODEL_W LPAREN args • RPAREN LBRACE layer_inits RBRACE
+   57 args: args • arg
+
+    IDENTIFIER  shift, and go to state 13
+    RPAREN      shift, and go to state 126
+    RELU        shift, and go to state 94
+    INTEGER     shift, and go to state 95
+    NULL_KEY    shift, and go to state 96
+
+    data_var  go to state 97
+    arg       go to state 98
+
+
+State 110
+
+   19 model_init: IDENTIFIER ASSIGN IDENTIFIER LPAREN • args RPAREN SEMICOLON
+
+    $default  reduce using rule 56 (args)
+
+    args  go to state 127
+
+
+State 111
+
+   21 model_use: IDENTIFIER ASSIGN IDENTIFIER • DOT EVAL LPAREN args RPAREN SEMICOLON
+
+    DOT  shift, and go to state 128
+
+
+State 112
+
+   22 model_use: IDENTIFIER DOT TRAIN • LPAREN train_args RPAREN SEMICOLON
+
+    LPAREN  shift, and go to state 129
+
+
+State 113
+
+   25 function: IDENTIFIER LPAREN data_var COMMA data_var • RPAREN
+   40 data_var: data_var • DOT FEAT_ATTR
+   41         | data_var • DOT GRAPH_ATTR
+   42         | data_var • DOT LABEL_ATTR
+   43         | data_var • DOT SIZE_FN LPAREN RPAREN
+
+    RPAREN  shift, and go to state 130
+    DOT     shift, and go to state 39
+
+
+State 114
+
+   13 layer_def: IDENTIFIER ASSIGN LAYER LPAREN args RPAREN LBRACE • statements RBRACE
+
+    $default  reduce using rule 6 (statements)
+
+    statements  go to state 131
+
+
+State 115
+
+   65 arg: RELU COMMA •
+
+    $default  reduce using rule 65 (arg)
+
+
+State 116
+
+   58 arg: INTEGER COMMA •
+
+    $default  reduce using rule 58 (arg)
+
+
+State 117
+
+   60 arg: NULL_KEY COMMA •
+
+    $default  reduce using rule 60 (arg)
+
+
+State 118
+
+   62 arg: data_var COMMA •
+
+    $default  reduce using rule 62 (arg)
+
+
+State 119
+
+   44 function_init: AGGR_INIT LPAREN FN_ARG ASSIGN DSL_FN • semiring_op RPAREN
+
+    MUL_SUM  shift, and go to state 132
+
+    semiring_op  go to state 133
+
+
+State 120
+
+   28 update_op: RELU LPAREN data_var RPAREN •
+
+    $default  reduce using rule 28 (update_op)
+
+
+State 121
+
+   27 update_op: FFN LPAREN data_var COMMA • FFN_OUT data_var RPAREN
+
+    FFN_OUT  shift, and go to state 134
+
+
+State 122
+
+   34 data_transform: data_var ASSIGN data_var DOT SET_UNWEIGHTED LPAREN • bool RPAREN SEMICOLON
+
+    TR  shift, and go to state 135
+    FA  shift, and go to state 136
+
+    bool  go to state 137
+
+
+State 123
+
+   33 data_transform: data_var ASSIGN data_var DOT SET_UNDIRECTED LPAREN • bool RPAREN SEMICOLON
+
+    TR  shift, and go to state 135
+    FA  shift, and go to state 136
+
+    bool  go to state 138
+
+
+State 124
+
+   37 data_transform: data_var ASSIGN data_var DOT COLTILE LPAREN • INTEGER RPAREN SEMICOLON
+
+    INTEGER  shift, and go to state 139
+
+
+State 125
+
+   38 function_transform: data_var ASSIGN data_var DOT COARSEN LPAREN • INTEGER RPAREN SEMICOLON
+
+    INTEGER  shift, and go to state 140
+
+
+State 126
+
+   15 model_def: IDENTIFIER ASSIGN MODEL_W LPAREN args RPAREN • LBRACE layer_inits RBRACE
+
+    LBRACE  shift, and go to state 141
+
+
+State 127
+
+   19 model_init: IDENTIFIER ASSIGN IDENTIFIER LPAREN args • RPAREN SEMICOLON
+   57 args: args • arg
+
+    IDENTIFIER  shift, and go to state 13
+    RPAREN      shift, and go to state 142
+    RELU        shift, and go to state 94
+    INTEGER     shift, and go to state 95
+    NULL_KEY    shift, and go to state 96
+
+    data_var  go to state 97
+    arg       go to state 98
+
+
+State 128
+
+   21 model_use: IDENTIFIER ASSIGN IDENTIFIER DOT • EVAL LPAREN args RPAREN SEMICOLON
+
+    EVAL  shift, and go to state 143
+
+
+State 129
+
+   22 model_use: IDENTIFIER DOT TRAIN LPAREN • train_args RPAREN SEMICOLON
+
+    $default  reduce using rule 50 (train_args)
+
+    train_args  go to state 144
+
+
+State 130
+
+   25 function: IDENTIFIER LPAREN data_var COMMA data_var RPAREN •
+
+    $default  reduce using rule 25 (function)
+
+
+State 131
+
+    7 statements: statements • statement
+   13 layer_def: IDENTIFIER ASSIGN LAYER LPAREN args RPAREN LBRACE statements • RBRACE
+
+    IDENTIFIER  shift, and go to state 145
+    RBRACE      shift, and go to state 146
+
+    statement  go to state 147
+
+
+State 132
+
+   45 semiring_op: MUL_SUM •
+
+    $default  reduce using rule 45 (semiring_op)
+
+
+State 133
+
+   44 function_init: AGGR_INIT LPAREN FN_ARG ASSIGN DSL_FN semiring_op • RPAREN
+
+    RPAREN  shift, and go to state 148
+
+
+State 134
+
+   27 update_op: FFN LPAREN data_var COMMA FFN_OUT • data_var RPAREN
+
+    IDENTIFIER  shift, and go to state 13
+
+    data_var  go to state 149
+
+
+State 135
+
+   66 bool: TR •
+
+    $default  reduce using rule 66 (bool)
+
+
+State 136
+
+   67 bool: FA •
+
+    $default  reduce using rule 67 (bool)
+
+
+State 137
+
+   34 data_transform: data_var ASSIGN data_var DOT SET_UNWEIGHTED LPAREN bool • RPAREN SEMICOLON
+
+    RPAREN  shift, and go to state 150
+
+
+State 138
+
+   33 data_transform: data_var ASSIGN data_var DOT SET_UNDIRECTED LPAREN bool • RPAREN SEMICOLON
+
+    RPAREN  shift, and go to state 151
+
+
+State 139
+
+   37 data_transform: data_var ASSIGN data_var DOT COLTILE LPAREN INTEGER • RPAREN SEMICOLON
+
+    RPAREN  shift, and go to state 152
+
+
+State 140
+
+   38 function_transform: data_var ASSIGN data_var DOT COARSEN LPAREN INTEGER • RPAREN SEMICOLON
+
+    RPAREN  shift, and go to state 153
+
+
+State 141
+
+   15 model_def: IDENTIFIER ASSIGN MODEL_W LPAREN args RPAREN LBRACE • layer_inits RBRACE
+
+    $default  reduce using rule 16 (layer_inits)
+
+    layer_inits  go to state 154
+
+
+State 142
+
+   19 model_init: IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN • SEMICOLON
+
+    SEMICOLON  shift, and go to state 155
+
+
+State 143
+
+   21 model_use: IDENTIFIER ASSIGN IDENTIFIER DOT EVAL • LPAREN args RPAREN SEMICOLON
+
+    LPAREN  shift, and go to state 156
+
+
+State 144
+
+   22 model_use: IDENTIFIER DOT TRAIN LPAREN train_args • RPAREN SEMICOLON
+   51 train_args: train_args • train_arg
+
+    RPAREN    shift, and go to state 157
+    ITERS     shift, and go to state 158
+    VAL_STEP  shift, and go to state 159
+
+    train_arg  go to state 160
+
+
+State 145
+
+    8 statement: IDENTIFIER • ASSIGN gnn_op SEMICOLON
+    9          | IDENTIFIER • ASSIGN IDENTIFIER DOT GRAPH_ATTR SEMICOLON
+   10          | IDENTIFIER • ASSIGN function_init SEMICOLON
+
+    ASSIGN  shift, and go to state 161
+
+
+State 146
+
+   13 layer_def: IDENTIFIER ASSIGN LAYER LPAREN args RPAREN LBRACE statements RBRACE •
+
+    $default  reduce using rule 13 (layer_def)
+
+
+State 147
+
+    7 statements: statements statement •
+
+    $default  reduce using rule 7 (statements)
+
+
+State 148
+
+   44 function_init: AGGR_INIT LPAREN FN_ARG ASSIGN DSL_FN semiring_op RPAREN •
+
+    $default  reduce using rule 44 (function_init)
+
+
+State 149
+
+   27 update_op: FFN LPAREN data_var COMMA FFN_OUT data_var • RPAREN
+   40 data_var: data_var • DOT FEAT_ATTR
+   41         | data_var • DOT GRAPH_ATTR
+   42         | data_var • DOT LABEL_ATTR
+   43         | data_var • DOT SIZE_FN LPAREN RPAREN
+
+    RPAREN  shift, and go to state 162
+    DOT     shift, and go to state 39
+
+
+State 150
+
+   34 data_transform: data_var ASSIGN data_var DOT SET_UNWEIGHTED LPAREN bool RPAREN • SEMICOLON
+
+    SEMICOLON  shift, and go to state 163
+
+
+State 151
+
+   33 data_transform: data_var ASSIGN data_var DOT SET_UNDIRECTED LPAREN bool RPAREN • SEMICOLON
+
+    SEMICOLON  shift, and go to state 164
+
+
+State 152
+
+   37 data_transform: data_var ASSIGN data_var DOT COLTILE LPAREN INTEGER RPAREN • SEMICOLON
+
+    SEMICOLON  shift, and go to state 165
+
+
+State 153
+
+   38 function_transform: data_var ASSIGN data_var DOT COARSEN LPAREN INTEGER RPAREN • SEMICOLON
+
+    SEMICOLON  shift, and go to state 166
+
+
+State 154
+
+   15 model_def: IDENTIFIER ASSIGN MODEL_W LPAREN args RPAREN LBRACE layer_inits • RBRACE
+   17 layer_inits: layer_inits • layer_init
+
+    IDENTIFIER  shift, and go to state 167
+    RBRACE      shift, and go to state 168
+
+    layer_init  go to state 169
+
+
+State 155
+
+   19 model_init: IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON •
+
+    $default  reduce using rule 19 (model_init)
+
+
+State 156
+
+   21 model_use: IDENTIFIER ASSIGN IDENTIFIER DOT EVAL LPAREN • args RPAREN SEMICOLON
+
+    $default  reduce using rule 56 (args)
+
+    args  go to state 170
+
+
+State 157
+
+   22 model_use: IDENTIFIER DOT TRAIN LPAREN train_args RPAREN • SEMICOLON
+
+    SEMICOLON  shift, and go to state 171
+
+
+State 158
+
+   52 train_arg: ITERS • ASSIGN INTEGER
+   53          | ITERS • ASSIGN INTEGER COMMA
+
+    ASSIGN  shift, and go to state 172
+
+
+State 159
+
+   54 train_arg: VAL_STEP • ASSIGN INTEGER
+   55          | VAL_STEP • ASSIGN INTEGER COMMA
+
+    ASSIGN  shift, and go to state 173
+
+
+State 160
+
+   51 train_args: train_args train_arg •
+
+    $default  reduce using rule 51 (train_args)
+
+
+State 161
+
+    8 statement: IDENTIFIER ASSIGN • gnn_op SEMICOLON
+    9          | IDENTIFIER ASSIGN • IDENTIFIER DOT GRAPH_ATTR SEMICOLON
+   10          | IDENTIFIER ASSIGN • function_init SEMICOLON
+
+    IDENTIFIER  shift, and go to state 27
+    AGGR_INIT   shift, and go to state 29
+    DSL_DOT     shift, and go to state 30
+
+    gnn_op         go to state 31
+    function       go to state 32
+    data_var       go to state 33
+    function_init  go to state 34
+
+
+State 162
+
+   27 update_op: FFN LPAREN data_var COMMA FFN_OUT data_var RPAREN •
+
+    $default  reduce using rule 27 (update_op)
+
+
+State 163
+
+   34 data_transform: data_var ASSIGN data_var DOT SET_UNWEIGHTED LPAREN bool RPAREN SEMICOLON •
+
+    $default  reduce using rule 34 (data_transform)
+
+
+State 164
+
+   33 data_transform: data_var ASSIGN data_var DOT SET_UNDIRECTED LPAREN bool RPAREN SEMICOLON •
+
+    $default  reduce using rule 33 (data_transform)
+
+
+State 165
+
+   37 data_transform: data_var ASSIGN data_var DOT COLTILE LPAREN INTEGER RPAREN SEMICOLON •
+
+    $default  reduce using rule 37 (data_transform)
+
+
+State 166
+
+   38 function_transform: data_var ASSIGN data_var DOT COARSEN LPAREN INTEGER RPAREN SEMICOLON •
+
+    $default  reduce using rule 38 (function_transform)
+
+
+State 167
+
+   18 layer_init: IDENTIFIER • ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON
+
+    ASSIGN  shift, and go to state 174
+
+
+State 168
+
+   15 model_def: IDENTIFIER ASSIGN MODEL_W LPAREN args RPAREN LBRACE layer_inits RBRACE •
+
+    $default  reduce using rule 15 (model_def)
+
+
+State 169
+
+   17 layer_inits: layer_inits layer_init •
+
+    $default  reduce using rule 17 (layer_inits)
+
+
+State 170
+
+   21 model_use: IDENTIFIER ASSIGN IDENTIFIER DOT EVAL LPAREN args • RPAREN SEMICOLON
+   57 args: args • arg
+
+    IDENTIFIER  shift, and go to state 13
+    RPAREN      shift, and go to state 175
+    RELU        shift, and go to state 94
+    INTEGER     shift, and go to state 95
+    NULL_KEY    shift, and go to state 96
+
+    data_var  go to state 97
+    arg       go to state 98
+
+
+State 171
+
+   22 model_use: IDENTIFIER DOT TRAIN LPAREN train_args RPAREN SEMICOLON •
+
+    $default  reduce using rule 22 (model_use)
+
+
+State 172
+
+   52 train_arg: ITERS ASSIGN • INTEGER
+   53          | ITERS ASSIGN • INTEGER COMMA
+
+    INTEGER  shift, and go to state 176
+
+
+State 173
+
+   54 train_arg: VAL_STEP ASSIGN • INTEGER
+   55          | VAL_STEP ASSIGN • INTEGER COMMA
+
+    INTEGER  shift, and go to state 177
+
+
+State 174
+
+   18 layer_init: IDENTIFIER ASSIGN • IDENTIFIER LPAREN args RPAREN SEMICOLON
+
+    IDENTIFIER  shift, and go to state 178
+
+
+State 175
+
+   21 model_use: IDENTIFIER ASSIGN IDENTIFIER DOT EVAL LPAREN args RPAREN • SEMICOLON
+
+    SEMICOLON  shift, and go to state 179
+
+
+State 176
+
+   52 train_arg: ITERS ASSIGN INTEGER •
+   53          | ITERS ASSIGN INTEGER • COMMA
+
+    COMMA  shift, and go to state 180
+
+    $default  reduce using rule 52 (train_arg)
+
+
+State 177
+
+   54 train_arg: VAL_STEP ASSIGN INTEGER •
+   55          | VAL_STEP ASSIGN INTEGER • COMMA
+
+    COMMA  shift, and go to state 181
+
+    $default  reduce using rule 54 (train_arg)
+
+
+State 178
+
+   18 layer_init: IDENTIFIER ASSIGN IDENTIFIER • LPAREN args RPAREN SEMICOLON
+
+    LPAREN  shift, and go to state 182
+
+
+State 179
+
+   21 model_use: IDENTIFIER ASSIGN IDENTIFIER DOT EVAL LPAREN args RPAREN SEMICOLON •
+
+    $default  reduce using rule 21 (model_use)
+
+
+State 180
+
+   53 train_arg: ITERS ASSIGN INTEGER COMMA •
+
+    $default  reduce using rule 53 (train_arg)
+
+
+State 181
+
+   55 train_arg: VAL_STEP ASSIGN INTEGER COMMA •
+
+    $default  reduce using rule 55 (train_arg)
+
+
+State 182
+
+   18 layer_init: IDENTIFIER ASSIGN IDENTIFIER LPAREN • args RPAREN SEMICOLON
+
+    $default  reduce using rule 56 (args)
+
+    args  go to state 183
+
+
+State 183
+
+   18 layer_init: IDENTIFIER ASSIGN IDENTIFIER LPAREN args • RPAREN SEMICOLON
+   57 args: args • arg
+
+    IDENTIFIER  shift, and go to state 13
+    RPAREN      shift, and go to state 184
+    RELU        shift, and go to state 94
+    INTEGER     shift, and go to state 95
+    NULL_KEY    shift, and go to state 96
+
+    data_var  go to state 97
+    arg       go to state 98
+
+
+State 184
+
+   18 layer_init: IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN • SEMICOLON
+
+    SEMICOLON  shift, and go to state 185
+
+
+State 185
+
+   18 layer_init: IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON •
+
+    $default  reduce using rule 18 (layer_init)

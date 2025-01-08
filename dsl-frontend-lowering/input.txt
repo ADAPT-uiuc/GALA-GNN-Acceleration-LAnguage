@@ -4,14 +4,24 @@ G = load_dataset("Reddit");
 aggrFn = dsl.get_aggregate(fn = dsl.fn.mul_sum);
 L1 = layer(G, hs, nonln_fn, aggregate_fn) {
     res = aggregate_fn(G.graphs, res); // aggregate operation
-    res = dsl.nn.ffn(res, out=hs); // weight operation
+    res = dsl.nn.ffn(res, out=hs); // weight operation (out hs is the output size)
 }
 
-M1 = model(non_ln) {
-    l1 = L1(G, 32, nonln_fn, aggrFn);
-    l2 = L1(l1, G.labels.size(), nonln_fn, aggrFn);
+M1 = model(G, non_ln) {
+	l1 = L1(G, G.labels.size(), non_ln, aggrFn);
 }
 
-m1 = M1(G);
+m1 = M1(G, dsl.non_ln.ReLU);
 m1.train(iters=100, validation_step=5);
 res = m1.eval();
+
+
+# schedule
+G=G.set_undirected(true); // false by default
+G=G.set_unweighted(true); // false by default
+feature_size(605); // -2 if not given 
+label_size(41); // -3 if not given 
+// Compute transformations
+aggrFn=aggrFn.coarsen(4);
+// Data transformations
+G=G.col_tile(37000);

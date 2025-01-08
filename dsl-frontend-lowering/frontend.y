@@ -8,6 +8,7 @@
 #include "ir/frontendIR.h"
 using namespace std;
 
+extern int yydebug;
 extern int yylex();
 extern int yyparse();
 extern FILE *yyin;
@@ -18,6 +19,7 @@ vector<RelationEdge*> dependencies;
 vector<RelationEdge*> associations;
 vector<TransformEdge*> transforms;
 map<string, DataNode*> dataNodeMap;
+map<string, ForwardNode*> computeNodeMap;
 %}
 
 %union {
@@ -29,17 +31,19 @@ map<string, DataNode*> dataNodeMap;
     TrainingLoopNode* trainingLoopNode;
 }
 
+%debug 
+
 %token<sval> IDENTIFIER ASSIGN LOAD;
-%token<sval> LPAREN RPAREN SEMICOLON QUOTE COMMENT
+%token<sval> LPAREN RPAREN SEMICOLON QUOTE COMMENT SET_UNWEIGHTED SET_UNDIRECTED
 %token<sval> MODEL_W EVAL TRAIN LAYER LOSS OPTIMIZER ITERS VAL_STEP RMSE_LOSS ADAM_T
 %token<sval> AGGR_INIT FN_ARG MUL_SUM DSL_FN DSL_DOT FFN_OUT SIZE_FN 
 %token<sval> RELAXNLN QUANT GRAPH_ATTR FEAT_ATTR RELU LABEL_ATTR
-%token<sval> RABBIT_REORDER_OP SAMPLE_RANDOM_OP
-%token<sval> COLTILE AGGR
+%token<sval> RABBIT_REORDER_OP SAMPLE_RANDOM_OP 
+%token<sval> COLTILE AGGR FEAT_SIZE_ASSIGN LABEL_SIZE_ASSIGN COARSEN
 %token<sval> INTEGER FLOAT
 %token<sval> LBRACE RBRACE LSQBRA RSQBRA DOT COMMA;
 %token<sval> IF ELSE DO WHILE;
-%token<sval> TRUE FALSE;
+%token<sval> TR FA;
 %token<sval> NOT AND OR NOTEQ EQ GREATER LESS GREATEREQ LESSEQ 
 %token<sval> PLUS MINUS MULTIPLY DIVIDE;
 %token<sval> FFN DATASET NONLN SENSEI_OP INT NEW NULL_KEY
@@ -54,19 +58,28 @@ map<string, DataNode*> dataNodeMap;
 %token<sval> NOT AND OR NOTEQ EQ GREATER LESS GREATEREQ LESSEQ 
 %token<sval> PLUS MINUS MULTIPLY DIVIDE; */
 
-%type <sval> arg train_arg string data_var function update_op gnn_op
+%type <ival> bool
+%type <sval> arg train_arg string data_var function update_op gnn_op 
 %type <forwardNode> load_dataset function_init statement
 %type <trainingLoopNode> algorithm layers layer_def statements
 %type <irNode> program schedule args train_args
-%type <irNode> layer_inits layer_init
-%type <irNode> model model_def model_init model_uses model_use
-
+%type <irNode> layer_inits layer_init data_transform function_transform
+%type <irNode> model model_def model_init model_uses model_use 
 
 %%
-program : load_dataset algorithm // TODO: add schedule
+program : load_dataset algorithm schedules
     {
         program.push_back($1);
         program.push_back($2);
+        /*
+        if transformation exists, passed through schedules
+        then to the first compute node in training loop add 
+        transformed graph as input data
+        */
+        if (dataNodeMap.find("TrGraph") != dataNodeMap.end()){
+            $2->getNode(0)->addInputData(dataNodeMap["TrGraph"]);
+            RelationEdge* inOutAggrRelationGraph = new RelationEdge(dataNodeMap["TrGraph"], ALL_RELATION, dataNodeMap["Output-Aggregate"], ALL_RELATION);
+        }
     }
 ;
 load_dataset : IDENTIFIER ASSIGN LOAD LPAREN string RPAREN SEMICOLON 
@@ -79,13 +92,12 @@ load_dataset : IDENTIFIER ASSIGN LOAD LPAREN string RPAREN SEMICOLON
         DataNode* graphData = new DataNode("Graph", INT32, INT32, F32, rootGraphLevel);
         // Feat
         DataInfo* featInfo = new DataInfo(RM_DTYPE);
-        featInfo->setDims(232965, 605); // TODO: Case statement for string keyword to input how many nodes and feature size
+        featInfo->setDims(-1, -2); 
         DataLevel* rootFeatLevel = new DataLevel(featInfo, true);
         DataNode* featData = new DataNode("Feat", INT32, INT32, F32, rootFeatLevel);
 
         dataNodeMap["Graph"] = graphData;
-        dataNodeMap["Feat"] = featData;
-
+        dataNodeMap["Feat"] = featData; // for future use (e.g. TrainingLoop is in another rule)
 
         // Relation (association) between graph and features
         RelationEdge* graphFeatAssociation = new RelationEdge(graphData, ALL_RELATION, featData, ROWS_RELATION);
@@ -94,34 +106,12 @@ load_dataset : IDENTIFIER ASSIGN LOAD LPAREN string RPAREN SEMICOLON
         $$->addOutputData(featData);
         $$->addOutputData(graphData);
         
-        // graph transformation -!-!- automatically happen, or should put somewhere else?)
-        DataLevel* originalRootGraphLevel = graphData->getData();
-        // TODO: ask about using DataItem* b/c it is an abstract class, so should either be DataLevel or DataInfo?
-        DataItem* originalGraphInfo = originalRootGraphLevel->next();
-        DataInfo* transformedGraphInfo = new DataInfo(CSR_STYPE, true, true);
-
-        transformedGraphInfo->addOpt(COL_TILE_DOPT, 65000.0); // TODO: change 65000 to match user input
-        DataLevel* transformedTileGraphLevel = new DataLevel(transformedGraphInfo, false);
-        DataLevel* transformedRootGraphLevel = new DataLevel(transformedTileGraphLevel, true);
-        DataNode* transformedGraph = new DataNode("Graph-Tile", graphData->getIType(), graphData->getNType(),
-            graphData->getVType(), transformedRootGraphLevel);
-
-        dataNodeMap["Transform-Tile"] = transformedGraph;
-
-        // Association between transformed graph and features
-        RelationEdge* trGraphFeatAssociation = new RelationEdge(transformedGraph, ALL_RELATION, featData, ROWS_RELATION);
-        TransformData* tileTransformation = new TransformData(COL_TILE_DOPT);
-        tileTransformation->addParam("65000");
-        TransformEdge* graphTrgraph = new TransformEdge(graphData, transformedGraph);
-        graphTrgraph->addTransformation(tileTransformation);
-        transforms.push_back(graphTrgraph);
-
         free($1);
         free($5);
     }
 ;
 // whatever is last in the grammar holds the TrainingLoopNode()
-// keep on copying to the newest one and freeing the old one
+// keep on copying to the newest one 
 algorithm : { $$ = NULL; }
     | statement algorithm // so far trainingLoopNode used regardless if there is layers or not
     {
@@ -135,18 +125,13 @@ algorithm : { $$ = NULL; }
             $$->addLoopNode($1);
         }
     }
-    | layers model algorithm // at least one layer needs to be defined
-    {
+    | layers model // algorithm supposed to be here but creates lot of ambiguity
+    {              // so for now just one layer+model then schedules
         if ($1 != NULL){
             $$ = $1;
         }
         else{
             $$ = new TrainingLoopNode(100);
-        }
-        if ($3 != NULL){
-            for (ForwardNode* forwardNode : *($3->getLoopNodes())){
-                $$->addLoopNode(forwardNode);
-            }
         }
     }
 ;
@@ -177,12 +162,16 @@ statement : IDENTIFIER ASSIGN gnn_op SEMICOLON
             dataNodeMap["Output-Aggregate"] = outputData;
             
             $$->addInputData(dataNodeMap["Feat"]);
-            $$->addInputData(dataNodeMap["Transform-Tile"]);
+            // below is supposed to be transformed graph, but not sure if it exists yet b/c
+            // schedule is at bottom of file (so will be read by parser latere), so will 
+            // just add both until a removeInputData() method is created?
+            $$->addInputData(dataNodeMap["Graph"]); 
             $$->addInputData(outputData);
+            computeNodeMap["aggregate"] = $$;
 
             // Relation (dependency) between features and aggregated output
             RelationEdge* inOutAggrRelationFeat = new RelationEdge(dataNodeMap["Feat"], ALL_RELATION, outputData, ALL_RELATION);
-            RelationEdge* inOutAggrRelationGraph = new RelationEdge(dataNodeMap["Transform-Tile"], ALL_RELATION, outputData, ALL_RELATION);
+            RelationEdge* inOutAggrRelationGraph = new RelationEdge(dataNodeMap["Graph"], ALL_RELATION, outputData, ALL_RELATION);
             dependencies.push_back(inOutAggrRelationFeat);
             dependencies.push_back(inOutAggrRelationGraph);
             
@@ -239,7 +228,6 @@ layers : layer_def { $$ = $1; } // layers are just one or more layer_def
 ;
 layer_def : IDENTIFIER ASSIGN LAYER LPAREN args RPAREN LBRACE statements RBRACE
     {
-        $$ = new TrainingLoopNode(100);
         if ($8 != NULL){
             $$ = $8;
         }
@@ -261,14 +249,13 @@ layer_init : IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON { free($1
 ;
 model_init : IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON { free($1); free($3); }
 ;
-model_uses : { $$ = NULL; }
-    | model_uses model_use {}
+model_uses : model_use model_use { $$ = NULL; }
+    /* | model_uses model_use {} */
 ;
 model_use : IDENTIFIER ASSIGN IDENTIFIER DOT EVAL LPAREN args RPAREN SEMICOLON { free($1); free($3); }
     | IDENTIFIER DOT TRAIN LPAREN train_args RPAREN SEMICOLON { free($1); }
 ;
-gnn_op : 
-    data_var op data_var { free($1); free($3); }
+gnn_op : data_var op data_var { free($1); free($3); }
     | function 
     {
         $$ = $1;
@@ -298,22 +285,118 @@ update_op : FFN LPAREN data_var COMMA FFN_OUT data_var RPAREN
         free($3);
     }
 ;
+schedules : schedule {}
+    | schedules schedule
+    {
+
+    }
+;
+schedule : data_transform
+    {
+
+    }
+    | function_transform
+    {
+        
+    }
+;
+data_transform : data_var ASSIGN data_var DOT SET_UNDIRECTED LPAREN bool RPAREN SEMICOLON
+    {
+        // if transformed graph already exists, then modify that as well
+        // always modify the original graph
+        if (dataNodeMap.find("TrGraph") != dataNodeMap.end()){
+            DataInfo* TrInfo = dynamic_cast<DataInfo*>(dataNodeMap["TrGraph"]->getData()->next());
+            TrInfo->setDirected(!$7);
+        }
+        DataInfo* GraphInfo = dynamic_cast<DataInfo*>(dataNodeMap["Graph"]->getData()->next());
+        GraphInfo->setDirected(!$7);
+    }
+    | data_var ASSIGN data_var DOT SET_UNWEIGHTED LPAREN bool RPAREN SEMICOLON
+    {
+        if (dataNodeMap.find("TrGraph") != dataNodeMap.end()){
+            DataInfo* TrInfo = dynamic_cast<DataInfo*>(dataNodeMap["TrGraph"]->getData()->next());
+            TrInfo->setWeighted(!$7);
+        }
+        DataInfo* GraphInfo = dynamic_cast<DataInfo*>(dataNodeMap["Graph"]->getData()->next());
+        GraphInfo->setWeighted(!$7);
+    }
+    | FEAT_SIZE_ASSIGN LPAREN INTEGER RPAREN SEMICOLON
+    {
+        DataInfo* featInfo = dynamic_cast<DataInfo*>(dataNodeMap["Feat"]->getData()->next());
+        DataInfo* outAggrInfo = dynamic_cast<DataInfo*>(dataNodeMap["Output-Aggregate"]->getData()->next());
+        int dimRow = featInfo->getDimRow();
+        featInfo->setDims(dimRow, atoi($3));
+        outAggrInfo->setDims(dimRow, atoi($3));
+        free($3);
+    }
+    | LABEL_SIZE_ASSIGN LPAREN INTEGER RPAREN SEMICOLON 
+    {
+        DataInfo* featInfo = dynamic_cast<DataInfo*>(dataNodeMap["Feat"]->getData()->next());
+        DataInfo* weightInfo = dynamic_cast<DataInfo*>(dataNodeMap["Weight1"]->getData()->next());
+        DataInfo* resInfo = dynamic_cast<DataInfo*>(dataNodeMap["Res1"]->getData()->next());
+        int featDimRow = featInfo->getDimRow();
+        int featDimCol = featInfo->getDimCol();
+        weightInfo->setDims(featDimCol, atoi($3));
+        resInfo->setDims(featDimRow, atoi($3));
+        free($3);
+    }
+    | data_var ASSIGN data_var DOT COLTILE LPAREN INTEGER RPAREN SEMICOLON 
+    {
+        // actually creating new DIR
+        DataLevel* originalRootGraphLevel = dataNodeMap["Graph"]->getData();
+        // TODO: ask about using DataItem* b/c it is an abstract class, so should either be DataLevel or DataInfo?
+        DataInfo* originalGraphInfo = dynamic_cast<DataInfo*>(originalRootGraphLevel->next());
+        DataInfo* transformedGraphInfo = new DataInfo(CSR_STYPE, originalGraphInfo->getDirected(), originalGraphInfo->getWeighted());
+        transformedGraphInfo->addOpt(COL_TILE_DOPT, atoi($7)); // TODO: change 65000 to match user input
+        DataLevel* transformedTileGraphLevel = new DataLevel(transformedGraphInfo, false);
+        DataLevel* transformedRootGraphLevel = new DataLevel(transformedTileGraphLevel, true);
+        DataNode* transformedGraph = new DataNode("Graph-Tile", dataNodeMap["Graph"]->getIType(), dataNodeMap["Graph"]->getNType(),
+            dataNodeMap["Graph"]->getVType(), transformedRootGraphLevel);
+
+        dataNodeMap["TrGraph"] = transformedGraph;
+
+        // Association between transformed graph and features
+        RelationEdge* trGraphFeatAssociation = new RelationEdge(transformedGraph, ALL_RELATION, dataNodeMap["Feat"], ROWS_RELATION);
+	    associations.push_back(trGraphFeatAssociation);
+        // Transformation between original graph and new one
+        TransformData* tileTransformation = new TransformData(COL_TILE_DOPT);
+        tileTransformation->addParam($7);
+        TransformEdge* graphTrgraph = new TransformEdge(dataNodeMap["Graph"], transformedGraph);
+        graphTrgraph->addTransformation(tileTransformation);
+        transforms.push_back(graphTrgraph);
+            
+        RelationEdge* inOutAggrRelationTrGraph = new RelationEdge(transformedGraph, ALL_RELATION, dataNodeMap["Output-Aggregate"], ALL_RELATION);
+        dependencies.push_back(inOutAggrRelationTrGraph);
+        free($3);
+    }
+;
+function_transform : data_var ASSIGN data_var DOT COARSEN LPAREN INTEGER RPAREN SEMICOLON
+    {
+        if (computeNodeMap.find("aggregate") != computeNodeMap.end()){
+            computeNodeMap["aggregate"]->addOpt(COARSE_COPT, atoi($7));
+        }
+        else{
+            cout << "error\n";
+        }
+        free($7);
+    }
+;
 // TODO: finish data var, it can be a variable, but also something like G.node.feats
 // so IDENTIFIER DOT NODE DOT FEATS and all different combinatioins
 data_var : IDENTIFIER
     {
     }
-    | IDENTIFIER DOT FEAT_ATTR
+    | data_var DOT FEAT_ATTR
     {
         $$ = strdup("feats");
         free($1);
     }
-    | IDENTIFIER DOT GRAPH_ATTR
+    | data_var DOT GRAPH_ATTR
     {
         $$ = strdup("graphs");
         free($1);
     }
-    | IDENTIFIER DOT LABEL_ATTR
+    | data_var DOT LABEL_ATTR
     {
         $$ = strdup("label");
         free($1);
@@ -353,17 +436,22 @@ args : { $$ = NULL; }
 
     }
 ;
-arg : INTEGER COMMA | INTEGER
+arg : INTEGER COMMA { free($1); } | INTEGER
     {
         free($1);
     }
     | NULL_KEY COMMA | NULL_KEY
     {}
-    | data_var COMMA | data_var
+    | data_var COMMA { free($1); } | data_var
     {
         free($1);
     }
+    | RELU | RELU COMMA
+    {
+
+    }
 ;
+bool : TR { $$ = 1; } | FA { $$ = 2; };
 string : QUOTE IDENTIFIER QUOTE
     {
         $$ = (char*) malloc(strlen($2) + 2);
@@ -387,27 +475,12 @@ int main(int argc, char** argv){
         return -1;
     }
     yyin = myfile;
+    yydebug = 0;
     yyparse();
-    cout << "PROGRAM\n";
-    for (auto a : program){
-        cout << a << '\n';
-        delete a;
-    }
-    cout << "DEPENDENCIES\n";
-    for (auto a : dependencies){
-        cout << a << '\n';
-        delete a;
-    }
-    cout << "ASSOCIATIONS\n";
-    for (auto a : associations){
-        cout << a << '\n';
-        delete a;
-    }
-    cout << "TRANSFORMS\n";
-    for (auto a : transforms){
-        cout << a << '\n';
-        delete a;
-    }
+    cout << "PROGRAM (CIR Nodes): " << program.size() << '\n';
+    cout << "DEPENDENCIES " << dependencies.size() << '\n';
+    cout << "ASSOCIATIONS " << associations.size() << '\n';
+    cout << "TRANSFORMS " << transforms.size() << '\n';
 
     fclose(myfile);
 }

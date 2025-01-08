@@ -1,5 +1,3 @@
-# Makefile for building a C++ project with Flex and Bison
-
 # Compiler and tools
 CXX = g++
 FLEX = flex
@@ -12,10 +10,14 @@ CXXFLAGS = -ggdb3
 LEX_SRC = frontend.l
 BISON_SRC = frontend.y
 
+# Output directories
+BUILD_DIR = build
+IR_DIR = $(BUILD_DIR)/ir
+
 # Generated files
-LEX_GEN = lex.yy.c
-BISON_GEN_C = frontend.tab.c
-BISON_GEN_H = frontend.tab.h
+LEX_GEN = $(BUILD_DIR)/lex.yy.c
+BISON_GEN_C = $(BUILD_DIR)/frontend.tab.c
+BISON_GEN_H = $(BUILD_DIR)/frontend.tab.h
 
 # Output executable
 TARGET = frontend
@@ -28,15 +30,20 @@ $(TARGET): $(BISON_GEN_C) $(LEX_GEN)
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(BISON_GEN_C) $(LEX_GEN)
 
 # Rule to generate the Bison parser
-$(BISON_GEN_C) $(BISON_GEN_H): $(BISON_SRC)
-	$(BISON) -d $(BISON_SRC)
+$(BISON_GEN_C) $(BISON_GEN_H): $(BISON_SRC) | $(BUILD_DIR)
+	$(BISON) -t -v -d -o $(BISON_GEN_C) $(BISON_SRC)
 
 # Rule to generate the Flex scanner
-$(LEX_GEN): $(LEX_SRC)
-	$(FLEX) -d $(LEX_SRC)
+$(LEX_GEN): $(LEX_SRC) | $(BUILD_DIR)
+	$(FLEX) -o $(LEX_GEN) $(LEX_SRC)
 
-# Clean up generated files
+# Ensure the build directory exists
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+# Clean up generated files but preserve the IR directory
 clean:
-	rm -f $(LEX_GEN) $(BISON_GEN_C) $(BISON_GEN_H) $(TARGET)
+	find $(BUILD_DIR) -mindepth 1 -not -path "$(BUILD_DIR)/ir" -not -path "$(BUILD_DIR)/ir/*" -delete
+	rm -f $(TARGET)
 
 .PHONY: all clean

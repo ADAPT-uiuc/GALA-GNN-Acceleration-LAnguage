@@ -32,12 +32,17 @@ fn { return FN_ARG; }
 dsl.fn. { return DSL_FN; }
 mul_sum { return MUL_SUM; }
 dsl. {return DSL_DOT; }
+set_undirected { return SET_UNDIRECTED; }
+set_unweighted { return SET_UNWEIGHTED; }
+feature_size { return FEAT_SIZE_ASSIGN; }
+label_size { return LABEL_SIZE_ASSIGN; }
+coarsen { return COARSEN; }
 dsl.reorder.rabbit { return RABBIT_REORDER_OP; }
 dsl.sample.random  { return SAMPLE_RANDOM_OP; }
 nn.ffn { return FFN; }
 out= { return FFN_OUT; }
 size { return SIZE_FN; }
-nln.ReLU { return RELU; }
+dsl.non_ln.ReLU { return RELU; }
 dsl.nn.loss.RMSE { return RMSE_LOSS; }
 dsl.nn.optmz.ADAM { return ADAM_T; }
 DSL_Dataset { return DATASET; }
@@ -71,8 +76,8 @@ null { return NULL_KEY; }
 int { return INT; }
 if { return IF; }
 else { return ELSE; }
-true { return TRUE; }
-false { return FALSE; }
+true { return TR; }
+false { return FA; }
 new { return NEW; }
 ! { return NOT; }
 && { return AND; }
@@ -92,6 +97,7 @@ new { return NEW; }
 \" { return QUOTE; }
 [ \t\r\n] {}
 \/\/.* {}
+#.* {}
 [0-9]+\.[0-9]+ {
     yylval.sval = strdup(yytext);
     return FLOAT; 

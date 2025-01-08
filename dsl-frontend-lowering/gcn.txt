@@ -1,30 +1,27 @@
 // Init data
-G = dsl.load("Reddit");
+G = load_dataset("Reddit");
 
-
-// Preprocessing
-reorder_rabbit = dsl.reorder.rabbit();
-sample_random = dsl.sample.random(neigh = 100);
-G = G.reorder(reorder_rabbit);
-G = G.sample(sample_random);
-G = G.col_tile(65000);
-
-L1 = layer(DSL_Dataset G, int output_feat, int col_tile_size, int slice_size, NonLn non_ln) {
-    deg = G.graphs.degrees();
-    norm = deg.pow(-0.5);
-
-    if slice_size != 0 || null:
-        G.feats = G.feats.col_tile(slice_size);
-        G.graphs = G.graphs.apply_edges(u_val = norm, v_val = norm, fn = dsl.fn.mul);
-
-    new_aggr = dsl.aggregate(fn = dsl.aggregate.mul_sum).col_tile(col_tile_size);
-    G.feats = G.new_aggr();
-    G.feats = G.feats.(dsl.nn.ffn(out_feats = output_feat)).bias().non_lnr(non_ln);
+aggrFn = dsl.get_aggregate(fn = dsl.fn.mul_sum);
+L1 = layer(G, hs, nonln_fn, aggregate_fn) {
+    res = aggregate_fn(G.graphs, res); // aggregate operation
+    res = dsl.nn.ffn(res, out=hs); // weight operation (out hs is the output size)
 }
-M1 = model(NonLn non_ln) {
-    l1 = L1(G, 256, 65000, 0, non_ln);
-    l2 = L1(l1, 32, 65000, 32, null);
+
+M1 = model(G, non_ln) {
+	l1 = L1(G, G.labels.size(), non_ln, aggrFn);
 }
-m1 = M1(G, dsl.nln.ReLU);
-m1.train(loss=dsl.nn.loss.RMSE, optimizer=dsl.nn.optmz.ADAM, iters = 100, validation_step=5);
-res = m1.eval()
+
+m1 = M1(G, dsl.non_ln.ReLU);
+m1.train(iters=100, validation_step=5);
+res = m1.eval();
+
+
+# schedule
+G=G.set_undirected(true); // false by default
+G=G.set_unweighted(true); // false by default
+feature_size(605); // -2 if not given 
+label_size(41); // -3 if not given 
+// Compute transformations
+aggrFn=aggrFn.coarsen(4);
+// Data transformations
+G=G.col_tile(37000);
