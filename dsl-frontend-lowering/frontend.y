@@ -20,6 +20,7 @@ vector<RelationEdge*> associations;
 vector<TransformEdge*> transforms;
 map<string, DataNode*> dataNodeMap;
 map<string, ForwardNode*> computeNodeMap;
+map<string, int> trainArgs;
 %}
 
 %union {
@@ -115,8 +116,9 @@ load_dataset : IDENTIFIER ASSIGN LOAD LPAREN string RPAREN SEMICOLON
 algorithm : { $$ = NULL; }
     | statement algorithm // so far trainingLoopNode used regardless if there is layers or not
     {
+        int iters = trainArgs.find("iters") != trainArgs.end() ? trainArgs["iters"] : 100;
         if ($2 == NULL){
-            $$ = new TrainingLoopNode(100); // default for this one
+            $$ = new TrainingLoopNode(iters); // default for this one
         }
         else{
             $$ = $2;
@@ -127,22 +129,24 @@ algorithm : { $$ = NULL; }
     }
     | layers model // algorithm supposed to be here but creates lot of ambiguity
     {              // so for now just one layer+model then schedules
+        int iters = trainArgs.find("iters") != trainArgs.end() ? trainArgs["iters"] : 100;
         if ($1 != NULL){
             $$ = $1;
         }
         else{
-            $$ = new TrainingLoopNode(100);
+            $$ = new TrainingLoopNode(iters);
         }
     }
 ;
 statements : { $$ = NULL; }
     | statements statement 
     {
+        int iters = trainArgs.find("iters") != trainArgs.end() ? trainArgs["iters"] : 100;
         if ($1){
             $$ = $1;
         }
         else{
-            $$ = new TrainingLoopNode(100);
+            $$ = new TrainingLoopNode(iters);
         }
         if ($2){
             $$->addLoopNode($2);
@@ -228,11 +232,12 @@ layers : layer_def { $$ = $1; } // layers are just one or more layer_def
 ;
 layer_def : IDENTIFIER ASSIGN LAYER LPAREN args RPAREN LBRACE statements RBRACE
     {
+        int iters = trainArgs.find("iters") != trainArgs.end() ? trainArgs["iters"] : 100;
         if ($8 != NULL){
             $$ = $8;
         }
         else{
-            $$ = new TrainingLoopNode(100);
+            $$ = new TrainingLoopNode(iters);
         }
         free($1);
     }
@@ -250,7 +255,8 @@ layer_init : IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON { free($1
 model_init : IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON { free($1); free($3); }
 ;
 model_uses : model_use model_use { $$ = NULL; }
-    /* | model_uses model_use {} */
+    /* | model_uses model_use {}  this rule creating a lot of ambiguity syntax errors, 
+        avoiding more than two model_uses for now*/ 
 ;
 model_use : IDENTIFIER ASSIGN IDENTIFIER DOT EVAL LPAREN args RPAREN SEMICOLON { free($1); free($3); }
     | IDENTIFIER DOT TRAIN LPAREN train_args RPAREN SEMICOLON { free($1); }
@@ -421,14 +427,15 @@ train_args : { $$ = NULL; }
 ;
 train_arg : ITERS ASSIGN INTEGER
     {
+        trainArgs["iters"] = atoi($3);
         free($3);
     }
     | ITERS ASSIGN INTEGER COMMA
-    { free($3); }
+    { trainArgs["iters"] = atoi($3); free($3); }
     | VAL_STEP ASSIGN INTEGER
-    { free($3); }
+    { trainArgs["val_step"] = atoi($3); free($3); }
     | VAL_STEP ASSIGN INTEGER COMMA
-    { free($3); }
+    { trainArgs["val_step"] = atoi($3); free($3); }
 ;
 args : { $$ = NULL; }
     | args arg

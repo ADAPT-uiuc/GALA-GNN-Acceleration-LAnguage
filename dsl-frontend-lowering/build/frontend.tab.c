@@ -90,8 +90,9 @@ vector<RelationEdge*> associations;
 vector<TransformEdge*> transforms;
 map<string, DataNode*> dataNodeMap;
 map<string, ForwardNode*> computeNodeMap;
+map<string, int> trainArgs;
 
-#line 95 "build/frontend.tab.c"
+#line 96 "build/frontend.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -621,13 +622,13 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,    70,    70,    85,   115,   116,   128,   138,   139,   153,
-     213,   219,   225,   226,   229,   241,   243,   245,   246,   248,
-     250,   252,   255,   256,   258,   259,   264,   271,   276,   282,
-     288,   289,   294,   298,   303,   314,   323,   332,   343,   373,
-     386,   389,   394,   399,   404,   410,   413,   416,   416,   416,
-     416,   418,   419,   422,   426,   428,   430,   433,   434,   439,
-     439,   443,   443,   445,   445,   449,   449,   454,   454,   455
+       0,    71,    71,    86,   116,   117,   130,   141,   142,   157,
+     217,   223,   229,   230,   233,   246,   248,   250,   251,   253,
+     255,   257,   261,   262,   264,   265,   270,   277,   282,   288,
+     294,   295,   300,   304,   309,   320,   329,   338,   349,   379,
+     392,   395,   400,   405,   410,   416,   419,   422,   422,   422,
+     422,   424,   425,   428,   433,   435,   437,   440,   441,   446,
+     446,   450,   450,   452,   452,   456,   456,   461,   461,   462
 };
 #endif
 
@@ -1314,7 +1315,7 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* program: load_dataset algorithm schedules  */
-#line 71 "frontend.y"
+#line 72 "frontend.y"
     {
         program.push_back((yyvsp[-2].forwardNode));
         program.push_back((yyvsp[-1].trainingLoopNode));
@@ -1328,11 +1329,11 @@ yyreduce:
             RelationEdge* inOutAggrRelationGraph = new RelationEdge(dataNodeMap["TrGraph"], ALL_RELATION, dataNodeMap["Output-Aggregate"], ALL_RELATION);
         }
     }
-#line 1332 "build/frontend.tab.c"
+#line 1333 "build/frontend.tab.c"
     break;
 
   case 3: /* load_dataset: IDENTIFIER ASSIGN LOAD LPAREN string RPAREN SEMICOLON  */
-#line 86 "frontend.y"
+#line 87 "frontend.y"
     {
         (yyval.forwardNode) = new ForwardNode(POINTWISE, LOAD_OP);
         (yyval.forwardNode)->addParam((yyvsp[-2].sval)); 
@@ -1359,20 +1360,21 @@ yyreduce:
         free((yyvsp[-6].sval));
         free((yyvsp[-2].sval));
     }
-#line 1363 "build/frontend.tab.c"
+#line 1364 "build/frontend.tab.c"
     break;
 
   case 4: /* algorithm: %empty  */
-#line 115 "frontend.y"
+#line 116 "frontend.y"
             { (yyval.trainingLoopNode) = NULL; }
-#line 1369 "build/frontend.tab.c"
+#line 1370 "build/frontend.tab.c"
     break;
 
   case 5: /* algorithm: statement algorithm  */
-#line 117 "frontend.y"
+#line 118 "frontend.y"
     {
+        int iters = trainArgs.find("iters") != trainArgs.end() ? trainArgs["iters"] : 100;
         if ((yyvsp[0].trainingLoopNode) == NULL){
-            (yyval.trainingLoopNode) = new TrainingLoopNode(100); // default for this one
+            (yyval.trainingLoopNode) = new TrainingLoopNode(iters); // default for this one
         }
         else{
             (yyval.trainingLoopNode) = (yyvsp[0].trainingLoopNode);
@@ -1381,46 +1383,48 @@ yyreduce:
             (yyval.trainingLoopNode)->addLoopNode((yyvsp[-1].forwardNode));
         }
     }
-#line 1385 "build/frontend.tab.c"
+#line 1387 "build/frontend.tab.c"
     break;
 
   case 6: /* algorithm: layers model  */
-#line 129 "frontend.y"
+#line 131 "frontend.y"
     {              // so for now just one layer+model then schedules
+        int iters = trainArgs.find("iters") != trainArgs.end() ? trainArgs["iters"] : 100;
         if ((yyvsp[-1].trainingLoopNode) != NULL){
             (yyval.trainingLoopNode) = (yyvsp[-1].trainingLoopNode);
         }
         else{
-            (yyval.trainingLoopNode) = new TrainingLoopNode(100);
+            (yyval.trainingLoopNode) = new TrainingLoopNode(iters);
         }
     }
-#line 1398 "build/frontend.tab.c"
+#line 1401 "build/frontend.tab.c"
     break;
 
   case 7: /* statements: %empty  */
-#line 138 "frontend.y"
+#line 141 "frontend.y"
              { (yyval.trainingLoopNode) = NULL; }
-#line 1404 "build/frontend.tab.c"
+#line 1407 "build/frontend.tab.c"
     break;
 
   case 8: /* statements: statements statement  */
-#line 140 "frontend.y"
+#line 143 "frontend.y"
     {
+        int iters = trainArgs.find("iters") != trainArgs.end() ? trainArgs["iters"] : 100;
         if ((yyvsp[-1].trainingLoopNode)){
             (yyval.trainingLoopNode) = (yyvsp[-1].trainingLoopNode);
         }
         else{
-            (yyval.trainingLoopNode) = new TrainingLoopNode(100);
+            (yyval.trainingLoopNode) = new TrainingLoopNode(iters);
         }
         if ((yyvsp[0].forwardNode)){
             (yyval.trainingLoopNode)->addLoopNode((yyvsp[0].forwardNode));
         }
     }
-#line 1420 "build/frontend.tab.c"
+#line 1424 "build/frontend.tab.c"
     break;
 
   case 9: /* statement: IDENTIFIER ASSIGN gnn_op SEMICOLON  */
-#line 154 "frontend.y"
+#line 158 "frontend.y"
     {
         // TODO: add some code to verify the aggregate function name matches
         if (string((yyvsp[-1].sval)) == "aggregate"){ // aggregate operation
@@ -1480,192 +1484,193 @@ yyreduce:
         free((yyvsp[-3].sval));
         free((yyvsp[-1].sval));
     }
-#line 1484 "build/frontend.tab.c"
+#line 1488 "build/frontend.tab.c"
     break;
 
   case 10: /* statement: IDENTIFIER ASSIGN IDENTIFIER DOT GRAPH_ATTR SEMICOLON  */
-#line 214 "frontend.y"
+#line 218 "frontend.y"
     {
         (yyval.forwardNode) = NULL;
         free((yyvsp[-5].sval));
         free((yyvsp[-3].sval));
     }
-#line 1494 "build/frontend.tab.c"
+#line 1498 "build/frontend.tab.c"
     break;
 
   case 11: /* statement: IDENTIFIER ASSIGN function_init SEMICOLON  */
-#line 220 "frontend.y"
+#line 224 "frontend.y"
     {
         (yyval.forwardNode) = NULL;
         free((yyvsp[-3].sval));
     }
-#line 1503 "build/frontend.tab.c"
+#line 1507 "build/frontend.tab.c"
     break;
 
   case 12: /* layers: layer_def  */
-#line 225 "frontend.y"
+#line 229 "frontend.y"
                    { (yyval.trainingLoopNode) = (yyvsp[0].trainingLoopNode); }
-#line 1509 "build/frontend.tab.c"
+#line 1513 "build/frontend.tab.c"
     break;
 
   case 13: /* layers: layers layer_def  */
-#line 227 "frontend.y"
+#line 231 "frontend.y"
     {}
-#line 1515 "build/frontend.tab.c"
+#line 1519 "build/frontend.tab.c"
     break;
 
   case 14: /* layer_def: IDENTIFIER ASSIGN LAYER LPAREN args RPAREN LBRACE statements RBRACE  */
-#line 230 "frontend.y"
+#line 234 "frontend.y"
     {
+        int iters = trainArgs.find("iters") != trainArgs.end() ? trainArgs["iters"] : 100;
         if ((yyvsp[-1].trainingLoopNode) != NULL){
             (yyval.trainingLoopNode) = (yyvsp[-1].trainingLoopNode);
         }
         else{
-            (yyval.trainingLoopNode) = new TrainingLoopNode(100);
+            (yyval.trainingLoopNode) = new TrainingLoopNode(iters);
         }
         free((yyvsp[-8].sval));
     }
-#line 1529 "build/frontend.tab.c"
+#line 1534 "build/frontend.tab.c"
     break;
 
   case 15: /* model: model_def model_init model_uses  */
-#line 241 "frontend.y"
+#line 246 "frontend.y"
                                         {}
-#line 1535 "build/frontend.tab.c"
+#line 1540 "build/frontend.tab.c"
     break;
 
   case 16: /* model_def: IDENTIFIER ASSIGN MODEL_W LPAREN args RPAREN LBRACE layer_inits RBRACE  */
-#line 243 "frontend.y"
+#line 248 "frontend.y"
                                                                                    {}
-#line 1541 "build/frontend.tab.c"
+#line 1546 "build/frontend.tab.c"
     break;
 
   case 17: /* layer_inits: %empty  */
-#line 245 "frontend.y"
+#line 250 "frontend.y"
               { (yyval.irNode) = NULL; }
-#line 1547 "build/frontend.tab.c"
+#line 1552 "build/frontend.tab.c"
     break;
 
   case 18: /* layer_inits: layer_inits layer_init  */
-#line 246 "frontend.y"
+#line 251 "frontend.y"
                              {}
-#line 1553 "build/frontend.tab.c"
+#line 1558 "build/frontend.tab.c"
     break;
 
   case 19: /* layer_init: IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON  */
-#line 248 "frontend.y"
+#line 253 "frontend.y"
                                                                        { free((yyvsp[-6].sval)); free((yyvsp[-4].sval)); }
-#line 1559 "build/frontend.tab.c"
+#line 1564 "build/frontend.tab.c"
     break;
 
   case 20: /* model_init: IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON  */
-#line 250 "frontend.y"
+#line 255 "frontend.y"
                                                                        { free((yyvsp[-6].sval)); free((yyvsp[-4].sval)); }
-#line 1565 "build/frontend.tab.c"
+#line 1570 "build/frontend.tab.c"
     break;
 
   case 21: /* model_uses: model_use model_use  */
-#line 252 "frontend.y"
+#line 257 "frontend.y"
                                  { (yyval.irNode) = NULL; }
-#line 1571 "build/frontend.tab.c"
+#line 1576 "build/frontend.tab.c"
     break;
 
   case 22: /* model_use: IDENTIFIER ASSIGN IDENTIFIER DOT EVAL LPAREN args RPAREN SEMICOLON  */
-#line 255 "frontend.y"
+#line 261 "frontend.y"
                                                                                { free((yyvsp[-8].sval)); free((yyvsp[-6].sval)); }
-#line 1577 "build/frontend.tab.c"
+#line 1582 "build/frontend.tab.c"
     break;
 
   case 23: /* model_use: IDENTIFIER DOT TRAIN LPAREN train_args RPAREN SEMICOLON  */
-#line 256 "frontend.y"
+#line 262 "frontend.y"
                                                               { free((yyvsp[-6].sval)); }
-#line 1583 "build/frontend.tab.c"
+#line 1588 "build/frontend.tab.c"
     break;
 
   case 24: /* gnn_op: data_var op data_var  */
-#line 258 "frontend.y"
+#line 264 "frontend.y"
                               { free((yyvsp[-2].sval)); free((yyvsp[0].sval)); }
-#line 1589 "build/frontend.tab.c"
+#line 1594 "build/frontend.tab.c"
     break;
 
   case 25: /* gnn_op: function  */
-#line 260 "frontend.y"
+#line 266 "frontend.y"
     {
         (yyval.sval) = (yyvsp[0].sval);
     }
-#line 1597 "build/frontend.tab.c"
+#line 1602 "build/frontend.tab.c"
     break;
 
   case 26: /* function: IDENTIFIER LPAREN data_var COMMA data_var RPAREN  */
-#line 265 "frontend.y"
+#line 271 "frontend.y"
     {
         (yyval.sval) = strdup("aggregate");
         free((yyvsp[-5].sval));
         free((yyvsp[-3].sval));
         free((yyvsp[-1].sval));
     }
-#line 1608 "build/frontend.tab.c"
+#line 1613 "build/frontend.tab.c"
     break;
 
   case 27: /* function: DSL_DOT update_op  */
-#line 272 "frontend.y"
+#line 278 "frontend.y"
     {
         (yyval.sval) = (yyvsp[0].sval);
     }
-#line 1616 "build/frontend.tab.c"
+#line 1621 "build/frontend.tab.c"
     break;
 
   case 28: /* update_op: FFN LPAREN data_var COMMA FFN_OUT data_var RPAREN  */
-#line 277 "frontend.y"
+#line 283 "frontend.y"
     {
         (yyval.sval) = strdup("ffn");
         free((yyvsp[-4].sval));
         free((yyvsp[-1].sval));
     }
-#line 1626 "build/frontend.tab.c"
+#line 1631 "build/frontend.tab.c"
     break;
 
   case 29: /* update_op: RELU LPAREN data_var RPAREN  */
-#line 283 "frontend.y"
+#line 289 "frontend.y"
     {
         (yyval.sval) = strdup("relu");
         free((yyvsp[-1].sval));
     }
-#line 1635 "build/frontend.tab.c"
+#line 1640 "build/frontend.tab.c"
     break;
 
   case 30: /* schedules: schedule  */
-#line 288 "frontend.y"
+#line 294 "frontend.y"
                      {}
-#line 1641 "build/frontend.tab.c"
+#line 1646 "build/frontend.tab.c"
     break;
 
   case 31: /* schedules: schedules schedule  */
-#line 290 "frontend.y"
+#line 296 "frontend.y"
     {
 
     }
-#line 1649 "build/frontend.tab.c"
+#line 1654 "build/frontend.tab.c"
     break;
 
   case 32: /* schedule: data_transform  */
-#line 295 "frontend.y"
+#line 301 "frontend.y"
     {
 
     }
-#line 1657 "build/frontend.tab.c"
+#line 1662 "build/frontend.tab.c"
     break;
 
   case 33: /* schedule: function_transform  */
-#line 299 "frontend.y"
+#line 305 "frontend.y"
     {
         
     }
-#line 1665 "build/frontend.tab.c"
+#line 1670 "build/frontend.tab.c"
     break;
 
   case 34: /* data_transform: data_var ASSIGN data_var DOT SET_UNDIRECTED LPAREN bool RPAREN SEMICOLON  */
-#line 304 "frontend.y"
+#line 310 "frontend.y"
     {
         // if transformed graph already exists, then modify that as well
         // always modify the original graph
@@ -1676,11 +1681,11 @@ yyreduce:
         DataInfo* GraphInfo = dynamic_cast<DataInfo*>(dataNodeMap["Graph"]->getData()->next());
         GraphInfo->setDirected(!(yyvsp[-2].ival));
     }
-#line 1680 "build/frontend.tab.c"
+#line 1685 "build/frontend.tab.c"
     break;
 
   case 35: /* data_transform: data_var ASSIGN data_var DOT SET_UNWEIGHTED LPAREN bool RPAREN SEMICOLON  */
-#line 315 "frontend.y"
+#line 321 "frontend.y"
     {
         if (dataNodeMap.find("TrGraph") != dataNodeMap.end()){
             DataInfo* TrInfo = dynamic_cast<DataInfo*>(dataNodeMap["TrGraph"]->getData()->next());
@@ -1689,11 +1694,11 @@ yyreduce:
         DataInfo* GraphInfo = dynamic_cast<DataInfo*>(dataNodeMap["Graph"]->getData()->next());
         GraphInfo->setWeighted(!(yyvsp[-2].ival));
     }
-#line 1693 "build/frontend.tab.c"
+#line 1698 "build/frontend.tab.c"
     break;
 
   case 36: /* data_transform: FEAT_SIZE_ASSIGN LPAREN INTEGER RPAREN SEMICOLON  */
-#line 324 "frontend.y"
+#line 330 "frontend.y"
     {
         DataInfo* featInfo = dynamic_cast<DataInfo*>(dataNodeMap["Feat"]->getData()->next());
         DataInfo* outAggrInfo = dynamic_cast<DataInfo*>(dataNodeMap["Output-Aggregate"]->getData()->next());
@@ -1702,11 +1707,11 @@ yyreduce:
         outAggrInfo->setDims(dimRow, atoi((yyvsp[-2].sval)));
         free((yyvsp[-2].sval));
     }
-#line 1706 "build/frontend.tab.c"
+#line 1711 "build/frontend.tab.c"
     break;
 
   case 37: /* data_transform: LABEL_SIZE_ASSIGN LPAREN INTEGER RPAREN SEMICOLON  */
-#line 333 "frontend.y"
+#line 339 "frontend.y"
     {
         DataInfo* featInfo = dynamic_cast<DataInfo*>(dataNodeMap["Feat"]->getData()->next());
         DataInfo* weightInfo = dynamic_cast<DataInfo*>(dataNodeMap["Weight1"]->getData()->next());
@@ -1717,11 +1722,11 @@ yyreduce:
         resInfo->setDims(featDimRow, atoi((yyvsp[-2].sval)));
         free((yyvsp[-2].sval));
     }
-#line 1721 "build/frontend.tab.c"
+#line 1726 "build/frontend.tab.c"
     break;
 
   case 38: /* data_transform: data_var ASSIGN data_var DOT COLTILE LPAREN INTEGER RPAREN SEMICOLON  */
-#line 344 "frontend.y"
+#line 350 "frontend.y"
     {
         // actually creating new DIR
         DataLevel* originalRootGraphLevel = dataNodeMap["Graph"]->getData();
@@ -1750,11 +1755,11 @@ yyreduce:
         dependencies.push_back(inOutAggrRelationTrGraph);
         free((yyvsp[-6].sval));
     }
-#line 1754 "build/frontend.tab.c"
+#line 1759 "build/frontend.tab.c"
     break;
 
   case 39: /* function_transform: data_var ASSIGN data_var DOT COARSEN LPAREN INTEGER RPAREN SEMICOLON  */
-#line 374 "frontend.y"
+#line 380 "frontend.y"
     {
         if (computeNodeMap.find("aggregate") != computeNodeMap.end()){
             computeNodeMap["aggregate"]->addOpt(COARSE_COPT, atoi((yyvsp[-2].sval)));
@@ -1764,206 +1769,207 @@ yyreduce:
         }
         free((yyvsp[-2].sval));
     }
-#line 1768 "build/frontend.tab.c"
+#line 1773 "build/frontend.tab.c"
     break;
 
   case 40: /* data_var: IDENTIFIER  */
-#line 387 "frontend.y"
+#line 393 "frontend.y"
     {
     }
-#line 1775 "build/frontend.tab.c"
+#line 1780 "build/frontend.tab.c"
     break;
 
   case 41: /* data_var: data_var DOT FEAT_ATTR  */
-#line 390 "frontend.y"
+#line 396 "frontend.y"
     {
         (yyval.sval) = strdup("feats");
         free((yyvsp[-2].sval));
     }
-#line 1784 "build/frontend.tab.c"
+#line 1789 "build/frontend.tab.c"
     break;
 
   case 42: /* data_var: data_var DOT GRAPH_ATTR  */
-#line 395 "frontend.y"
+#line 401 "frontend.y"
     {
         (yyval.sval) = strdup("graphs");
         free((yyvsp[-2].sval));
     }
-#line 1793 "build/frontend.tab.c"
+#line 1798 "build/frontend.tab.c"
     break;
 
   case 43: /* data_var: data_var DOT LABEL_ATTR  */
-#line 400 "frontend.y"
+#line 406 "frontend.y"
     {
         (yyval.sval) = strdup("label");
         free((yyvsp[-2].sval));
     }
-#line 1802 "build/frontend.tab.c"
+#line 1807 "build/frontend.tab.c"
     break;
 
   case 44: /* data_var: data_var DOT SIZE_FN LPAREN RPAREN  */
-#line 405 "frontend.y"
+#line 411 "frontend.y"
     {
         (yyval.sval) = strdup("size");
         free((yyvsp[-4].sval));
     }
-#line 1811 "build/frontend.tab.c"
+#line 1816 "build/frontend.tab.c"
     break;
 
   case 45: /* function_init: AGGR_INIT LPAREN FN_ARG ASSIGN DSL_FN semiring_op RPAREN  */
-#line 411 "frontend.y"
+#line 417 "frontend.y"
     {}
-#line 1817 "build/frontend.tab.c"
+#line 1822 "build/frontend.tab.c"
     break;
 
   case 46: /* semiring_op: MUL_SUM  */
-#line 414 "frontend.y"
+#line 420 "frontend.y"
     {}
-#line 1823 "build/frontend.tab.c"
+#line 1828 "build/frontend.tab.c"
     break;
 
   case 47: /* op: PLUS  */
-#line 416 "frontend.y"
+#line 422 "frontend.y"
           {}
-#line 1829 "build/frontend.tab.c"
+#line 1834 "build/frontend.tab.c"
     break;
 
   case 48: /* op: MINUS  */
-#line 416 "frontend.y"
+#line 422 "frontend.y"
                      {}
-#line 1835 "build/frontend.tab.c"
+#line 1840 "build/frontend.tab.c"
     break;
 
   case 49: /* op: MULTIPLY  */
-#line 416 "frontend.y"
+#line 422 "frontend.y"
                                    {}
-#line 1841 "build/frontend.tab.c"
+#line 1846 "build/frontend.tab.c"
     break;
 
   case 50: /* op: DIVIDE  */
-#line 416 "frontend.y"
+#line 422 "frontend.y"
                                                {}
-#line 1847 "build/frontend.tab.c"
+#line 1852 "build/frontend.tab.c"
     break;
 
   case 51: /* train_args: %empty  */
-#line 418 "frontend.y"
+#line 424 "frontend.y"
              { (yyval.irNode) = NULL; }
-#line 1853 "build/frontend.tab.c"
+#line 1858 "build/frontend.tab.c"
     break;
 
   case 52: /* train_args: train_args train_arg  */
-#line 420 "frontend.y"
+#line 426 "frontend.y"
     {}
-#line 1859 "build/frontend.tab.c"
+#line 1864 "build/frontend.tab.c"
     break;
 
   case 53: /* train_arg: ITERS ASSIGN INTEGER  */
-#line 423 "frontend.y"
+#line 429 "frontend.y"
     {
+        trainArgs["iters"] = atoi((yyvsp[0].sval));
         free((yyvsp[0].sval));
     }
-#line 1867 "build/frontend.tab.c"
-    break;
-
-  case 54: /* train_arg: ITERS ASSIGN INTEGER COMMA  */
-#line 427 "frontend.y"
-    { free((yyvsp[-1].sval)); }
 #line 1873 "build/frontend.tab.c"
     break;
 
-  case 55: /* train_arg: VAL_STEP ASSIGN INTEGER  */
-#line 429 "frontend.y"
-    { free((yyvsp[0].sval)); }
+  case 54: /* train_arg: ITERS ASSIGN INTEGER COMMA  */
+#line 434 "frontend.y"
+    { trainArgs["iters"] = atoi((yyvsp[-1].sval)); free((yyvsp[-1].sval)); }
 #line 1879 "build/frontend.tab.c"
     break;
 
-  case 56: /* train_arg: VAL_STEP ASSIGN INTEGER COMMA  */
-#line 431 "frontend.y"
-    { free((yyvsp[-1].sval)); }
+  case 55: /* train_arg: VAL_STEP ASSIGN INTEGER  */
+#line 436 "frontend.y"
+    { trainArgs["val_step"] = atoi((yyvsp[0].sval)); free((yyvsp[0].sval)); }
 #line 1885 "build/frontend.tab.c"
     break;
 
-  case 57: /* args: %empty  */
-#line 433 "frontend.y"
-       { (yyval.irNode) = NULL; }
+  case 56: /* train_arg: VAL_STEP ASSIGN INTEGER COMMA  */
+#line 438 "frontend.y"
+    { trainArgs["val_step"] = atoi((yyvsp[-1].sval)); free((yyvsp[-1].sval)); }
 #line 1891 "build/frontend.tab.c"
     break;
 
+  case 57: /* args: %empty  */
+#line 440 "frontend.y"
+       { (yyval.irNode) = NULL; }
+#line 1897 "build/frontend.tab.c"
+    break;
+
   case 58: /* args: args arg  */
-#line 435 "frontend.y"
+#line 442 "frontend.y"
     {
 
     }
-#line 1899 "build/frontend.tab.c"
-    break;
-
-  case 59: /* arg: INTEGER COMMA  */
-#line 439 "frontend.y"
-                    { free((yyvsp[-1].sval)); }
 #line 1905 "build/frontend.tab.c"
     break;
 
+  case 59: /* arg: INTEGER COMMA  */
+#line 446 "frontend.y"
+                    { free((yyvsp[-1].sval)); }
+#line 1911 "build/frontend.tab.c"
+    break;
+
   case 60: /* arg: INTEGER  */
-#line 440 "frontend.y"
+#line 447 "frontend.y"
     {
         free((yyvsp[0].sval));
     }
-#line 1913 "build/frontend.tab.c"
-    break;
-
-  case 62: /* arg: NULL_KEY  */
-#line 444 "frontend.y"
-    {}
 #line 1919 "build/frontend.tab.c"
     break;
 
-  case 63: /* arg: data_var COMMA  */
-#line 445 "frontend.y"
-                     { free((yyvsp[-1].sval)); }
+  case 62: /* arg: NULL_KEY  */
+#line 451 "frontend.y"
+    {}
 #line 1925 "build/frontend.tab.c"
     break;
 
+  case 63: /* arg: data_var COMMA  */
+#line 452 "frontend.y"
+                     { free((yyvsp[-1].sval)); }
+#line 1931 "build/frontend.tab.c"
+    break;
+
   case 64: /* arg: data_var  */
-#line 446 "frontend.y"
+#line 453 "frontend.y"
     {
         free((yyvsp[0].sval));
     }
-#line 1933 "build/frontend.tab.c"
+#line 1939 "build/frontend.tab.c"
     break;
 
   case 66: /* arg: RELU COMMA  */
-#line 450 "frontend.y"
+#line 457 "frontend.y"
     {
 
     }
-#line 1941 "build/frontend.tab.c"
-    break;
-
-  case 67: /* bool: TR  */
-#line 454 "frontend.y"
-          { (yyval.ival) = 1; }
 #line 1947 "build/frontend.tab.c"
     break;
 
-  case 68: /* bool: FA  */
-#line 454 "frontend.y"
-                           { (yyval.ival) = 2; }
+  case 67: /* bool: TR  */
+#line 461 "frontend.y"
+          { (yyval.ival) = 1; }
 #line 1953 "build/frontend.tab.c"
     break;
 
+  case 68: /* bool: FA  */
+#line 461 "frontend.y"
+                           { (yyval.ival) = 2; }
+#line 1959 "build/frontend.tab.c"
+    break;
+
   case 69: /* string: QUOTE IDENTIFIER QUOTE  */
-#line 456 "frontend.y"
+#line 463 "frontend.y"
     {
         (yyval.sval) = (char*) malloc(strlen((yyvsp[-1].sval)) + 2);
         sprintf((yyval.sval), "%s", (yyvsp[-1].sval));
         free((yyvsp[-1].sval));
     }
-#line 1963 "build/frontend.tab.c"
+#line 1969 "build/frontend.tab.c"
     break;
 
 
-#line 1967 "build/frontend.tab.c"
+#line 1973 "build/frontend.tab.c"
 
       default: break;
     }
@@ -2156,7 +2162,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 463 "frontend.y"
+#line 470 "frontend.y"
 
 
 int main(int argc, char** argv){
