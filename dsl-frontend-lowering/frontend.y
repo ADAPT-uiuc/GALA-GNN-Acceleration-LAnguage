@@ -160,7 +160,7 @@ statement : IDENTIFIER ASSIGN gnn_op SEMICOLON
         if (string($3) == "aggregate"){ // aggregate operation
             $$ = new ForwardNode(AGGREGATE_NODE, MUL_SUM_OP);
             DataInfo* outputInfo = new DataInfo(RM_DTYPE);
-            outputInfo->setDims(-1, 605); // -1=N=232965, the number of nodes in the graph
+            outputInfo->setDims(-1, -2); // -1=N=232965, the number of nodes in the graph
             DataLevel* rootOutputLevel = new DataLevel(outputInfo, true);
             DataNode* outputData = new DataNode("Out1", INT32, INT32, F32, rootOutputLevel);
             dataNodeMap["Output-Aggregate"] = outputData;
@@ -184,14 +184,14 @@ statement : IDENTIFIER ASSIGN gnn_op SEMICOLON
             $$ = new ForwardNode(UPDATE_NODE, FFN_OP);
             // weight as matrix in DIR
             DataInfo* weightInfo = new DataInfo(RM_DTYPE);
-            weightInfo->setDims(-1, 32); // -1=N=232965, the number of nodes in the graph
+            weightInfo->setDims(-2, -3); // -1=N=232965, the number of nodes in the graph
             DataLevel* weightLevel = new DataLevel(weightInfo, true);
             DataNode* weightData = new DataNode("Weight1", INT32, INT32, F32, weightLevel);
             dataNodeMap["Weight1"] = weightData;
 
             // Res DIR
             DataInfo* resInfo = new DataInfo(RM_DTYPE);
-            resInfo->setDims(-1, 32); // -1=N=232965, the number of nodes in the graph
+            resInfo->setDims(-1, -3); // -1=N=232965, the number of nodes in the graph
             DataLevel* rootResLevel = new DataLevel(resInfo, true);
             DataNode* resData = new DataNode("Res1", INT32, INT32, F32, rootResLevel);
             dataNodeMap["Res1"] = resData;
