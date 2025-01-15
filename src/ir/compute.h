@@ -97,6 +97,11 @@ public:
   	void addOpt(CompOptimization opt, float param) {
     	opts.push_back(std::make_pair(opt, param));
   	};
+    int getNumOpts() { return (int)opts.size(); };
+    std::pair<CompOptimization, float>* getOpt(int idx)
+    {
+        return &opts.at(idx);
+    }
 
     // Params can only add new (No need to remove any)
     void addParam(std::string new_param) { this->params.push_back(new_param); }

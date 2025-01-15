@@ -22,6 +22,7 @@ typedef int val_int_t;
 #include "../src/ir/data.h"
 #include "../src/ir/compute.h"
 #include "../src/codegen/cuda.h"
+#include "../src/middle-end/middle-end.h"
 
 // Code generator
 //#include "../src/codegen//gala/codegen/cuda.h"
@@ -67,7 +68,7 @@ int main(int argc, char **argv) {
     auto featData = DataNode("Feat", INT32, INT32, F32, &rootFeatLevel);
 
 	// Association between graph and features
-	auto graphFeatAssociation = RelationEdge(&graphData, ALL_RELATION, &featData, ROWS_RELATIOM);
+	auto graphFeatAssociation = RelationEdge(&graphData, ALL_RELATION, &featData, ROWS_RELATION);
 	associations.push_back(&graphFeatAssociation);
 	loadDataset.addOutputData(&featData);
 	loadDataset.addOutputData(&graphData);
@@ -81,7 +82,7 @@ int main(int argc, char **argv) {
 	auto transformedGraph = DataNode("Graph-Tile", graphData.getIType(), graphData.getNType(),
 		graphData.getVType(), &transformedRootGraphLevel);
 	// Association between graph and features
-	auto trgrapgFeatAssociation = RelationEdge(&transformedGraph, ALL_RELATION, &featData, ROWS_RELATIOM);
+	auto trgrapgFeatAssociation = RelationEdge(&transformedGraph, ALL_RELATION, &featData, ROWS_RELATION);
 	associations.push_back(&graphFeatAssociation);
 	auto tileTransformation = TransformData(COL_TILE_DOPT);
 	tileTransformation.addParam("65000");
@@ -102,8 +103,9 @@ int main(int argc, char **argv) {
 	aggregate.addInputData(&featData);
 	aggregate.addInputData(&transformedGraph);
     aggregate.addOutputData(&outputData);
+	aggregate.addOpt(COARSE_COPT, 2);
     trainingLoop.addLoopNode(&aggregate);
-
+	//* Dependencies
     // Dependency relation between the features and the aggregated output
 	auto inOutAggrRelationFeat = RelationEdge(&featData, ALL_RELATION, &outputData, ALL_RELATION);
 	// Dependency relation between the graph and the aggregated output
@@ -121,18 +123,16 @@ int main(int argc, char **argv) {
     // Res DIR
     auto resInfo = DataInfo(RM_DTYPE);
     resInfo.setDims(-1, -3); // -1=N=232965, the number of nodes in the graph, -3=output classes
-
-    // set dimenions from the new schedule information
-    weightInfo.setDims(605, 41); //
-    resInfo.setDims(-1, 41); // -1=N=232965, the number of nodes in the graph
-
-    auto rootResLevel = DataLevel(&outputInfo, true);
-    auto resData = DataNode("Res1", INT32, INT32, F32, &rootResLevel);
-    aggregate.addInputData(&outputData);
-    aggregate.addInputData(&weightData);
-    aggregate.addOutputData(&resData);
-    aggregate.addOpt(COARSE_COPT, 4);
+	auto rootResLevel = DataLevel(&resInfo, true);
+	auto resData = DataNode("Res1", INT32, INT32, F32, &rootResLevel);
+	// set dimenions from the new schedule information
+	weightInfo.setDims(605, 41); //
+	resInfo.setDims(-1, 41); // -1=N=232965, the number of nodes in the graph
+    ffn.addInputData(&outputData);
+    ffn.addInputData(&weightData);
+    ffn.addOutputData(&resData);
     trainingLoop.addLoopNode(&ffn);
+	//* Dependencies
     auto inOutWeightDepRelationFeat = RelationEdge(&outputData, ALL_RELATION, &resData, ALL_RELATION);
     auto inOutWeightDepRelationWeight = RelationEdge(&weightData, COLS_RELATION, &resData, ROWS_RELATION);
     dependencies.push_back(&inOutWeightDepRelationFeat);
@@ -147,6 +147,7 @@ int main(int argc, char **argv) {
 	auto ctx = new GALAContext(GPU_DEVICE, SINGLE_NODE_SINGLE);
 	std::string outputPath = "../test-codegen/";
 	auto genCode = CUDAGenerator(ctx, outputPath);
+	GALATransformations::complexityOperatorReordering(program, dependencies, associations, transforms);
 	genCode.writeCode(program);
 
     // Should be enough for now

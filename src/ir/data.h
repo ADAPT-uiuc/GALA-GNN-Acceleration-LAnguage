@@ -33,8 +33,8 @@ enum DataFormat {
 
 // Relation between dimensions of the data representations
 enum RelationDim {
-    ROWS_RELATIOM,
-    COLS_RELATIOM,
+    ROWS_RELATION,
+    COLS_RELATION,
     ALL_RELATION // Point-wise relation
 };
 
@@ -97,6 +97,8 @@ private:
   bool isWeighted;
   int dimRow;
   int dimCol;
+    // To be used by the global meta-data array
+    int globalIndex;
 public:
   // Set the data informaiton
   DataInfo(DataFormat format,
@@ -105,9 +107,11 @@ public:
     this->format = format;
     this->isDirected = isDirected;
     this->isWeighted = isWeighted;
+      this->globalIndex = -1;
   };
   DataInfo(DataFormat format){
     this->format = format;
+      this->globalIndex = -1;
   };
 
   // Get opts
@@ -150,6 +154,21 @@ public:
   bool isLevel(){
     return false;
   }
+
+  DataFormat getFormat(){
+      return this->format;
+  }
+
+    void setIndex(int index)
+  {
+      this->globalIndex = index;
+  }
+    int getIndex()
+  {
+      return this->globalIndex;
+  }
+
+
 };
 
 class DataLevel: virtual public DataItem {
