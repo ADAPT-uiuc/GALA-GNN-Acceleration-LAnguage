@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
     auto loadDataset = ForwardNode(POINTWISE, LOAD_OP);
     loadDataset.addParam("/shared/damitha2/gala_npy/RedditDataset/");
     // Graph
-    auto graphInfo = DataInfo(CSR_STYPE, false, false);
+    auto graphInfo = DataInfo(CSR_STYPE, true, true);
     auto rootGraphLevel = DataLevel(&graphInfo, true);
     auto graphData = DataNode("Graph", INT32, INT32, F32, &rootGraphLevel);
     // Feat
@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
 
 	auto originalRootGraphLevel = graphData.getData(); // Returns pointer
 	auto originalGraphInfo = originalRootGraphLevel->next(); // Returns pointer
-	auto transformedGraphInfo = DataInfo(CSR_STYPE, true, true);
+	auto transformedGraphInfo = DataInfo(CSR_STYPE, false, false);
 	transformedGraphInfo.addOpt(COL_TILE_DOPT, "65000");
 	auto transformedTileGraphLevel = DataLevel(&transformedGraphInfo, false);
 	auto transformedRootGraphLevel = DataLevel(&transformedTileGraphLevel, true);
