@@ -131,7 +131,7 @@ public:
         // Remainder
         if (cFact != 0)
         {
-            res += coarsenedKernelCall(cFact - 1, cFact);
+            res += coarsenedKernelCall(cFact - 1, cFact, weighted);
         }
         res += "  }\n";
 
@@ -139,7 +139,7 @@ public:
         if (cFact != 0 && prevLayer == -1)
         {
             res += "else {\n";
-            res += coarsenedKernelCall(cFact - 1, -1);
+            res += coarsenedKernelCall(cFact - 1, -1, weighted);
             res += "}\n";
         }
         return res;
