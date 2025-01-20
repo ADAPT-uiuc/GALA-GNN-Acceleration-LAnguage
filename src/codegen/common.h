@@ -251,7 +251,6 @@ protected:
     Code preCode; // Just one for now. Preprocessing should be done first and THEN the trasfers.
     Model model; // TODO: Assume a single model for now
     Code postCode; // Cleanup code?
-    Code
 
     std::vector<std::string> generatedFunctions;
 
