@@ -148,7 +148,7 @@ int main(int argc, char **argv) {
 	std::string outputPath = "../test-codegen/";
 	auto genCode = CUDAGenerator(ctx, outputPath);
 	GALATransformations::complexityOperatorReordering(program, dependencies, associations, transforms);
-	GALATransformations::trainingInvariantCodeMotion(program, dependencies, associations, transforms);
+	// GALATransformations::trainingInvariantCodeMotion(program, dependencies, associations, transforms);
 	genCode.writeCode(program);
 
     // Should be enough for now
