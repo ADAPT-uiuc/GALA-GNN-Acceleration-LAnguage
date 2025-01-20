@@ -126,16 +126,54 @@ public:
         std::vector<RelationEdge*>& associations,
         std::vector<TransformEdge*>& transforms)
     {
-        // Iterate through the list of operations till you hit a learned operation
+        // Do complexity aware re-ordering to make the learning parts as far oof in the computation as possible.
+        complexityOperatorReordering(program, dependencies, associations, transforms, true);
 
-        // Move all the non-learned ops in the training loop to initialization
+        std::vector<CIRNode*> newProgram;
 
-        // TODO: Separate out code generation of a particular compute node and the 
-        //   
+        bool foundLeaning = false;
+        // Iterate through the list of operations in the training loop till you hit a learned operation
+        for (int i = 0; i < program.size(); i++)
+        {
+            CIRNode* outNode = program[i];
+            auto lNode = dynamic_cast<TrainingLoopNode*>(outNode);
+            // Do this transformation only if you have
+            if (lNode)
+            {
+                auto newTrainingLoop = TrainingLoopNode(100,
+                    lNode->getLossFunc(),
+                    lNode->getOptimizer(),
+                    lNode->getValidStep(),
+                    lNode->getTestStep());
+                for (int ix = lNode->getLoopNodeNum() - 1; ix >= 0; ix--)
+                {
+                    if (foundLeaning)
+                    {
+                        newTrainingLoop.addLoopNode(lNode->getNode(ix));
+                    } else
+                    {
+                        auto cNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix));
+                        if (cNode->getOp() != FFN_OP)
+                        {
+                            foundLeaning = true;
+                            newTrainingLoop.addLoopNode(lNode->getNode(ix));
+                            newProgram.push_back(&newTrainingLoop);
+                        } else
+                        {
+                            newProgram.push_back(lNode->getNode(ix));
+                        }
+                    }
+                }
+            } else {
+                newProgram.push_back(outNode);
+            }
+        }
 
+        // TODO see if this works correctly
+        program = newProgram;
     }
 
-    // TODO Complexity aware operator reordering
+    // Complexity aware operator reordering
     // Reorder adjacent operations till no changes 
     static void complexityOperatorReordering (std::vector<CIRNode*>& program,
         std::vector<RelationEdge*>& dependencies,
@@ -157,6 +195,56 @@ public:
                 if (enableTim)
                 {
                     // TODO leave alone for now. To be completed in the when implementing TIM
+                     do
+                    {
+                        changed = false;
+
+                        for (int ix = 0; ix < lNode->getLoopNodeNum(); ix++)
+                        {
+                            CIRNode* inNode = lNode->getNode(ix);
+                            auto cNode = dynamic_cast<ComputeNode*>(inNode);
+                            if (cNode->getOp() == FFN_OP)
+                            {
+                                DataNode* output = cNode->getOutput(0);
+                                DataNode* input = cNode->getInput(0);
+
+                                // Check next operation and get the complexity
+                                if (lNode->getLoopNodeNum() <= (ix + 1))
+                                {
+                                    continue;
+                                }
+
+                                // Next node
+                                auto nextNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix + 1));
+                                if (nextNode->getOp() == AGGREGATE_MUL_SUM_OP ||
+                                    nextNode->getOp() == ROW_BROADCAST_OP)
+                                {
+                                    changed = true;
+
+                                    // Swap the nodes in the CIR
+                                    lNode->swapNodes(ix, ix + 1);
+
+                                    // Change the data for the DIR
+                                    // The res input to the current FFN should be the res input to the next op
+                                    auto nextInput = nextNode->getInput(0);
+                                    auto nextOutput = nextNode->getOutput(0);
+                                    cNode->setInputDataNode(0, nextInput);
+                                    nextNode->setInputDataNode(0, input);
+
+                                    // Change the dependency graph
+                                    auto inOutDepIndex = getEdgeIndex(dependencies, input, output);
+                                    dependencies.erase(dependencies.begin() + inOutDepIndex);
+                                    auto updatedDependency = RelationEdge(nextInput, ALL_RELATION, input, ALL_RELATION);
+                                    dependencies.push_back(&updatedDependency);
+                                    // Swap dependency for new output
+                                    auto outResDepIndex = getEdgeIndex(dependencies, nextInput, nextOutput);
+                                    dependencies.erase(dependencies.begin() + outResDepIndex);
+                                    auto updatedResDependency = RelationEdge(input, ALL_RELATION, nextOutput, ALL_RELATION);
+                                    dependencies.push_back(&updatedResDependency);
+                                }
+                            }
+                        }
+                    } while (changed);
                 } else
                 {
                     do
@@ -177,40 +265,40 @@ public:
                                 if (output->getDataInfo()->getDimCol() > input->getDataInfo()->getDimCol())
                                 {
 
-                                    // // Check next operation and get the complexity
-                                    // if (lNode->getLoopNodeNum() <= (ix + 1))
-                                    // {
-                                    //     continue;
-                                    // }
-                                    //
-                                    // // Next node
-                                    // auto nextNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix + 1));
-                                    // if (nextNode->getOp() == AGGREGATE_MUL_SUM_OP ||
-                                    //     nextNode->getOp() == ROW_BROADCAST_OP)
-                                    // {
-                                    //     changed = true;
-                                    //
-                                    //     // Swap the nodes in the CIR
-                                    //     lNode->swapNodes(ix, ix + 1);
-                                    //
-                                    //     // Change the data for the DIR
-                                    //     // The res input to the current FFN should be the res input to the next op
-                                    //     auto nextInput = nextNode->getInput(0);
-                                    //     auto nextOutput = nextNode->getOutput(0);
-                                    //     cNode->setInputDataNode(0, nextInput);
-                                    //     nextNode->setInputDataNode(0, input);
-                                    //
-                                    //     // Change the dependency graph
-                                    //     auto inOutDepIndex = getEdgeIndex(dependencies, input, nextInput);
-                                    //     dependencies.erase(dependencies.begin() + inOutDepIndex);
-                                    //     auto updatedDependency = RelationEdge(nextInput, ALL_RELATION, input, ALL_RELATION);
-                                    //     dependencies.push_back(&updatedDependency);
-                                    //     // Swap dependency for new output
-                                    //     auto outResDepIndex = getEdgeIndex(dependencies, nextInput, nextOutput);
-                                    //     dependencies.erase(dependencies.begin() + outResDepIndex);
-                                    //     auto updatedResDependency = RelationEdge(input, ALL_RELATION, nextOutput, ALL_RELATION);
-                                    //     dependencies.push_back(&updatedResDependency);
-                                    // }
+                                    // Check next operation and get the complexity
+                                    if (lNode->getLoopNodeNum() <= (ix + 1))
+                                    {
+                                        continue;
+                                    }
+
+                                    // Next node
+                                    auto nextNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix + 1));
+                                    if (nextNode->getOp() == AGGREGATE_MUL_SUM_OP ||
+                                        nextNode->getOp() == ROW_BROADCAST_OP)
+                                    {
+                                        changed = true;
+
+                                        // Swap the nodes in the CIR
+                                        lNode->swapNodes(ix, ix + 1);
+
+                                        // Change the data for the DIR
+                                        // The res input to the current FFN should be the res input to the next op
+                                        auto nextInput = nextNode->getInput(0);
+                                        auto nextOutput = nextNode->getOutput(0);
+                                        cNode->setInputDataNode(0, nextInput);
+                                        nextNode->setInputDataNode(0, input);
+
+                                        // Change the dependency graph
+                                        auto inOutDepIndex = getEdgeIndex(dependencies, input, output);
+                                        dependencies.erase(dependencies.begin() + inOutDepIndex);
+                                        auto updatedDependency = RelationEdge(nextInput, ALL_RELATION, input, ALL_RELATION);
+                                        dependencies.push_back(&updatedDependency);
+                                        // Swap dependency for new output
+                                        auto outResDepIndex = getEdgeIndex(dependencies, nextInput, nextOutput);
+                                        dependencies.erase(dependencies.begin() + outResDepIndex);
+                                        auto updatedResDependency = RelationEdge(input, ALL_RELATION, nextOutput, ALL_RELATION);
+                                        dependencies.push_back(&updatedResDependency);
+                                    }
                                 } else if (output->getDataInfo()->getDimCol() < input->getDataInfo()->getDimCol())
                                 {
                                     // Check next operation and get the complexity

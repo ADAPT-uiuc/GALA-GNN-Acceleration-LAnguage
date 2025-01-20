@@ -184,7 +184,7 @@ public:
     int getLoopNodeNum() { return this->loop.size(); }
 
     std::vector<ForwardNode *> *getLoopNodes() { return &loop; }
-    ComputeNode *getNode(int i) { return this->loop.at(i); }
+    ForwardNode *getNode(int i) { return this->loop.at(i); }
     void swapNodes(int i, int j) { std::swap(this->loop[i], this->loop[j]); }
 };
 
