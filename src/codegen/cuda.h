@@ -142,6 +142,194 @@ public:
         return res;
     }
 
+    void generateCudaCodeForCNode(ComputeNode* cNode)
+    {
+        if (cNode->getOpType() == AGGREGATE_NODE)
+        {
+            // Get the input
+            auto graphInput = cNode->getInput(1);
+            auto graphInfo =  graphInput->getDataInfo();
+
+            // Unweighted (Col tile or undirected is not necessary at the moment)
+            bool isWeighted = false;
+            if (graphInfo->getWeighted())
+            {
+                isWeighted = true;
+            }
+
+            int maxCoarsening = 1;
+            for (auto opt: *cNode->getOpts())
+            {
+                if (opt.first == COARSE_COPT)
+                {
+                    maxCoarsening = (int)opt.second;
+                }
+            }
+
+            std::string kernelCodeStr = "";
+
+            // TODO eventually change the 32, 8 sizes based on the configurations of the CIR
+            //  The 64 here needs to be changed into something else if the blocksize.y is changed
+            // TODO add the semiring selection here
+            for (int cFact = 0; cFact < maxCoarsening; cFact++)
+            {
+                kernelCodeStr += "extern \"C\" __global__ void __launch_bounds__(256)\n\
+default_function_kernel" + std::to_string(cFact) + "(float *__restrict__ C,\n\
+                    int *__restrict__ J_indptr_data,\n";
+
+                if (isWeighted)
+                {
+                    kernelCodeStr += "                                float *__restrict__ A, ";
+                }
+
+                kernelCodeStr += "float *__restrict__ B,\n\
+                    int *__restrict__ J_indices_data, int nrows,\n\
+                    int dcols) {\n\
+if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {\n";
+
+                // The local register storage
+                for (int j = 0; j <= cFact; j++)
+                {
+                    kernelCodeStr += "    float local" + std::to_string(j) + " = C[(((((((int)blockIdx.x) * 8)\
++ ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) + ((int)threadIdx.x)) + " + std::to_string(32 * j) + ")];\n";
+                }
+
+                            kernelCodeStr += "\
+        for (int j = 0;\n\
+             j <\n\
+             (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -\n\
+              J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);\n\
+             ++j) {\n";
+                            for (int j = 0; j <= cFact; j++)
+                            {
+                                kernelCodeStr += "\
+            local" + std::to_string(j) + " = local" + std::to_string(j) + " +";
+                                
+                                if (isWeighted)
+                                {
+                                    kernelCodeStr += "A[(j + J_indptr_data[((((int)blockIdx.x) * 8) +\n\
+                                    ((int)threadIdx.y))])] * ";
+                                }
+                                kernelCodeStr += "(B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + \n\
+                                                         ((int)threadIdx.y))])] * \n\
+                      dcols) + (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) + ((int)threadIdx.x) + " + std::to_string(32 * j) + ")]);\n";
+                            }
+
+                kernelCodeStr += "             }\n";
+                for (int j = 0; j <= cFact; j++)
+                {
+                kernelCodeStr += "\n\
+C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +\n\
+(((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) +\n\
+((int)threadIdx.x) + " + std::to_string(32 * j) + ")] = local" + std::to_string(j) + ";\n";
+                }
+                kernelCodeStr += "   }\n}\n\n";
+            }
+
+            // Offsets
+            for (int cFact = 0; cFact < maxCoarsening - 1; cFact++)
+            {
+                kernelCodeStr += "extern \"C\" __global__ void __launch_bounds__(256)\n\
+default_function_kernel" + std::to_string(cFact) + "_offset(float *__restrict__ C,\n\
+                    int *__restrict__ J_indptr_data,\n";
+
+                if (isWeighted)
+                {
+                    kernelCodeStr += "                                float *__restrict__ A, ";
+                }
+
+                kernelCodeStr += "float *__restrict__ B,\n\
+                    int *__restrict__ J_indices_data, int nrows,\n\
+                    int dcols, int offset) {\n\
+if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {\n";
+
+                // The local register storage
+                for (int j = 0; j <= cFact; j++)
+                {
+                    kernelCodeStr += "    float local" + std::to_string(j) + " = C[(((((((int)blockIdx.x) * 8)\
++ ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) + ((int)threadIdx.x)) + "
+                    + std::to_string(32 * j) + ") + offset];\n";
+                }
+
+                kernelCodeStr += "\
+for (int j = 0;\n\
+ j <\n\
+ (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -\n\
+  J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);\n\
+ ++j) {\n";
+                for (int j = 0; j <= cFact; j++)
+                {
+                    kernelCodeStr += "\
+local" + std::to_string(j) + " = local" + std::to_string(j) + " +";
+
+                    if (isWeighted)
+                    {
+                        kernelCodeStr += "A * ";
+                    }
+                    kernelCodeStr += "(B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + \n\
+                                             ((int)threadIdx.y))])] * \n\
+          dcols) + (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) + ((int)threadIdx.x) + "
+                    + std::to_string(32 * j) + ") + offset])\n";
+                }
+
+                kernelCodeStr += "             }\n";
+                for (int j = 0; j <= cFact; j++)
+                {
+                kernelCodeStr += "\n\
+C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +\n\
+(((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) +\n\
+((int)threadIdx.x) + " + std::to_string(32 * j) + ") + offset] = local" + std::to_string(j) + ";\n";
+                }
+                kernelCodeStr += "   }\n}\n\n";
+            }
+
+            kernelCode.addCode(kernelCodeStr);
+
+            // This is the kernel call
+            std::string aggrKernelCall = ""
+"torch::Tensor gather_forward_gcn(torch::Tensor input_dense,\n\
+                   torch::Tensor offset_graph,\n\
+                   torch::Tensor columns_graph,\n\
+                   torch::Tensor value_graph) {\n\
+auto nrows = offset_graph.numel() - 1;\n\
+auto nvals = columns_graph.numel();\n\
+auto full_iden = input_dense.numel();\n\
+auto dcols = full_iden / nrows;\n\
+// // Dense\n\
+// Input\n\
+float *iden_ptr = input_dense.data_ptr<float>();\n\
+// Output\n\
+auto options = torch::TensorOptions()\n\
+         .dtype(torch::kFloat)\n\
+         .requires_grad(true)\n\
+         .device(torch::kCUDA, 0);\n\
+auto output_dense = torch::zeros({nrows, dcols}, options);\n\
+float *oden_array = output_dense.data_ptr<float>();\n\
+// Sparse\n\
+int *offset_ptr = offset_graph.data_ptr<int>();\n\
+int *col_ptr = columns_graph.data_ptr<int>();\n\
+float *val_ptr = value_graph.data_ptr<float>();\n";
+
+            aggrKernelCall += "cudaStream_t ";
+            for (int cFact = 0; cFact < maxCoarsening + 1; cFact++)
+            {
+                aggrKernelCall += "stream" + std::to_string(cFact);
+                if (cFact < maxCoarsening)
+                {
+                    aggrKernelCall += ", ";
+                }
+            }
+            aggrKernelCall += ";\n";
+
+            aggrKernelCall += coarsenedKernelCall(maxCoarsening, -1);
+            aggrKernelCall += "return output_dense;\n\
+}";
+            // Adding the kernel call and setting the name
+            kernelCallCode.addCode(aggrKernelCall);
+            cNode->setKernelName("gather_forward");
+        }
+    }
+
     void initKernels(std::vector<CIRNode*>& program) override
     {
         std::string importBase = "#include <cuda_runtime_api.h> // cudaMalloc, cudaMemcpy, etc.\n"
@@ -193,198 +381,16 @@ public:
             auto oNode = dynamic_cast<ComputeNode*>(outNode);
             if (oNode)
             {
-
+                auto cNode = dynamic_cast<ComputeNode*>(outNode);
+                generateCudaCodeForCNode(cNode);
+                generateCudaCodeForCNode(cNode);
             } else {
                 auto loopNode = dynamic_cast<TrainingLoopNode*>(outNode);
                 for (int ix = 0; ix < loopNode->getLoopNodeNum(); ix++)
                 {
                     CIRNode* inNode = loopNode->getNode(ix);
                     auto cNode = dynamic_cast<ComputeNode*>(inNode);
-                    if (cNode->getOpType() == AGGREGATE_NODE)
-                    {
-                        // Get the input
-                        auto graphInput = cNode->getInput(1);
-                        auto graphInfo =  graphInput->getDataInfo();
-
-                        // Unweighted (Col tile or undirected is not necessary at the moment)
-                        bool isWeighted = false;
-                        if (graphInfo->getWeighted())
-                        {
-                            isWeighted = true;
-                        }
-
-                        int maxCoarsening = 1;
-                        for (auto opt: *cNode->getOpts())
-                        {
-                            if (opt.first == COARSE_COPT)
-                            {
-                                maxCoarsening = (int)opt.second;
-                            }
-                        }
-
-                        std::string kernelCodeStr = "";
-
-                        // TODO eventually change the 32, 8 sizes based on the configurations of the CIR
-                        //  The 64 here needs to be changed into something else if the blocksize.y is changed
-                        // TODO add the semiring selection here 
-                        for (int cFact = 0; cFact < maxCoarsening; cFact++)
-                        {
-                            kernelCodeStr += "extern \"C\" __global__ void __launch_bounds__(256)\n\
-    default_function_kernel" + std::to_string(cFact) + "(float *__restrict__ C,\n\
-                                int *__restrict__ J_indptr_data,\n";
-
-                            if (isWeighted)
-                            {
-                                kernelCodeStr += "                                float *__restrict__ A, ";
-                            }
-
-                            kernelCodeStr += "float *__restrict__ B,\n\
-                                int *__restrict__ J_indices_data, int nrows,\n\
-                                int dcols) {\n\
-  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {\n";
-
-                            // The local register storage
-                            for (int j = 0; j <= cFact; j++)
-                            {
-                                kernelCodeStr += "    float local" + std::to_string(j) + " = C[(((((((int)blockIdx.x) * 8)\
- + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) + ((int)threadIdx.x)) + " + std::to_string(32 * j) + ")];\n";
-                            }
-
-                            kernelCodeStr += "\
-        for (int j = 0;\n\
-             j <\n\
-             (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -\n\
-              J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);\n\
-             ++j) {\n";
-                            for (int j = 0; j <= cFact; j++)
-                            {
-                                kernelCodeStr += "\
-            local" + std::to_string(j) + " = local" + std::to_string(j) + " +";
-                                
-                                if (isWeighted)
-                                {
-                                    kernelCodeStr += "A[(j + J_indptr_data[((((int)blockIdx.x) * 8) +\n\
-                                    ((int)threadIdx.y))])] * ";
-                                }
-                                kernelCodeStr += "(B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + \n\
-                                                         ((int)threadIdx.y))])] * \n\
-                      dcols) + (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) + ((int)threadIdx.x) + " + std::to_string(32 * j) + ")]);\n";
-                            }
-
-                            kernelCodeStr += "             }\n";
-                            for (int j = 0; j <= cFact; j++)
-                            {
-                            kernelCodeStr += "\n\
-        C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +\n\
-            (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) +\n\
-           ((int)threadIdx.x) + " + std::to_string(32 * j) + ")] = local" + std::to_string(j) + ";\n";
-                            }
-                            kernelCodeStr += "   }\n}\n\n";
-                        }
-
-                        // Offsets
-                        for (int cFact = 0; cFact < maxCoarsening - 1; cFact++)
-                        {
-                            kernelCodeStr += "extern \"C\" __global__ void __launch_bounds__(256)\n\
-    default_function_kernel" + std::to_string(cFact) + "_offset(float *__restrict__ C,\n\
-                                int *__restrict__ J_indptr_data,\n";
-
-                            if (isWeighted)
-                            {
-                                kernelCodeStr += "                                float *__restrict__ A, ";
-                            }
-
-                            kernelCodeStr += "float *__restrict__ B,\n\
-                                int *__restrict__ J_indices_data, int nrows,\n\
-                                int dcols, int offset) {\n\
-  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {\n";
-
-                            // The local register storage
-                            for (int j = 0; j <= cFact; j++)
-                            {
-                                kernelCodeStr += "    float local" + std::to_string(j) + " = C[(((((((int)blockIdx.x) * 8)\
- + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) + ((int)threadIdx.x)) + "
-                                + std::to_string(32 * j) + ") + offset];\n";
-                            }
-
-                            kernelCodeStr += "\
-        for (int j = 0;\n\
-             j <\n\
-             (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -\n\
-              J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);\n\
-             ++j) {\n";
-                            for (int j = 0; j <= cFact; j++)
-                            {
-                                kernelCodeStr += "\
-            local" + std::to_string(j) + " = local" + std::to_string(j) + " +";
-
-                                if (isWeighted)
-                                {
-                                    kernelCodeStr += "A[(j + J_indptr_data[((((int)blockIdx.x) * 8) + \n\
-                                    ((int)threadIdx.y))])] * ";
-                                }
-                                kernelCodeStr += "(B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + \n\
-                                                         ((int)threadIdx.y))])] * \n\
-                      dcols) + (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) + ((int)threadIdx.x) + "
-                                + std::to_string(32 * j) + ") + offset]);\n";
-                            }
-
-                            kernelCodeStr += "             }\n";
-                            for (int j = 0; j <= cFact; j++)
-                            {
-                            kernelCodeStr += "\n\
-        C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +\n\
-            (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) +\n\
-           ((int)threadIdx.x) + " + std::to_string(32 * j) + ") + offset] = local" + std::to_string(j) + ";\n";
-                            }
-                            kernelCodeStr += "   }\n}\n\n";
-                        }
-
-                        kernelCode.addCode(kernelCodeStr);
-
-                        // This is the kernel call
-                        std::string aggrKernelCall = ""
-"torch::Tensor gather_forward_gcn(torch::Tensor input_dense,\n\
-                               torch::Tensor offset_graph,\n\
-                               torch::Tensor columns_graph,\n\
-                               torch::Tensor value_graph) {\n\
-  auto nrows = offset_graph.numel() - 1;\n\
-  auto nvals = columns_graph.numel();\n\
-  auto full_iden = input_dense.numel();\n\
-  auto dcols = full_iden / nrows;\n\
-  // // Dense\n\
-  // Input\n\
-  float *iden_ptr = input_dense.data_ptr<float>();\n\
-  // Output\n\
-  auto options = torch::TensorOptions()\n\
-                     .dtype(torch::kFloat)\n\
-                     .requires_grad(true)\n\
-                     .device(torch::kCUDA, 0);\n\
-  auto output_dense = torch::zeros({nrows, dcols}, options);\n\
-  float *oden_array = output_dense.data_ptr<float>();\n\
-  // Sparse\n\
-  int *offset_ptr = offset_graph.data_ptr<int>();\n\
-  int *col_ptr = columns_graph.data_ptr<int>();\n\
-  float *val_ptr = value_graph.data_ptr<float>();\n";
-
-                        aggrKernelCall += "cudaStream_t ";
-                        for (int cFact = 0; cFact < maxCoarsening + 1; cFact++)
-                        {
-                            aggrKernelCall += "stream" + std::to_string(cFact);
-                            if (cFact < maxCoarsening)
-                            {
-                                aggrKernelCall += ", ";
-                            }
-                        }
-                        aggrKernelCall += ";\n";
-
-                        aggrKernelCall += coarsenedKernelCall(maxCoarsening, -1);
-                        aggrKernelCall += "return output_dense;\n\
-}";
-                        // Adding the kernel call and setting the name
-                        kernelCallCode.addCode(aggrKernelCall);
-                        cNode->setKernelName("gather_forward");
-                    }
+                    generateCudaCodeForCNode(cNode);
                 }
             }
         }
@@ -448,9 +454,6 @@ public:
                         // TODO
                         //  Add the parts for directed graphs
                     }
-
-
-
                     // TODO add bounds if column tiling was applied
                 }
             }
