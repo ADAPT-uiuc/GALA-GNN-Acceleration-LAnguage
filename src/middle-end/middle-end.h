@@ -219,19 +219,16 @@ public:
                                     // The res input to the current FFN should be the res input to the next op
                                     auto nextInput = nextNode->getInput(0);
                                     auto nextOutput = nextNode->getOutput(0);
-                                    cNode->setInputDataNode(0, nextInput);
-                                    nextNode->setInputDataNode(0, input);
 
-                                    // Change the dependency graph
-                                    auto inOutDepIndex = getEdgeIndex(dependencies, input, output);
-                                    dependencies.erase(dependencies.begin() + inOutDepIndex);
-                                    auto updatedDependency = RelationEdge(nextInput, ALL_RELATION, input, ALL_RELATION);
-                                    dependencies.push_back(&updatedDependency);
-                                    // Swap dependency for new output
-                                    auto outResDepIndex = getEdgeIndex(dependencies, nextInput, nextOutput);
-                                    dependencies.erase(dependencies.begin() + outResDepIndex);
-                                    auto updatedResDependency = RelationEdge(input, ALL_RELATION, nextOutput, ALL_RELATION);
-                                    dependencies.push_back(&updatedResDependency);
+                                    output->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+
+                                    // New next node
+                                    cNode->setInputDataNode(0, output);
+                                    cNode->setOutputDataNode(0, nextOutput);
+
+                                    // New prev node
+                                    nextNode->setInputDataNode(0, input);
+                                    nextNode->setOutputDataNode(0, output);
                                 }
                             }
                         }
@@ -276,19 +273,26 @@ public:
                                         // The res input to the current FFN should be the res input to the next op
                                         auto nextInput = nextNode->getInput(0);
                                         auto nextOutput = nextNode->getOutput(0);
-                                        cNode->setInputDataNode(0, nextInput);
-                                        nextNode->setInputDataNode(0, input);
 
-                                        // Change the dependency graph
-                                        auto inOutDepIndex = getEdgeIndex(dependencies, input, output);
-                                        dependencies.erase(dependencies.begin() + inOutDepIndex);
-                                        auto updatedDependency = RelationEdge(nextInput, ALL_RELATION, input, ALL_RELATION);
-                                        dependencies.push_back(&updatedDependency);
-                                        // Swap dependency for new output
-                                        auto outResDepIndex = getEdgeIndex(dependencies, nextInput, nextOutput);
-                                        dependencies.erase(dependencies.begin() + outResDepIndex);
-                                        auto updatedResDependency = RelationEdge(input, ALL_RELATION, nextOutput, ALL_RELATION);
-                                        dependencies.push_back(&updatedResDependency);
+                                        output->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+
+                                        // New next node
+                                        cNode->setInputDataNode(0, output);
+                                        cNode->setOutputDataNode(0, nextOutput);
+
+                                        // New prev node
+                                        nextNode->setInputDataNode(0, input);
+                                        nextNode->setOutputDataNode(0, output);
+                                        // // Change the dependency graph
+                                        // auto inOutDepIndex = getEdgeIndex(dependencies, input, output);
+                                        // dependencies.erase(dependencies.begin() + inOutDepIndex);
+                                        // auto updatedDependency = RelationEdge(nextInput, ALL_RELATION, input, ALL_RELATION);
+                                        // dependencies.push_back(&updatedDependency);
+                                        // // Swap dependency for new output
+                                        // auto outResDepIndex = getEdgeIndex(dependencies, nextInput, nextOutput);
+                                        // dependencies.erase(dependencies.begin() + outResDepIndex);
+                                        // auto updatedResDependency = RelationEdge(input, ALL_RELATION, nextOutput, ALL_RELATION);
+                                        // dependencies.push_back(&updatedResDependency);
                                     }
                                 } else if (output->getDataInfo()->getDimCol() < input->getDataInfo()->getDimCol())
                                 {
@@ -312,21 +316,28 @@ public:
                                         // The res input to the current FFN should be the res input to the next op
                                         auto prevInput = prevNode->getInput(0);
                                         auto prevOutput = prevNode->getOutput(0);
-                                        cNode->setInputDataNode(0, prevInput);
-                                        prevNode->setInputDataNode(0, input);
 
-                                        // TODO Reconsider how this is handled. Input should change to something
-                                        //  completely new?
-                                        // Change the dependency graph
-                                        auto inOutDepIndex = getEdgeIndex(dependencies, prevInput, input);
-                                        dependencies.erase(dependencies.begin() + inOutDepIndex);
-                                        auto updatedDependency = RelationEdge(prevInput, ALL_RELATION, output, ALL_RELATION);
-                                        dependencies.push_back(&updatedDependency);
-                                        // Swap dependency for new output
-                                        auto outResDepIndex = getEdgeIndex(dependencies, input, output);
-                                        dependencies.erase(dependencies.begin() + outResDepIndex);
-                                        auto updatedResDependency = RelationEdge(output, ALL_RELATION, input, ALL_RELATION);
-                                        dependencies.push_back(&updatedResDependency);
+                                        input->getDataInfo()->setDims(-1, output->getDataInfo()->getDimCol());
+
+                                        // New prev node
+                                        cNode->setInputDataNode(0, prevInput);
+                                        cNode->setOutputDataNode(0, input);
+
+                                        // New next node
+                                        prevNode->setInputDataNode(0, input);
+                                        prevNode->setOutputDataNode(0, output);
+
+                                        // TODO you don't need to change the dependencies
+                                        // // Change the dependency graph
+                                        // auto inOutDepIndex = getEdgeIndex(dependencies, prevInput, prevOutput);
+                                        // dependencies.erase(dependencies.begin() + inOutDepIndex);
+                                        // auto updatedDependency = RelationEdge(prevInput, ALL_RELATION, input, ALL_RELATION);
+                                        // dependencies.push_back(&updatedDependency);
+                                        // // Swap dependency for new output
+                                        // auto outResDepIndex = getEdgeIndex(dependencies, input, output);
+                                        // dependencies.erase(dependencies.begin() + outResDepIndex);
+                                        // auto updatedResDependency = RelationEdge(output, ALL_RELATION, input, ALL_RELATION);
+                                        // dependencies.push_back(&updatedResDependency);
                                     }
                                 }
                             }
