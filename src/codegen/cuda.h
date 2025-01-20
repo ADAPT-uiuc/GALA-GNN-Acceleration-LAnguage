@@ -62,7 +62,11 @@ public:
         // Top layer just divide
         if (prevLayer == -1)
         {
-            res += "  if ((int)dcols / " + std::to_string(32 * (cFact)) + ") {\n";
+            if (cFact != 0){
+                res += "  if ((int)dcols / " + std::to_string(32 * (cFact)) + ") {\n";
+            } else {
+                res += "  if ((int)dcols) {\n";
+            }
         } else
         {
             // Sub-layers - modulo division by the higher layer. Then, see if any remaining
@@ -74,9 +78,14 @@ public:
 
         if (prevLayer == -1)
         {
-            res += "    dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / "
-            + std::to_string(32 * (cFact)) + ");\n\
-    dim3 blockDim(32, 8);\n";
+            if (cFact != 0){
+                res += "    dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / "
+                + std::to_string(32 * (cFact)) + ");\n\
+        dim3 blockDim(32, 8);\n";
+            } else {
+                res += "    dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols);\n\
+        dim3 blockDim(32, 8);\n";
+            }
         } else
         {
             res += "    dim3 gridDim(((int)(nrows - 1) / 8) + 1, 1);\n";
@@ -105,13 +114,13 @@ public:
         {
             if (cFact != 0)
             {
-                res += "    default_function_kernel" + std::to_string(cFact - 1) + "<<<gridDim, blockDim, 0, stream"
+                res += "    default_function_kernel" + std::to_string(cFact - 1) + "_offset<<<gridDim, blockDim, 0, stream"
                 + std::to_string(cFact) + ">>>(\n\
         oden_array, offset_ptr, val_ptr, iden_ptr, col_ptr, nrows, dcols, ((int)dcols /"
                 + std::to_string(32 * (cFact + 1)) + ") * " + std::to_string(32 * (cFact + 1)) + ");\n";
             } else
             {
-                res += "    default_function_kernel0<<<gridDim, blockDim, 0, stream0>>>(\n\
+                res += "    default_function_kernel0_offset<<<gridDim, blockDim, 0, stream0>>>(\n\
         oden_array, offset_ptr, val_ptr, iden_ptr, col_ptr, nrows, dcols, ((int)dcols /"
                 + std::to_string(32 * (cFact + 1)) + ") * " + std::to_string(32 * (cFact + 1)) + ");\n";
             }
@@ -254,11 +263,12 @@ public:
                                 
                                 if (isWeighted)
                                 {
-                                    kernelCodeStr += "A*";
+                                    kernelCodeStr += "A[(j + J_indptr_data[((((int)blockIdx.x) * 8) +\n\
+                                    ((int)threadIdx.y))])] * ";
                                 }
                                 kernelCodeStr += "(B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + \n\
                                                          ((int)threadIdx.y))])] * \n\
-                      dcols) + (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) + ((int)threadIdx.x) + " + std::to_string(32 * j) + ")])\n";
+                      dcols) + (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) + ((int)threadIdx.x) + " + std::to_string(32 * j) + ")]);\n";
                             }
 
                             kernelCodeStr += "             }\n";
@@ -310,12 +320,13 @@ public:
 
                                 if (isWeighted)
                                 {
-                                    kernelCodeStr += "A * ";
+                                    kernelCodeStr += "A[(j + J_indptr_data[((((int)blockIdx.x) * 8) + \n\
+                                    ((int)threadIdx.y))])] * ";
                                 }
                                 kernelCodeStr += "(B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + \n\
                                                          ((int)threadIdx.y))])] * \n\
                       dcols) + (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) + ((int)threadIdx.x) + "
-                                + std::to_string(32 * j) + ") + offset])\n";
+                                + std::to_string(32 * j) + ") + offset]);\n";
                             }
 
                             kernelCodeStr += "             }\n";
@@ -423,9 +434,9 @@ public:
   torch::Tensor t_vals"+std::to_string(indexData)+" =\n\
       torch::from_blob(dA_values"+std::to_string(indexData)+", {nvals"+std::to_string(indexData)+"}, options_cu_float_ngrad);\n";
 
-                    inputTransferCode += "  global_offset_graph.push_back(t_offsets"+std::to_string(indexData)+")\n\
-    global_columns_graph.push_back(t_cols"+std::to_string(indexData)+")\n\
-    global_value_graph.push_back(t_vals"+std::to_string(indexData)+")\n";
+                    inputTransferCode += "  global_offset_graph.push_back(t_offsets"+std::to_string(indexData)+");\n\
+  global_columns_graph.push_back(t_cols"+std::to_string(indexData)+");\n\
+  global_value_graph.push_back(t_vals"+std::to_string(indexData)+");\n";
 
                     if (!inputInfo->getDirected())
                     {

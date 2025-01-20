@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
 	auto ctx = new GALAContext(GPU_DEVICE, SINGLE_NODE_SINGLE);
 	std::string outputPath = "../test-codegen/";
 	auto genCode = CUDAGenerator(ctx, outputPath);
-	GALATransformations::complexityOperatorReordering(program, dependencies, associations, transforms);
+	// GALATransformations::complexityOperatorReordering(program, dependencies, associations, transforms);
 	genCode.writeCode(program);
 
     // Should be enough for now

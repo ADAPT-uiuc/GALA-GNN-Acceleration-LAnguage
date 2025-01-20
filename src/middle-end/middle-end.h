@@ -80,12 +80,43 @@ public:
         }
     }
 
+    // TODO have a commong way to write re-write rules.
     // TODO Sparsity aware re-write
     static void sparsityAwareRewrites(std::vector<CIRNode*>& program,
         std::vector<RelationEdge*>& dependencies,
         std::vector<RelationEdge*>& associations,
         std::vector<TransformEdge*>& transforms)
     {
+        // Iterate through program to locate the training loop
+        for (int i = 0; i < program.size(); i++)
+        {
+            CIRNode* outNode = program[i];
+            auto lNode = dynamic_cast<TrainingLoopNode*>(outNode);
+            // Do this transformation only if you have
+            if (lNode)
+            {
+                // TODO Create the initial input graph.
+                //  i.e. add computations to the IR to create these results
+
+                for (int ix = lNode->getLoopNodeNum() - 1; ix >= 0; ix--)
+                {
+                    // TODO Change this to a stringed set of aggregations not just aggregation
+                    //  i.e. result of aggregation 1 is used by aggregation 2
+                    //  if the aggregations are separate then they can still be independent
+                    auto cNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix));
+                    if (cNode->getOpType() == AGGREGATE_NODE)
+                    {
+                       
+                    } else
+                    {
+                        // TODO Use the most recent input graph as a graph input if graph is used
+                        // Use previous
+                    }
+                }
+            } else {
+                auto cNode = dynamic_cast<ComputeNode*>(outNode);
+            }
+        }
 
     }
 
@@ -98,6 +129,9 @@ public:
         // Iterate through the list of operations till you hit a learned operation
 
         // Move all the non-learned ops in the training loop to initialization
+
+        // TODO: Separate out code generation of a particular compute node and the 
+        //   
 
     }
 
