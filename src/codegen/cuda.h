@@ -98,17 +98,20 @@ public:
             }
         }
 
+        std::string weightedStr = weighted ? "val_ptr, " : "";
+
         if (prevLayer == -1)
         {
             if (cFact != 0)
             {
                 res += "    default_function_kernel" + std::to_string(cFact - 1) + "<<<gridDim, blockDim, 0, stream"
                 + std::to_string(cFact) + ">>>(\n\
-        oden_array, offset_ptr," + (weighted ? "val_ptr, " : "") + " iden_ptr, col_ptr, nrows, dcols);\n";
+        oden_array, offset_ptr," + (weightedStr) + " iden_ptr, col_ptr, nrows, dcols);\n";
             } else
             {
+
                 res += "    default_function_kernel0<<<gridDim, blockDim, 0, stream0>>>(\n\
-        oden_array, offset_ptr," + (weighted ? "val_ptr, " : "") + " iden_ptr, col_ptr, nrows, dcols);\n";
+        oden_array, offset_ptr," + (weightedStr) + " iden_ptr, col_ptr, nrows, dcols);\n";
             }
         } else
         {
@@ -116,12 +119,12 @@ public:
             {
                 res += "    default_function_kernel" + std::to_string(cFact - 1) + "_offset<<<gridDim, blockDim, 0, stream"
                 + std::to_string(cFact) + ">>>(\n\
-        oden_array, offset_ptr," + (weighted ? "val_ptr, " : "") +" iden_ptr, col_ptr, nrows, dcols, ((int)dcols /"
+        oden_array, offset_ptr," + (weightedStr) +" iden_ptr, col_ptr, nrows, dcols, ((int)dcols /"
                 + std::to_string(32 * (cFact + 1)) + ") * " + std::to_string(32 * (cFact + 1)) + ");\n";
             } else
             {
                 res += "    default_function_kernel0_offset<<<gridDim, blockDim, 0, stream0>>>(\n\
-        oden_array, offset_ptr," + (weighted ? "val_ptr, " : "") +" iden_ptr, col_ptr, nrows, dcols, ((int)dcols /"
+        oden_array, offset_ptr," + (weightedStr) + " iden_ptr, col_ptr, nrows, dcols, ((int)dcols /"
                 + std::to_string(32 * (cFact + 1)) + ") * " + std::to_string(32 * (cFact + 1)) + ");\n";
             }
         }
