@@ -264,7 +264,8 @@ local" + std::to_string(j) + " = local" + std::to_string(j) + " +";
 
                     if (isWeighted)
                     {
-                        kernelCodeStr += "A * ";
+                        kernelCodeStr += "A[(j + J_indptr_data[((((int)blockIdx.x) * 8) +\n\
+                                    ((int)threadIdx.y))])] * ";
                     }
                     kernelCodeStr += "(B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + \n\
                                              ((int)threadIdx.y))])] * \n\
