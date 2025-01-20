@@ -185,6 +185,13 @@ public:
 
     std::vector<ForwardNode *> *getLoopNodes() { return &loop; }
     ForwardNode *getNode(int i) { return this->loop.at(i); }
+    void eraseFirstNLoopNodes(int n)
+    {
+        for (int i_n = 0; i_n < n; i_n++)
+        {
+            this->loop.erase(this->loop.begin());
+        }
+    }
     void swapNodes(int i, int j) { std::swap(this->loop[i], this->loop[j]); }
 };
 

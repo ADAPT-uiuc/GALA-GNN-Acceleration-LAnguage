@@ -129,9 +129,8 @@ public:
         // Do complexity aware re-ordering to make the learning parts as far oof in the computation as possible.
         complexityOperatorReordering(program, dependencies, associations, transforms, true);
 
-        std::vector<CIRNode*> newProgram;
-
         bool foundLeaning = false;
+        int nodesMoved = 0;
         // Iterate through the list of operations in the training loop till you hit a learned operation
         for (int i = 0; i < program.size(); i++)
         {
@@ -140,37 +139,29 @@ public:
             // Do this transformation only if you have
             if (lNode)
             {
-                auto newTrainingLoop = TrainingLoopNode(100,
-                    lNode->getLossFunc(),
-                    lNode->getOptimizer(),
-                    lNode->getValidStep(),
-                    lNode->getTestStep());
-                for (int ix = lNode->getLoopNodeNum() - 1; ix >= 0; ix--)
+                int ix = 0;
+                while (ix < lNode->getLoopNodeNum())
                 {
-                    if (foundLeaning)
+                    auto cNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix));
+                    if (cNode->getOp() != FFN_OP)
                     {
-                        newTrainingLoop.addLoopNode(lNode->getNode(ix));
+                        foundLeaning = true;
+                        break;
                     } else
                     {
-                        auto cNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix));
-                        if (cNode->getOp() != FFN_OP)
-                        {
-                            foundLeaning = true;
-                            newTrainingLoop.addLoopNode(lNode->getNode(ix));
-                            newProgram.push_back(&newTrainingLoop);
-                        } else
-                        {
-                            newProgram.push_back(lNode->getNode(ix));
-                        }
+                        // Add and remove
+                        program.insert(program.begin() + i + nodesMoved, cNode);
+                        nodesMoved++;
                     }
+                    ix++;
                 }
-            } else {
-                newProgram.push_back(outNode);
+                lNode->eraseFirstNLoopNodes(nodesMoved);
+            }
+            if (foundLeaning)
+            {
+                break;
             }
         }
-
-        // TODO see if this works correctly
-        program = newProgram;
     }
 
     // Complexity aware operator reordering
