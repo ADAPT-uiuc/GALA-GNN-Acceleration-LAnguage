@@ -143,6 +143,8 @@ private:
     // These are in the main funciton
     // Model component definition (The init of a Torch model)
     Code modelUse;
+    // Model Training Invariant
+    Code modelInv;
     // Code for the model use
     Code modelTraining;
     Code modelValidation;
@@ -203,6 +205,11 @@ public:
     {
         return &this->modelUse;
     }
+    // Invariant
+    Code* getInv()
+    {
+        return &this->modelInv;
+    }
 
     // Forward
     Code* getForward()
@@ -244,6 +251,7 @@ protected:
     Code preCode; // Just one for now. Preprocessing should be done first and THEN the trasfers.
     Model model; // TODO: Assume a single model for now
     Code postCode; // Cleanup code?
+    Code
 
     std::vector<std::string> generatedFunctions;
 
@@ -257,7 +265,7 @@ public:
         this->openStream(outputPath);
     }
 
-    void generateOpCode(ComputeNode* cNode, int& fcCount)
+    void generateOpCode(ComputeNode* cNode, int& fcCount, bool outOfLoop = false)
     {
         if (cNode->getOp() == LOAD_OP)
         {
@@ -370,10 +378,18 @@ public:\n\
 };";
         kernelCallCode.addCode(autoGradFunction);
 
-        auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
+        if (outOfLoop)
+        {
+            auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
+            std::string tempForwardAggrCall = "t_iden = GatherForward::apply(t_iden, " + std::to_string(inGraphIndx) + ");";
+            model.getInv()->addCode(tempForwardAggrCall);
+        } else
+        {
+            auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
+            std::string tempForwardAggrCall = "res = GatherForward::apply(res, " + std::to_string(inGraphIndx) + ");";
+            model.getForward()->addCode(tempForwardAggrCall);
+        }
 
-        std::string tempForwardAggrCall = "res = GatherForward::apply(res, " + std::to_string(inGraphIndx) + ");";
-        model.getForward()->addCode(tempForwardAggrCall);
         } else if (cNode->getOpType() == UPDATE_NODE)
         {
             if (fcCount == 0)
@@ -630,6 +646,7 @@ std::vector<torch::Tensor> global_bounds;";
         this->writeCode(*model.getForward(), outStreamModel);
         this->writeCode(preCode, outStreamModel);
         this->writeCode(*model.getUse(), outStreamModel);
+        this->writeCode(*model.getInv(), outStreamModel);
         this->writeCode(postCode, outStreamModel);
 
         this->closeStream();
