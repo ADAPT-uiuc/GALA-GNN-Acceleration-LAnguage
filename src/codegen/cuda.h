@@ -55,7 +55,7 @@ public:
         cmakeCode.addCode(cmakeExecutable);
     }
 
-    std::string coarsenedKernelCall(int cFact, int prevLayer)
+    std::string coarsenedKernelCall(int cFact, int prevLayer, int weighted = true)
     {
         std::string res = "";
         // Add check for the next coarsening
@@ -104,11 +104,11 @@ public:
             {
                 res += "    default_function_kernel" + std::to_string(cFact - 1) + "<<<gridDim, blockDim, 0, stream"
                 + std::to_string(cFact) + ">>>(\n\
-        oden_array, offset_ptr, val_ptr, iden_ptr, col_ptr, nrows, dcols);\n";
+        oden_array, offset_ptr," + (weighted ? "val_ptr, " : "") + " iden_ptr, col_ptr, nrows, dcols);\n";
             } else
             {
                 res += "    default_function_kernel0<<<gridDim, blockDim, 0, stream0>>>(\n\
-        oden_array, offset_ptr, val_ptr, iden_ptr, col_ptr, nrows, dcols);\n";
+        oden_array, offset_ptr," + (weighted ? "val_ptr, " : "") + " iden_ptr, col_ptr, nrows, dcols);\n";
             }
         } else
         {
@@ -116,12 +116,12 @@ public:
             {
                 res += "    default_function_kernel" + std::to_string(cFact - 1) + "_offset<<<gridDim, blockDim, 0, stream"
                 + std::to_string(cFact) + ">>>(\n\
-        oden_array, offset_ptr, val_ptr, iden_ptr, col_ptr, nrows, dcols, ((int)dcols /"
+        oden_array, offset_ptr," + (weighted ? "val_ptr, " : "") +" iden_ptr, col_ptr, nrows, dcols, ((int)dcols /"
                 + std::to_string(32 * (cFact + 1)) + ") * " + std::to_string(32 * (cFact + 1)) + ");\n";
             } else
             {
                 res += "    default_function_kernel0_offset<<<gridDim, blockDim, 0, stream0>>>(\n\
-        oden_array, offset_ptr, val_ptr, iden_ptr, col_ptr, nrows, dcols, ((int)dcols /"
+        oden_array, offset_ptr," + (weighted ? "val_ptr, " : "") +" iden_ptr, col_ptr, nrows, dcols, ((int)dcols /"
                 + std::to_string(32 * (cFact + 1)) + ") * " + std::to_string(32 * (cFact + 1)) + ");\n";
             }
         }
@@ -322,7 +322,7 @@ float *val_ptr = value_graph.data_ptr<float>();\n";
             }
             aggrKernelCall += ";\n";
 
-            aggrKernelCall += coarsenedKernelCall(maxCoarsening, -1);
+            aggrKernelCall += coarsenedKernelCall(maxCoarsening, -1, isWeighted);
             aggrKernelCall += "return output_dense;\n\
 }";
             // Adding the kernel call and setting the name
@@ -447,13 +447,14 @@ float *val_ptr = value_graph.data_ptr<float>();\n";
 
                     if (!inputInfo->getDirected())
                     {
-                        inputTransferCode += "  global_offset_graph.push_back(t_offsets"+std::to_string(indexData)+")\n\
-    global_columns_graph.push_back(t_cols"+std::to_string(indexData)+")\n\
-    global_value_graph.push_back(t_vals"+std::to_string(indexData)+")\n";
+                        inputTransferCode += "  global_offset_graph.push_back(t_offsets"+std::to_string(indexData)+");\n\
+    global_columns_graph.push_back(t_cols"+std::to_string(indexData)+");\n\
+    global_value_graph.push_back(t_vals"+std::to_string(indexData)+");\n";
                     } else
                     {
                         // TODO
                         //  Add the parts for directed graphs
+                        inputTransferCode += " TODO\n";
                     }
                     // TODO add bounds if column tiling was applied
                 }
