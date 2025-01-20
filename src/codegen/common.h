@@ -431,7 +431,7 @@ public:\n\
             auto oNode = dynamic_cast<ComputeNode*>(outNode);
             if (oNode)
             {
-                generateOpCode(oNode, fcCount);
+                generateOpCode(oNode, fcCount, true);
             } else {
                 // TODO add data transformations before data preparation.
                 //  Should come from a middle end transformation.
