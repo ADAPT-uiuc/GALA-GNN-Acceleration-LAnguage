@@ -270,7 +270,7 @@ local" + std::to_string(j) + " = local" + std::to_string(j) + " +";
                     kernelCodeStr += "(B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + \n\
                                              ((int)threadIdx.y))])] * \n\
           dcols) + (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) + ((int)threadIdx.x) + "
-                    + std::to_string(32 * j) + ") + offset])\n";
+                    + std::to_string(32 * j) + ") + offset]);\n";
                 }
 
                 kernelCodeStr += "             }\n";
