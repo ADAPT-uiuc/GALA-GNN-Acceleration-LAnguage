@@ -257,31 +257,24 @@ public:
         this->openStream(outputPath);
     }
 
-// TODO Put this in the common codegen? Doesn't seem to have any context specific content yet
-    void generateCode(std::vector<CIRNode*>& program)
+    void generateOpCode(ComputeNode* cNode, int& fcCount)
     {
-        for (int i = 0; i < program.size(); i++)
+        if (cNode->getOp() == LOAD_OP)
         {
-            CIRNode* outNode = program[i];
-            auto oNode = dynamic_cast<ComputeNode*>(outNode);
-            if (oNode)
+            // TODO assume a single load for now and make the index for it 0
+
+            for (int oI = 0; oI < cNode->getNumOutputs(); oI++)
             {
-                if (oNode->getOp() == LOAD_OP)
+                auto currentInfo = cNode->getOutput(oI)->getDataInfo();
+                if (currentInfo->getFormat() == CSR_STYPE)
                 {
-                    // TODO assume a single load for now and make the index for it 0
+                    currentInfo->setIndex(0);
+                }
+            }
 
-                    for (int oI = 0; oI < oNode->getNumOutputs(); oI++)
-                    {
-                        auto currentInfo = oNode->getOutput(oI)->getDataInfo();
-                        if (currentInfo->getFormat() == CSR_STYPE)
-                        {
-                            currentInfo->setIndex(0);
-                        }
-                    }
-
-                    // This doesn't need to change
-                    std::string fileLoadCode = "    SM adj0;\n\
-    std::string filename = \"" + oNode->getParam(0) +  "\";\n\
+            // This doesn't need to change
+            std::string fileLoadCode = "    SM adj0;\n\
+    std::string filename = \"" + cNode->getParam(0) +  "\";\n\
     readSM_npy32<SM>(filename, &adj0);\n\
 \n\
     // Adj info\n\
@@ -319,11 +312,111 @@ public:
     int classes =\n\
     *std::max_element(labels.vals_ptr(), labels.vals_ptr() + labels.nvals()) + 1;";
 
-                    preCode.addCode(fileLoadCode);
-                }
-            } else {
-                int fcCount = 0;
+            preCode.addCode(fileLoadCode);
+        } else if (cNode->getOpType() == AGGREGATE_NODE)
+        {
+            bool isColTile = false;
 
+            // TODO get if col_tile from the data
+             // Also add the autograd function which should be generated based on the program
+             // TODO change the function call based on the optimizations
+             //  Global_i@s_directed does not need to be passed. You do do neet to pass segments.
+            std::string autoGradFunction = ""
+"class GatherForward : public torch::autograd::Function<GatherForward> {\n\
+public:\n\
+    static torch::Tensor forward(torch::autograd::AutogradContext *ctx,\n\
+                                 torch::Tensor input_dense, int li) {\n\
+        ctx->saved_data[\"li\"] = li;\n\
+        torch::Tensor offset_graph = global_offset_graph[2 * li];\n\
+        torch::Tensor columns_graph = global_columns_graph[2 * li];\n\
+        torch::Tensor value_graph = global_value_graph[2 * li];\n";
+
+            if (isColTile){
+                autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
+        int segments = global_segments[2 * li];\n\
+         return gather_forward_gcn(input_dense, offset_graph, columns_graph,\n\
+                            value_graph, bounds, global_nrows, segments);\n";
+            } else
+            {
+                autoGradFunction += "        return gather_forward_gcn(input_dense, offset_graph, columns_graph,\n\
+                                  value_graph);\n";
+            }
+
+            autoGradFunction += "    }\n\
+\n\
+    static torch::autograd::tensor_list\n\
+    backward(torch::autograd::AutogradContext *ctx,\n\
+             torch::autograd::tensor_list grad_outputs) {\n\
+        torch::Tensor input_dense = grad_outputs[0];\n\
+        int li = ctx->saved_data[\"li\"].toInt();\n\
+        torch::Tensor offset_graph = global_offset_graph[2 * li + 1];\n\
+        torch::Tensor columns_graph = global_columns_graph[2 * li + 1];\n\
+        torch::Tensor value_graph = global_value_graph[2 * li + 1];\n";
+
+            if (isColTile){
+                autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
+        int segments = global_segments[2 * li];\n\
+        return gather_forward_gcn(input_dense, offset_graph, columns_graph,\
+                              value_graph, bounds, global_nrows, segments)";
+            } else
+            {
+                autoGradFunction += "\
+        return {gather_forward_gcn(input_dense, offset_graph, columns_graph,\n\
+                                   value_graph), torch::Tensor()};\n";
+            }
+
+    autoGradFunction += "\
+    }\n\
+};";
+        kernelCallCode.addCode(autoGradFunction);
+
+        auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
+
+        std::string tempForwardAggrCall = "res = GatherForward::apply(res, " + std::to_string(inGraphIndx) + ");";
+        model.getForward()->addCode(tempForwardAggrCall);
+        } else if (cNode->getOpType() == UPDATE_NODE)
+        {
+            if (fcCount == 0)
+            {
+                std::string inSize1 = "int size" + std::to_string(fcCount);
+                model.getInitCall()->addCode(inSize1);
+
+                std::string inSize2 = "int size" + std::to_string(fcCount + 1);
+                model.getInitCall()->addCode(inSize2);
+
+                std::string fcDef = "torch::nn::Linear fc" + std::to_string(fcCount) + "{nullptr};";
+                model.getDef()->addCode(fcDef);
+
+                std::string fcInit = "fc" + std::to_string(fcCount) + " = register_module(\"fc"
+                + std::to_string(fcCount) + "\", torch::nn::Linear(size" + std::to_string(fcCount)
+                + ", size" + std::to_string(fcCount + 1) + "));";
+                model.getInit()->addCode(fcInit);
+
+                // TODO need some way to add the inputs to the function call
+
+                // TODO add the inputs to the forward call based on the actual inputs
+                std::string tempForwardCall = "res = fc" + std::to_string(fcCount) + "->forward(res);";
+                model.getForward()->addCode(tempForwardCall);
+            } else
+            {
+                // TODO Fill this.
+            }
+            fcCount++;
+        }
+    }
+
+// TODO Put this in the common codegen? Doesn't seem to have any context specific content yet
+    void generateCode(std::vector<CIRNode*>& program)
+    {
+        for (int i = 0; i < program.size(); i++)
+        {
+            int fcCount = 0;
+            CIRNode* outNode = program[i];
+            auto oNode = dynamic_cast<ComputeNode*>(outNode);
+            if (oNode)
+            {
+                generateOpCode(oNode, fcCount);
+            } else {
                 // TODO add data transformations before data preparation.
                 //  Should come from a middle end transformation.
 
@@ -352,96 +445,7 @@ forward(torch::Tensor input_dense,   // B\n\
                 {
                     CIRNode* inNode = loopNode->getNode(ix);
                     auto cNode = dynamic_cast<ComputeNode*>(inNode);
-                    if (cNode->getOpType() == AGGREGATE_NODE)
-                    {
-                        bool isColTile = false;
-
-                        // TODO get if col_tile from the data
-                         // Also add the autograd function which should be generated based on the program
-                         // TODO change the function call based on the optimizations
-                         //  Global_i@s_directed does not need to be passed. You do do neet to pass segments.
-                        std::string autoGradFunction = ""
-"class GatherForward : public torch::autograd::Function<GatherForward> {\n\
-public:\n\
-    static torch::Tensor forward(torch::autograd::AutogradContext *ctx,\n\
-                                 torch::Tensor input_dense, int li) {\n\
-        ctx->saved_data[\"li\"] = li;\n\
-        torch::Tensor offset_graph = global_offset_graph[2 * li];\n\
-        torch::Tensor columns_graph = global_columns_graph[2 * li];\n\
-        torch::Tensor value_graph = global_value_graph[2 * li];\n";
-
-                        if (isColTile){
-                            autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
-        int segments = global_segments[2 * li];\n\
-         return gather_forward_gcn(input_dense, offset_graph, columns_graph,\n\
-                            value_graph, bounds, global_nrows, segments);\n";
-                        } else
-                        {
-                            autoGradFunction += "        return gather_forward_gcn(input_dense, offset_graph, columns_graph,\n\
-                                  value_graph);\n";
-                        }
-
-                        autoGradFunction += "    }\n\
-\n\
-    static torch::autograd::tensor_list\n\
-    backward(torch::autograd::AutogradContext *ctx,\n\
-             torch::autograd::tensor_list grad_outputs) {\n\
-        torch::Tensor input_dense = grad_outputs[0];\n\
-        int li = ctx->saved_data[\"li\"].toInt();\n\
-        torch::Tensor offset_graph = global_offset_graph[2 * li + 1];\n\
-        torch::Tensor columns_graph = global_columns_graph[2 * li + 1];\n\
-        torch::Tensor value_graph = global_value_graph[2 * li + 1];\n";
-
-                        if (isColTile){
-                            autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
-        int segments = global_segments[2 * li];\n\
-        return gather_forward_gcn(input_dense, offset_graph, columns_graph,\
-                              value_graph, bounds, global_nrows, segments)";
-                        } else
-                        {
-                            autoGradFunction += "\
-        return {gather_forward_gcn(input_dense, offset_graph, columns_graph,\n\
-                                   value_graph), torch::Tensor()};\n";
-                        }
-
-                autoGradFunction += "\
-    }\n\
-};";
-                        kernelCallCode.addCode(autoGradFunction);
-
-                        auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
-
-                        std::string tempForwardAggrCall = "res = GatherForward::apply(res, " + std::to_string(inGraphIndx) + ");";
-                        model.getForward()->addCode(tempForwardAggrCall);
-                    } else if (cNode->getOpType() == UPDATE_NODE)
-                    {
-                        if (fcCount == 0)
-                        {
-                            std::string inSize1 = "int size" + std::to_string(fcCount);
-                            model.getInitCall()->addCode(inSize1);
-
-                            std::string inSize2 = "int size" + std::to_string(fcCount + 1);
-                            model.getInitCall()->addCode(inSize2);
-
-                            std::string fcDef = "torch::nn::Linear fc" + std::to_string(fcCount) + "{nullptr};";
-                            model.getDef()->addCode(fcDef);
-
-                            std::string fcInit = "fc" + std::to_string(fcCount) + " = register_module(\"fc"
-                            + std::to_string(fcCount) + "\", torch::nn::Linear(size" + std::to_string(fcCount)
-                            + ", size" + std::to_string(fcCount + 1) + "));";
-                            model.getInit()->addCode(fcInit);
-
-                            // TODO need some way to add the inputs to the function call
-
-                            // TODO add the inputs to the forward call based on the actual inputs
-                            std::string tempForwardCall = "res = fc" + std::to_string(fcCount) + "->forward(res);";
-                            model.getForward()->addCode(tempForwardCall);
-                        } else
-                        {
-                            // TODO Fill this.
-                        }
-                        fcCount++;
-                    }
+                    generateOpCode(cNode, fcCount);
                 }
                 std::string tempReturn = "return {torch::log_softmax(res, /*dim=*/1)};";
                 model.getForward()->addCode(tempReturn);
