@@ -423,6 +423,10 @@ public:\n\
 // TODO Put this in the common codegen? Doesn't seem to have any context specific content yet
     void generateCode(std::vector<CIRNode*>& program)
     {
+        // TODO add data transformations before data preparation.
+        //  Should come from a middle end transformation.
+        this->dataPrep(program);
+
         for (int i = 0; i < program.size(); i++)
         {
             int fcCount = 0;
@@ -432,11 +436,6 @@ public:\n\
             {
                 generateOpCode(oNode, fcCount, true);
             } else {
-                // TODO add data transformations before data preparation.
-                //  Should come from a middle end transformation.
-
-                this->dataPrep(program);
-
                 std::string modelDef = "struct GALAGNN : torch::nn::Module {";
                 model.getDef()->addCode(modelDef);
                 std::string modelCall =  "GALAGNN(";
