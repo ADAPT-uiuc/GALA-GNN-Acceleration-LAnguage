@@ -435,7 +435,7 @@ public:\n\
                 generateOpCode(oNode, fcCount, true);
 
                 // Generate the transfer code after the load operation
-                if (oNode->getOpType() == LOAD_OP)
+                if (oNode->getOp() == LOAD_OP)
                 {
                     this->dataPrep(program);
                 }
