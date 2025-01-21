@@ -387,7 +387,6 @@ float *val_ptr = value_graph.data_ptr<float>();\n";
             {
                 auto cNode = dynamic_cast<ComputeNode*>(outNode);
                 generateCudaCodeForCNode(cNode);
-                generateCudaCodeForCNode(cNode);
             } else {
                 auto loopNode = dynamic_cast<TrainingLoopNode*>(outNode);
                 for (int ix = 0; ix < loopNode->getLoopNodeNum(); ix++)
