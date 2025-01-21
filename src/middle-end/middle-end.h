@@ -143,7 +143,7 @@ public:
                 while (ix < lNode->getLoopNodeNum())
                 {
                     auto cNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix));
-                    if (cNode->getOp() != FFN_OP)
+                    if (cNode->getOp() == FFN_OP)
                     {
                         foundLeaning = true;
                         break;
@@ -283,16 +283,6 @@ public:
                                         // New prev node
                                         nextNode->setInputDataNode(0, input);
                                         nextNode->setOutputDataNode(0, output);
-                                        // // Change the dependency graph
-                                        // auto inOutDepIndex = getEdgeIndex(dependencies, input, output);
-                                        // dependencies.erase(dependencies.begin() + inOutDepIndex);
-                                        // auto updatedDependency = RelationEdge(nextInput, ALL_RELATION, input, ALL_RELATION);
-                                        // dependencies.push_back(&updatedDependency);
-                                        // // Swap dependency for new output
-                                        // auto outResDepIndex = getEdgeIndex(dependencies, nextInput, nextOutput);
-                                        // dependencies.erase(dependencies.begin() + outResDepIndex);
-                                        // auto updatedResDependency = RelationEdge(input, ALL_RELATION, nextOutput, ALL_RELATION);
-                                        // dependencies.push_back(&updatedResDependency);
                                     }
                                 } else if (output->getDataInfo()->getDimCol() < input->getDataInfo()->getDimCol())
                                 {
@@ -326,18 +316,6 @@ public:
                                         // New next node
                                         prevNode->setInputDataNode(0, input);
                                         prevNode->setOutputDataNode(0, output);
-
-                                        // TODO you don't need to change the dependencies
-                                        // // Change the dependency graph
-                                        // auto inOutDepIndex = getEdgeIndex(dependencies, prevInput, prevOutput);
-                                        // dependencies.erase(dependencies.begin() + inOutDepIndex);
-                                        // auto updatedDependency = RelationEdge(prevInput, ALL_RELATION, input, ALL_RELATION);
-                                        // dependencies.push_back(&updatedDependency);
-                                        // // Swap dependency for new output
-                                        // auto outResDepIndex = getEdgeIndex(dependencies, input, output);
-                                        // dependencies.erase(dependencies.begin() + outResDepIndex);
-                                        // auto updatedResDependency = RelationEdge(output, ALL_RELATION, input, ALL_RELATION);
-                                        // dependencies.push_back(&updatedResDependency);
                                     }
                                 }
                             }
