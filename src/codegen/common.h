@@ -425,8 +425,6 @@ public:\n\
     {
         // TODO add data transformations before data preparation.
         //  Should come from a middle end transformation.
-        this->dataPrep(program);
-
         for (int i = 0; i < program.size(); i++)
         {
             int fcCount = 0;
@@ -435,6 +433,13 @@ public:\n\
             if (oNode)
             {
                 generateOpCode(oNode, fcCount, true);
+
+                // Generate the transfer code after the load operation
+                if (oNode->getOpType() == LOAD_OP)
+                {
+                    this->dataPrep(program);
+                }
+
             } else {
                 std::string modelDef = "struct GALAGNN : torch::nn::Module {";
                 model.getDef()->addCode(modelDef);
