@@ -104,26 +104,26 @@ public:
         {
             if (cFact != 0)
             {
-                res += "    default_function_kernel" + std::to_string(cFact - 1) + "<<<gridDim, blockDim, 0, stream"
+                res += "    gala_node_aggregate_kernel" + std::to_string(cFact - 1) + "<<<gridDim, blockDim, 0, stream"
                 + std::to_string(cFact) + ">>>(\n\
         oden_array, offset_ptr," + (weightedStr) + " iden_ptr, col_ptr, nrows, dcols);\n";
             } else
             {
 
-                res += "    default_function_kernel0<<<gridDim, blockDim, 0, stream0>>>(\n\
+                res += "    gala_node_aggregate_kernel0<<<gridDim, blockDim, 0, stream0>>>(\n\
         oden_array, offset_ptr," + (weightedStr) + " iden_ptr, col_ptr, nrows, dcols);\n";
             }
         } else
         {
             if (cFact != 0)
             {
-                res += "    default_function_kernel" + std::to_string(cFact - 1) + "_offset<<<gridDim, blockDim, 0, stream"
+                res += "    gala_node_aggregate_kernel" + std::to_string(cFact - 1) + "_offset<<<gridDim, blockDim, 0, stream"
                 + std::to_string(cFact) + ">>>(\n\
         oden_array, offset_ptr," + (weightedStr) +" iden_ptr, col_ptr, nrows, dcols, ((int)dcols /"
                 + std::to_string(32 * (cFact + 1)) + ") * " + std::to_string(32 * (cFact + 1)) + ");\n";
             } else
             {
-                res += "    default_function_kernel0_offset<<<gridDim, blockDim, 0, stream0>>>(\n\
+                res += "    gala_node_aggregate_kernel0_offset<<<gridDim, blockDim, 0, stream0>>>(\n\
         oden_array, offset_ptr," + (weightedStr) + " iden_ptr, col_ptr, nrows, dcols, ((int)dcols /"
                 + std::to_string(32 * (cFact + 1)) + ") * " + std::to_string(32 * (cFact + 1)) + ");\n";
             }
@@ -177,7 +177,7 @@ public:
             for (int cFact = 0; cFact < maxCoarsening; cFact++)
             {
                 kernelCodeStr += "extern \"C\" __global__ void __launch_bounds__(256)\n\
-default_function_kernel" + std::to_string(cFact) + "(float *__restrict__ C,\n\
+gala_node_aggregate_kernel" + std::to_string(cFact) + "(float *__restrict__ C,\n\
                     int *__restrict__ J_indptr_data,\n";
 
                 if (isWeighted)
@@ -233,7 +233,7 @@ C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +\n\
             for (int cFact = 0; cFact < maxCoarsening - 1; cFact++)
             {
                 kernelCodeStr += "extern \"C\" __global__ void __launch_bounds__(256)\n\
-default_function_kernel" + std::to_string(cFact) + "_offset(float *__restrict__ C,\n\
+gala_node_aggregate_kernel" + std::to_string(cFact) + "_offset(float *__restrict__ C,\n\
                     int *__restrict__ J_indptr_data,\n";
 
                 if (isWeighted)
