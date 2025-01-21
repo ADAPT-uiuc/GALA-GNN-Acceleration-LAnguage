@@ -379,6 +379,7 @@ float *val_ptr = value_graph.data_ptr<float>();\n";
   } while (0)";
         kernelCode.addCode(cudaInitFunctions);
 
+        std::unordered_set<OpType> encountedOps;
         for (int i = 0; i < program.size(); i++)
         {
             CIRNode* outNode = program[i];
@@ -386,14 +387,23 @@ float *val_ptr = value_graph.data_ptr<float>();\n";
             if (oNode)
             {
                 auto cNode = dynamic_cast<ComputeNode*>(outNode);
-                generateCudaCodeForCNode(cNode);
+                if (encountedOps.find(cNode->getOpType()) == encountedOps.end())
+                {
+                    generateCudaCodeForCNode(cNode);
+                    encountedOps.insert(cNode->getOpType());
+                }
+
             } else {
                 auto loopNode = dynamic_cast<TrainingLoopNode*>(outNode);
                 for (int ix = 0; ix < loopNode->getLoopNodeNum(); ix++)
                 {
                     CIRNode* inNode = loopNode->getNode(ix);
                     auto cNode = dynamic_cast<ComputeNode*>(inNode);
-                    generateCudaCodeForCNode(cNode);
+                    if (encountedOps.find(cNode->getOpType()) == encountedOps.end())
+                    {
+                        generateCudaCodeForCNode(cNode);
+                        encountedOps.insert(cNode->getOpType());
+                    }
                 }
             }
         }
