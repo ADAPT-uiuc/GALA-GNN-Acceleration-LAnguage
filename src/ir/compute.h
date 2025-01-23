@@ -38,13 +38,22 @@ enum ComputeOp {
     AGGREGATE_MUL_SUM_OP, // SpMM
     FFN_OP, // Can also be UPDATE
     BIAS_OP,
-    NON_LNR_OP,
+    NON_LNR_OP_RELU,
+    NON_LNR_OP_LOG_SOFTMAX,
+    NON_LNR_OP_SOFTMAX,
+    NON_LNR_OP_LEAKY_RELU,
     ROW_BROADCAST_OP,
+    SCALAR_ADD_EPS_MULTIPLY_OP,
+    ADD_OP, // Tensor add
+    MUL_OP, // Tensor multiply
     // Control statements
     IF_CONTROL,
     TRAIN_CONTROL,
     // Transformation
-    TRANSFORM_OP
+    TRANSFORM_OP,
+    // Data creation ops
+    ONES_OP,
+    EPSILON_OP,
 };
 
 enum CompOptimization {
