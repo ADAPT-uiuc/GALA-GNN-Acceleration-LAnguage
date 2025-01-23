@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
 	auto rootOnesLevel = DataLevel(&onesInfo, true);
 	auto onesData = DataNode("ones", INT32, INT32, F32, &rootOnesLevel);
 	onesTensorOp.addOutputData(&onesData);
-	trainingLoop.addLoopNode(%onesData);
+	trainingLoop.addLoopNode(&onesTensorOp);
 	//* Dependencies
 	auto onesTensorGraphAssociation = RelationEdge(&transformedGraph, ALL_RELATION, &onesData, ROWS_RELATION);
 	associations.push_back(&onesTensorGraphAssociation);
