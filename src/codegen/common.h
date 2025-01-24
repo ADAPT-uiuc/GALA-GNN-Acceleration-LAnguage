@@ -367,7 +367,7 @@ public:\n\
                             value_graph, bounds, global_nrows, segments);\n";
             } else
             {
-                autoGradFunction += "        return " + getKernelName(cNode) + "call(input_dense, offset_graph, columns_graph,\n\
+                autoGradFunction += "        return " + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph,\n\
                                   value_graph);\n";
             }
 
@@ -390,7 +390,7 @@ public:\n\
             } else
             {
                 autoGradFunction += "\
-        return {" + getKernelName(cNode) + "(input_dense, offset_graph, columns_graph,\n\
+        return {" + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph,\n\
                                    value_graph), torch::Tensor()};\n";
             }
 
