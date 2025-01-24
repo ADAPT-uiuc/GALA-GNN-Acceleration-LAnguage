@@ -55,7 +55,7 @@ public:
         cmakeCode.addCode(cmakeExecutable);
     }
 
-    std::string coarsenedKernelCall(int cFact, int prevLayer, int weighted = true)
+    std::string coarsenedKernelCall(ComputeNode* cNode, int cFact, int prevLayer, int weighted = true)
     {
         std::string res = "";
         // Add check for the next coarsening
@@ -104,26 +104,26 @@ public:
         {
             if (cFact != 0)
             {
-                res += "    gala_node_aggregate_kernel" + std::to_string(cFact - 1) + "<<<gridDim, blockDim, 0, stream"
+                res += "    " + getKernelName(cNode) + "_kernel" + std::to_string(cFact - 1) + "<<<gridDim, blockDim, 0, stream"
                 + std::to_string(cFact) + ">>>(\n\
         oden_array, offset_ptr," + (weightedStr) + " iden_ptr, col_ptr, nrows, dcols);\n";
             } else
             {
 
-                res += "    gala_node_aggregate_kernel0<<<gridDim, blockDim, 0, stream0>>>(\n\
+                res += "    " + getKernelName(cNode) + "_kernel0<<<gridDim, blockDim, 0, stream0>>>(\n\
         oden_array, offset_ptr," + (weightedStr) + " iden_ptr, col_ptr, nrows, dcols);\n";
             }
         } else
         {
             if (cFact != 0)
             {
-                res += "    gala_node_aggregate_kernel" + std::to_string(cFact - 1) + "_offset<<<gridDim, blockDim, 0, stream"
+                res += "    " + getKernelName(cNode) + "_kernel" + std::to_string(cFact - 1) + "_offset<<<gridDim, blockDim, 0, stream"
                 + std::to_string(cFact) + ">>>(\n\
         oden_array, offset_ptr," + (weightedStr) +" iden_ptr, col_ptr, nrows, dcols, ((int)dcols /"
                 + std::to_string(32 * (cFact + 1)) + ") * " + std::to_string(32 * (cFact + 1)) + ");\n";
             } else
             {
-                res += "    gala_node_aggregate_kernel0_offset<<<gridDim, blockDim, 0, stream0>>>(\n\
+                res += "    " + getKernelName(cNode) + "_kernel0_offset<<<gridDim, blockDim, 0, stream0>>>(\n\
         oden_array, offset_ptr," + (weightedStr) + " iden_ptr, col_ptr, nrows, dcols, ((int)dcols /"
                 + std::to_string(32 * (cFact + 1)) + ") * " + std::to_string(32 * (cFact + 1)) + ");\n";
             }
@@ -131,7 +131,7 @@ public:
         // Remainder
         if (cFact != 0)
         {
-            res += coarsenedKernelCall(cFact - 1, cFact, weighted);
+            res += coarsenedKernelCall(cNode, cFact - 1, cFact, weighted);
         }
         res += "  }\n";
 
@@ -139,7 +139,7 @@ public:
         if (cFact != 0 && prevLayer == -1)
         {
             res += "else {\n";
-            res += coarsenedKernelCall(cFact - 1, -1, weighted);
+            res += coarsenedKernelCall(cNode, cFact - 1, -1, weighted);
             res += "}\n";
         }
         return res;
@@ -176,8 +176,8 @@ public:
             // TODO add the semiring selection here
             for (int cFact = 0; cFact < maxCoarsening; cFact++)
             {
-                kernelCodeStr += "extern \"C\" __global__ void __launch_bounds__(256)\n\
-gala_node_aggregate_kernel" + std::to_string(cFact) + "(float *__restrict__ C,\n\
+                kernelCodeStr += "extern \"C\" __global__ void __launch_bounds__(256)\n"
+                + getKernelName(cNode) + "_kernel" + std::to_string(cFact) + "(float *__restrict__ C,\n\
                     int *__restrict__ J_indptr_data,\n";
 
                 if (isWeighted)
@@ -232,8 +232,8 @@ C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +\n\
             // Offsets
             for (int cFact = 0; cFact < maxCoarsening - 1; cFact++)
             {
-                kernelCodeStr += "extern \"C\" __global__ void __launch_bounds__(256)\n\
-gala_node_aggregate_kernel" + std::to_string(cFact) + "_offset(float *__restrict__ C,\n\
+                kernelCodeStr += "extern \"C\" __global__ void __launch_bounds__(256)\n"
+                + getKernelName(cNode) + "_kernel" + std::to_string(cFact) + "_offset(float *__restrict__ C,\n\
                     int *__restrict__ J_indptr_data,\n";
 
                 if (isWeighted)
@@ -291,7 +291,7 @@ C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +\n\
 
             // This is the kernel call
             std::string aggrKernelCall = ""
-"torch::Tensor gather_forward_gcn(torch::Tensor input_dense,\n\
+            "torch::Tensor " + getKernelName(cNode) + "_call(torch::Tensor input_dense,\n\
                    torch::Tensor offset_graph,\n\
                    torch::Tensor columns_graph,\n\
                    torch::Tensor value_graph) {\n\
@@ -325,34 +325,13 @@ float *val_ptr = value_graph.data_ptr<float>();\n";
             }
             aggrKernelCall += ";\n";
 
-            aggrKernelCall += coarsenedKernelCall(maxCoarsening, -1, isWeighted);
+            aggrKernelCall += coarsenedKernelCall(cNode, maxCoarsening, -1, isWeighted);
             aggrKernelCall += "return output_dense;\n\
 }";
             // Adding the kernel call and setting the name
             kernelCallCode.addCode(aggrKernelCall);
             cNode->setKernelName("gather_forward");
         }
-    }
-
-    std::string getKernelName(ComputeNode* cNode)
-    {
-        std::string kernelName = "";
-        if (cNode->getOpType() == AGGREGATE_NODE)
-        {
-            kernelName += "aggregate_node";
-        } else
-        {
-            kernelName += "unsupported";
-        }
-        // TODO add other kernel optimizations
-        for (std::pair<CompOptimization, float> optPair: *cNode->getOpts())
-        {
-            if (optPair.first == COARSE_COPT)
-            {
-                kernelName += "_coarse" + std::to_string(optPair.second);
-            }
-        }
-        return kernelName;
     }
 
     void initKernels(std::vector<CIRNode*>& program) override

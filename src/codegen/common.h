@@ -280,7 +280,7 @@ public:
         {
             if (optPair.first == COARSE_COPT)
             {
-                kernelName += "_coarse" + std::to_string(optPair.second);
+                kernelName += "_coarse" + std::to_string((int)(optPair.second));
             }
         }
         return kernelName;
