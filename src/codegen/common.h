@@ -264,6 +264,28 @@ public:
         this->openStream(outputPath);
     }
 
+
+    std::string getKernelName(ComputeNode* cNode)
+    {
+        std::string kernelName = "";
+        if (cNode->getOpType() == AGGREGATE_NODE)
+        {
+            kernelName += "aggregate_node";
+        } else
+        {
+            kernelName += "unsupported";
+        }
+        // TODO add other kernel optimizations
+        for (std::pair<CompOptimization, float> optPair: *cNode->getOpts())
+        {
+            if (optPair.first == COARSE_COPT)
+            {
+                kernelName += "_coarse" + std::to_string(optPair.second);
+            }
+        }
+        return kernelName;
+    }
+
     void generateOpCode(ComputeNode* cNode, int& fcCount, bool outOfLoop = false)
     {
         if (cNode->getOp() == LOAD_OP)
@@ -329,7 +351,7 @@ public:
              // TODO change the function call based on the optimizations
              //  Global_i@s_directed does not need to be passed. You do do neet to pass segments.
             std::string autoGradFunction = ""
-"class GatherForward : public torch::autograd::Function<GatherForward> {\n\
+"class " + getKernelName(cNode) + "_AutoGrad : public torch::autograd::Function<GatherForward> {\n\
 public:\n\
     static torch::Tensor forward(torch::autograd::AutogradContext *ctx,\n\
                                  torch::Tensor input_dense, int li) {\n\
@@ -345,7 +367,7 @@ public:\n\
                             value_graph, bounds, global_nrows, segments);\n";
             } else
             {
-                autoGradFunction += "        return gather_forward_gcn(input_dense, offset_graph, columns_graph,\n\
+                autoGradFunction += "        return " + getKernelName(cNode) + "call(input_dense, offset_graph, columns_graph,\n\
                                   value_graph);\n";
             }
 
@@ -363,12 +385,12 @@ public:\n\
             if (isColTile){
                 autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
         int segments = global_segments[2 * li];\n\
-        return gather_forward_gcn(input_dense, offset_graph, columns_graph,\
+        return " + getKernelName(cNode) + "(input_dense, offset_graph, columns_graph,\
                               value_graph, bounds, global_nrows, segments)";
             } else
             {
                 autoGradFunction += "\
-        return {gather_forward_gcn(input_dense, offset_graph, columns_graph,\n\
+        return {" + getKernelName(cNode) + "(input_dense, offset_graph, columns_graph,\n\
                                    value_graph), torch::Tensor()};\n";
             }
 
@@ -380,12 +402,12 @@ public:\n\
         if (outOfLoop)
         {
             auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
-            std::string tempForwardAggrCall = "t_iden = GatherForward::apply(t_iden, " + std::to_string(inGraphIndx) + ");";
+            std::string tempForwardAggrCall = "t_iden = " + getKernelName(cNode) + "_AutoGrad::apply(t_iden, " + std::to_string(inGraphIndx) + ");";
             model.getInv()->addCode(tempForwardAggrCall);
         } else
         {
             auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
-            std::string tempForwardAggrCall = "res = GatherForward::apply(res, " + std::to_string(inGraphIndx) + ");";
+            std::string tempForwardAggrCall = "res = " + getKernelName(cNode) + "_AutoGrad::apply(res, " + std::to_string(inGraphIndx) + ");";
             model.getForward()->addCode(tempForwardAggrCall);
         }
 
@@ -466,6 +488,7 @@ forward(torch::Tensor input_dense,   // B\n\
                     auto cNode = dynamic_cast<ComputeNode*>(inNode);
                     generateOpCode(cNode, fcCount);
                 }
+                // TODO Change this. (Remove and replace)
                 std::string tempReturn = "return {torch::log_softmax(res, /*dim=*/1)};";
                 model.getForward()->addCode(tempReturn);
 
