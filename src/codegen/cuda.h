@@ -334,6 +334,27 @@ float *val_ptr = value_graph.data_ptr<float>();\n";
         }
     }
 
+    std::string getKernelName(ComputeNode* cNode)
+    {
+        std::string kernelName = "";
+        if (cNode->getOpType() == AGGREGATE_NODE)
+        {
+            kernelName += "aggregate_node";
+        } else
+        {
+            kernelName += "unsupported";
+        }
+        // TODO add other kernel optimizations
+        for (std::pair<CompOptimization, float> optPair: *cNode->getOpts())
+        {
+            if (optPair.first == COARSE_COPT)
+            {
+                kernelName += "_coarse" + std::to_string(optPair.second);
+            }
+        }
+        return kernelName;
+    }
+
     void initKernels(std::vector<CIRNode*>& program) override
     {
         std::string importBase = "#include <cuda_runtime_api.h> // cudaMalloc, cudaMemcpy, etc.\n"
@@ -379,7 +400,7 @@ float *val_ptr = value_graph.data_ptr<float>();\n";
   } while (0)";
         kernelCode.addCode(cudaInitFunctions);
 
-        std::unordered_set<OpType> encountedOps;
+        std::unordered_set<std::string> encountedOps;
         for (int i = 0; i < program.size(); i++)
         {
             CIRNode* outNode = program[i];
@@ -387,22 +408,24 @@ float *val_ptr = value_graph.data_ptr<float>();\n";
             if (oNode)
             {
                 auto cNode = dynamic_cast<ComputeNode*>(outNode);
-                if (encountedOps.find(cNode->getOpType()) == encountedOps.end())
+                std::string kernelName = getKernelName(cNode);
+
+                if (encountedOps.find(kernelName) == encountedOps.end())
                 {
                     generateCudaCodeForCNode(cNode);
-                    encountedOps.insert(cNode->getOpType());
+                    encountedOps.insert(kernelName);
                 }
-
             } else {
                 auto loopNode = dynamic_cast<TrainingLoopNode*>(outNode);
                 for (int ix = 0; ix < loopNode->getLoopNodeNum(); ix++)
                 {
                     CIRNode* inNode = loopNode->getNode(ix);
                     auto cNode = dynamic_cast<ComputeNode*>(inNode);
-                    if (encountedOps.find(cNode->getOpType()) == encountedOps.end())
+                    std::string kernelName = getKernelName(cNode);
+                    if (encountedOps.find(kernelName) == encountedOps.end())
                     {
                         generateCudaCodeForCNode(cNode);
-                        encountedOps.insert(cNode->getOpType());
+                        encountedOps.insert(kernelName);
                     }
                 }
             }
@@ -410,7 +433,7 @@ float *val_ptr = value_graph.data_ptr<float>();\n";
     }
 
     void generateCudaTransferCodeForUniqueInput(ComputeNode* cNode,
-        std::unordered_set<std::string> encounteredStrings)
+        std::unordered_set<std::string> &encounteredStrings)
     {
         std::string inputTransferCode = "";
         // TODO need to the same for the backward pass' data
