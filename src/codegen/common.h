@@ -518,7 +518,20 @@ public:\n\
                 model.getForward()->addCode(forwardCall);
             } else
             {
-                // TODO Fill this.
+                std::string inSize2 = "int size" + std::to_string(fcCount + 1);
+                model.getInitCall()->addCode(inSize2);
+
+                std::string fcDef = "torch::nn::Linear fc" + std::to_string(fcCount) + "{nullptr};";
+                model.getDef()->addCode(fcDef);
+
+                std::string fcInit = "fc" + std::to_string(fcCount) + " = register_module(\"fc"
+                + std::to_string(fcCount) + "\", torch::nn::Linear(size" + std::to_string(fcCount)
+                + ", size" + std::to_string(fcCount + 1) + "));";
+                model.getInit()->addCode(fcInit);
+
+                // TODO add the inputs to the forward call based on the actual inputs
+                std::string forwardCall = generateOutputString(cNode) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
+                model.getForward()->addCode(forwardCall);
             }
             fcCount++;
         } else if (cNode->getOp() == ONES_OP)
