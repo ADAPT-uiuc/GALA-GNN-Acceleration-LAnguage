@@ -272,6 +272,12 @@ public:
             if (val == -1)
             {
                 return "global_nrows";
+            } else if (val == -2)
+            {
+                return "global_classes";
+            } else if (val == -3)
+            {
+                return "global_emb_size";
             } else
             {
                 // TODO
@@ -318,7 +324,8 @@ public:
     }
 
     void generateOpCode(ComputeNode* cNode, int& fcCount, bool outOfLoop,
-        std::unordered_set<std::string> &encounteredAutograds)
+        std::unordered_set<std::string> &encounteredAutograds,
+        std::vector<int> &inputSizes)
     {
         if (cNode->getOp() == LOAD_OP)
         {
@@ -371,7 +378,9 @@ public:
     DB test_mask;\n\
     repopulate<DBL, DB>(&test_mask_load, &test_mask);\n\
     int classes =\n\
-    *std::max_element(labels.vals_ptr(), labels.vals_ptr() + labels.nvals()) + 1;";
+    *std::max_element(labels.vals_ptr(), labels.vals_ptr() + labels.nvals()) + 1;\n\
+    global_classes = classes;\n\
+    global_emb_size = emb_size";
 
             preCode.addCode(fileLoadCode);
         } else if (cNode->getOp() == AGGREGATE_MUL_SUM_OP)
@@ -512,6 +521,8 @@ public:\n\
                 model.getInit()->addCode(fcInit);
 
                 // TODO need some way to add the inputs to the function call
+                inputSizes.push_back(cNode->getInput(0)->getDataInfo()->getDimRow());
+                inputSizes.push_back(cNode->getInput(1)->getDataInfo()->getDimRow());
 
                 // TODO add the inputs to the forward call based on the actual inputs
                 std::string forwardCall = generateOutputString(cNode) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
@@ -528,6 +539,8 @@ public:\n\
                 + std::to_string(fcCount) + "\", torch::nn::Linear(size" + std::to_string(fcCount)
                 + ", size" + std::to_string(fcCount + 1) + "));";
                 model.getInit()->addCode(fcInit);
+
+                inputSizes.push_back(cNode->getInput(1)->getDataInfo()->getDimRow());
 
                 // TODO add the inputs to the forward call based on the actual inputs
                 std::string forwardCall = generateOutputString(cNode) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
@@ -558,6 +571,8 @@ public:\n\
 // TODO Put this in the common codegen? Doesn't seem to have any context specific content yet
     void generateCode(std::vector<CIRNode*>& program)
     {
+        std::vector<int> inputSizes;
+
         // TODO add data transformations before data preparation.
         //  Should come from a middle end transformation.
         std::unordered_set<std::string> encounteredAutograds;
@@ -568,7 +583,7 @@ public:\n\
             auto oNode = dynamic_cast<ComputeNode*>(outNode);
             if (oNode)
             {
-                generateOpCode(oNode, fcCount, true, encounteredAutograds);
+                generateOpCode(oNode, fcCount, true, encounteredAutograds, inputSizes);
 
                 // Generate the transfer code after the load operation
                 if (oNode->getOp() == LOAD_OP)
@@ -584,7 +599,7 @@ public:\n\
 
                 // TODO generate this based on the program
                 std::string tempFowradCall = "std::vector<torch::Tensor>\n\
-forward(torch::Tensor t_iden,   // B){";
+forward(torch::Tensor t_iden){";
                 model.getForwardCall()->addCode(tempFowradCall);
 
                 // std::string resInit = "torch::Tensor res = input_dense;";
@@ -599,7 +614,7 @@ forward(torch::Tensor t_iden,   // B){";
                 {
                     CIRNode* inNode = loopNode->getNode(ix);
                     auto cNode = dynamic_cast<ComputeNode*>(inNode);
-                    generateOpCode(cNode, fcCount, false, encounteredAutograds);
+                    generateOpCode(cNode, fcCount, false, encounteredAutograds, inputSizes);
                 }
                 CIRNode* inNode = loopNode->getNode(loopNode->getLoopNodeNum()-1);
                 auto cNode = dynamic_cast<ComputeNode*>(inNode);
@@ -618,7 +633,17 @@ forward(torch::Tensor t_iden,   // B){";
                 model.getInitCall()->addCode(closeInitCall);
 
                 // TODO Change the embedding sizes based on the
-                std::string tempModelInit = "auto net = std::make_shared<GALAGNN>(emb_size, classes);";
+
+                std::string tempModelInit = "auto net = std::make_shared<GALAGNN>(";
+                for (int ei = 0; ei < inputSizes.size(); ei++)
+                {
+                    tempModelInit += processDims(inputSizes[ei]);
+                    if (ei < inputSizes.size() - 1)
+                    {
+                        tempModelInit += ", ";
+                    }
+                }
+                tempModelInit += ");";
                 model.getUse()->addCode(tempModelInit);
 
                 std::string modelTransfer = "net->to(device);";
@@ -745,6 +770,8 @@ typedef DenseMatrix<ind1_t, ind2_t, mask_load_t> DBL;\n\
 typedef DenseMatrix<ind1_t, ind2_t, mask_t> DB;\n\
 typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;\n\
 int global_nrows;\n\
+int global_classes;\n\
+int global_emb_size;\n\
 std::vector<int> global_segments;\n\
 bool global_is_directed;\n\
 \n\
