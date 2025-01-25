@@ -546,7 +546,7 @@ public:\n\
             auto oNode = dynamic_cast<ComputeNode*>(outNode);
             if (oNode)
             {
-                generateOpCode(oNode, fcCount, true);
+                generateOpCode(oNode, fcCount, true, encounteredAutograds);
 
                 // Generate the transfer code after the load operation
                 if (oNode->getOp() == LOAD_OP)
@@ -578,7 +578,7 @@ forward(torch::Tensor input_dense,   // B\n\
                 {
                     CIRNode* inNode = loopNode->getNode(ix);
                     auto cNode = dynamic_cast<ComputeNode*>(inNode);
-                    generateOpCode(cNode, fcCount);
+                    generateOpCode(cNode, fcCount, false, encounteredAutograds);
                 }
                 CIRNode* inNode = loopNode->getNode(loopNode->getLoopNodeNum()-1);
                 auto cNode = dynamic_cast<ComputeNode*>(inNode);
