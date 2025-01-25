@@ -310,7 +310,7 @@ public:
         {
             if (cNode->getOutput(0)->getName() == cNode->getInput(ix)->getName())
             {
-                return cNode->getOutput(ix)->getName();
+                return cNode->getInput(ix)->getName();
             }
         }
         return "torch::Tensor " + cNode->getOutput(0)->getName();
@@ -384,6 +384,7 @@ public:
 
             if (encounteredAutograds.find(getKernelName(cNode)) == encounteredAutograds.end())
             {
+                encounteredAutograds.insert(getKernelName(cNode));
                 std::string autoGradFunction = ""
 "class " + getKernelName(cNode) + "_AutoGrad : public torch::autograd::Function<GatherForward> {\n\
 public:\n\
