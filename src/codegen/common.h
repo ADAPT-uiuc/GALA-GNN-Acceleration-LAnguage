@@ -265,6 +265,24 @@ public:
     }
 
 
+    std::string processDims(int val)
+    {
+        if (val < 0)
+        {
+            if (val == -1)
+            {
+                return "global_nrows";
+            } else
+            {
+                // TODO
+            }
+        } else
+        {
+            return std::to_string(val);
+        }
+    }
+
+
     std::string getKernelName(ComputeNode* cNode)
     {
         std::string kernelName = "";
@@ -286,7 +304,20 @@ public:
         return kernelName;
     }
 
-    void generateOpCode(ComputeNode* cNode, int& fcCount, bool outOfLoop = false)
+    std::string generateOutputString(ComputeNode* cNode)
+    {
+        for (int ix = 0; ix < cNode->getNumInputs(); ix++)
+        {
+            if (cNode->getOutput(0)->getName() == cNode->getInput(ix)->getName())
+            {
+                return cNode->getOutput(ix)->getName();
+            }
+        }
+        return "torch::Tensor " + cNode->getOutput(0)->getName();
+    }
+
+    void generateOpCode(ComputeNode* cNode, int& fcCount, bool outOfLoop = false,
+        std::unordered_set<std::string> &encounteredAutograds)
     {
         if (cNode->getOp() == LOAD_OP)
         {
@@ -342,7 +373,7 @@ public:
     *std::max_element(labels.vals_ptr(), labels.vals_ptr() + labels.nvals()) + 1;";
 
             preCode.addCode(fileLoadCode);
-        } else if (cNode->getOpType() == AGGREGATE_NODE)
+        } else if (cNode->getOp() == AGGREGATE_MUL_SUM_OP)
         {
             bool isColTile = false;
 
@@ -350,7 +381,10 @@ public:
              // Also add the autograd function which should be generated based on the program
              // TODO change the function call based on the optimizations
              //  Global_i@s_directed does not need to be passed. You do do neet to pass segments.
-            std::string autoGradFunction = ""
+
+            if (encounteredAutograds.find(getKernelName(cNode)) == encounteredAutograds.end())
+            {
+                std::string autoGradFunction = ""
 "class " + getKernelName(cNode) + "_AutoGrad : public torch::autograd::Function<GatherForward> {\n\
 public:\n\
     static torch::Tensor forward(torch::autograd::AutogradContext *ctx,\n\
@@ -385,7 +419,7 @@ public:\n\
             if (isColTile){
                 autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
         int segments = global_segments[2 * li];\n\
-        return " + getKernelName(cNode) + "(input_dense, offset_graph, columns_graph,\
+        return " + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph,\
                               value_graph, bounds, global_nrows, segments)";
             } else
             {
@@ -398,21 +432,60 @@ public:\n\
     }\n\
 };";
         kernelCallCode.addCode(autoGradFunction);
+            }
 
-        if (outOfLoop)
-        {
-            auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
-            std::string tempForwardAggrCall = "t_iden = " + getKernelName(cNode) + "_AutoGrad::apply(t_iden, " + std::to_string(inGraphIndx) + ");";
-            model.getInv()->addCode(tempForwardAggrCall);
-        } else
-        {
-            auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
-            std::string tempForwardAggrCall = "res = " + getKernelName(cNode) + "_AutoGrad::apply(res, " + std::to_string(inGraphIndx) + ");";
-            model.getForward()->addCode(tempForwardAggrCall);
-        }
+        auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
+        std::string tempForwardAggrCall = cNode->getOutput(0)->getName() + " = " + getKernelName(cNode) + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");";
+        model.getInv()->addCode(tempForwardAggrCall);
 
-        } else if (cNode->getOpType() == UPDATE_NODE)
+        // if (outOfLoop)
+        // {
+        //     auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
+        //     std::string tempForwardAggrCall = "t_iden = " + getKernelName(cNode) + "_AutoGrad::apply(t_iden, " + std::to_string(inGraphIndx) + ");";
+        //     model.getInv()->addCode(tempForwardAggrCall);
+        // } else
+        // {
+        //     auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
+        //     std::string tempForwardAggrCall = "res = " + getKernelName(cNode) + "_AutoGrad::apply(res, " + std::to_string(inGraphIndx) + ");";
+        //     model.getForward()->addCode(tempForwardAggrCall);
+        // }
+
+        } else if (cNode->getOp() == AGGREGATE_MUL_SUM_DIRECT)
         {
+            bool isColTile = false;
+
+            auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
+            std::string directAggrCall = "            torch::Tensor offset_graph_ones = global_offset_graph[2 * " + std::to_string(inGraphIndx) + "];\n\
+          torch::Tensor columns_graph_ones = global_columns_graph[2 * " + std::to_string(inGraphIndx) + "];\n\
+          torch::Tensor value_graph_ones = global_value_graph[2 * " + std::to_string(inGraphIndx) + "];\n";
+
+            if (isColTile){
+                directAggrCall += "        torch::Tensor bounds_ones = global_bounds[2 * " + std::to_string(inGraphIndx) + "];\n\
+        int segments_ones = global_segments[2 * " + std::to_string(inGraphIndx) + "];\n\
+          torch::Tensor " + cNode->getOutput(0)->getName() + " = " + getKernelName(cNode) + "_call(" + cNode->getInput(0)->getName() + ", offset_graph_ones, columns_graph_ones,\n\
+                            value_graph_ones, bounds_ones, global_nrows, segments_ones);\n";
+            } else
+            {
+                directAggrCall += "        " + generateOutputString(cNode) +" = " + getKernelName(cNode) + "_call(" + cNode->getInput(0)->getName() + ", offset_graph_ones, columns_graph_ones,\n\
+                                  value_graph_ones);\n";
+            }
+            model.getForward()->addCode(directAggrCall);
+        } else if (cNode->getOp() == POWER_OP)
+        {
+            std::string powerCall = "        " + generateOutputString(cNode) + " = torch::pow(" + cNode->getInput(0)->getName() + ", " + cNode->getParam(0) + ");";
+            model.getForward()->addCode(powerCall);
+        } else if (cNode->getOp() == ROW_BROADCAST_OP)
+        {
+            std::string rbCall = "        " + generateOutputString(cNode) + " = " + cNode->getInput(0)->getName()
+            + " * " + cNode->getInput(1)->getName() + ";";
+            model.getForward()->addCode(rbCall);
+        } else if (cNode->getOp() == NON_LNR_OP_RELU)
+        {
+            std::string reluCall = "        " + generateOutputString(cNode) + " = torch::relu(" + cNode->getInput(0)->getName() + ");";
+            model.getForward()->addCode(reluCall);
+        } else if (cNode->getOp() == FFN_OP)
+        {
+            // TODO Check if input and output names are same. If they are use same, if not use something else
             if (fcCount == 0)
             {
                 std::string inSize1 = "int size" + std::to_string(fcCount);
@@ -432,13 +505,31 @@ public:\n\
                 // TODO need some way to add the inputs to the function call
 
                 // TODO add the inputs to the forward call based on the actual inputs
-                std::string tempForwardCall = "res = fc" + std::to_string(fcCount) + "->forward(res);";
-                model.getForward()->addCode(tempForwardCall);
+                std::string forwardCall = generateOutputString(cNode) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
+                model.getForward()->addCode(forwardCall);
             } else
             {
                 // TODO Fill this.
             }
             fcCount++;
+        } else if (cNode->getOp() == ONES_OP)
+        {
+            auto outputInfo = cNode->getOutput(0)->getDataInfo();
+
+            std::string rowDims = processDims(outputInfo->getDimRow());
+            std::string colDims = processDims(outputInfo->getDimCol());
+
+            // TODO eventually use a device specific function for this.
+            std::string tempOptionsOnes = "    auto options_" + cNode->getOutput(0)->getName() +" = torch::TensorOptions()\n\
+                       .dtype(torch::kFloat)\n\
+                       .requires_grad(false)\n\
+                       .device(torch::kCUDA, 0);";
+            model.getForward()->addCode(tempOptionsOnes);
+
+            // TODO add the inputs to the forward call based on the actual inputs
+            std::string onesCall = cNode->getOutput(0)->getName() + " = torch::ones({" + rowDims
+            + ", " + colDims + "}, options_" + cNode->getOutput(0)->getName() + ");";
+            model.getForward()->addCode(onesCall);
         }
     }
 
@@ -447,6 +538,7 @@ public:\n\
     {
         // TODO add data transformations before data preparation.
         //  Should come from a middle end transformation.
+        std::unordered_set<std::string> encounteredAutograds;
         for (int i = 0; i < program.size(); i++)
         {
             int fcCount = 0;
@@ -488,8 +580,10 @@ forward(torch::Tensor input_dense,   // B\n\
                     auto cNode = dynamic_cast<ComputeNode*>(inNode);
                     generateOpCode(cNode, fcCount);
                 }
+                CIRNode* inNode = loopNode->getNode(loopNode->getLoopNodeNum()-1);
+                auto cNode = dynamic_cast<ComputeNode*>(inNode);
                 // TODO Change this. (Remove and replace)
-                std::string tempReturn = "return {torch::log_softmax(res, /*dim=*/1)};";
+                std::string tempReturn = "return {" + cNode->getOutput(0)->getName() + "};";
                 model.getForward()->addCode(tempReturn);
 
                 std::string closeForward = "    }\n"

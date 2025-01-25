@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
     auto featInfo = DataInfo(RM_DTYPE);
     featInfo.setDims(-1, -2);
     auto rootFeatLevel = DataLevel(&featInfo, true);
-    auto featData = DataNode("feat", INT32, INT32, F32, &rootFeatLevel);
+    auto featData = DataNode("t_iden", INT32, INT32, F32, &rootFeatLevel);
 
 	// Association between graph and features
 	auto graphFeatAssociation = RelationEdge(&graphData, ALL_RELATION, &featData, ROWS_RELATION);
@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
 	associations.push_back(&onesTensorGraphAssociation);
 
 	// The actual degrees calculation
-	auto degreesOp = ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
+	auto degreesOp = ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_DIRECT);
 	auto degreesInfo = DataInfo(RM_DTYPE);
 	degreesInfo.setDims(-1, 1);
 	auto rootDegreesLevel = DataLevel(&degreesInfo, true);

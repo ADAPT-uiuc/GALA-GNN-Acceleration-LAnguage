@@ -36,6 +36,7 @@ enum ComputeOp {
     POWER_OP,
     APPLY_EDGES_OP, // SDDMM
     AGGREGATE_MUL_SUM_OP, // SpMM
+    AGGREGATE_MUL_SUM_DIRECT, // No autograd
     FFN_OP, // Can also be UPDATE
     BIAS_OP,
     NON_LNR_OP_RELU,
