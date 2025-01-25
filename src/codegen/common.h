@@ -521,8 +521,8 @@ public:\n\
                 model.getInit()->addCode(fcInit);
 
                 // TODO need some way to add the inputs to the function call
-                inputSizes.push_back(cNode->getInput(0)->getDataInfo()->getDimRow());
                 inputSizes.push_back(cNode->getInput(1)->getDataInfo()->getDimRow());
+                inputSizes.push_back(cNode->getInput(1)->getDataInfo()->getDimCol());
 
                 // TODO add the inputs to the forward call based on the actual inputs
                 std::string forwardCall = generateOutputString(cNode) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
@@ -540,7 +540,7 @@ public:\n\
                 + ", size" + std::to_string(fcCount + 1) + "));";
                 model.getInit()->addCode(fcInit);
 
-                inputSizes.push_back(cNode->getInput(1)->getDataInfo()->getDimRow());
+                inputSizes.push_back(cNode->getInput(1)->getDataInfo()->getDimCol());
 
                 // TODO add the inputs to the forward call based on the actual inputs
                 std::string forwardCall = generateOutputString(cNode) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
