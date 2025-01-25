@@ -436,9 +436,16 @@ public:\n\
         kernelCallCode.addCode(autoGradFunction);
             }
 
-        auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
-        std::string tempForwardAggrCall = cNode->getOutput(0)->getName() + " = " + getKernelName(cNode) + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");";
-        model.getInv()->addCode(tempForwardAggrCall);
+            auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
+            std::string tempForwardAggrCall = cNode->getOutput(0)->getName() + " = " + getKernelName(cNode) + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");";
+
+            if (outOfLoop)
+            {
+                model.getInv()->addCode(tempForwardAggrCall);
+            } else
+            {
+               model.getForward()->addCode(tempForwardAggrCall);
+            }
 
         // if (outOfLoop)
         // {
@@ -529,7 +536,7 @@ public:\n\
             model.getForward()->addCode(tempOptionsOnes);
 
             // TODO add the inputs to the forward call based on the actual inputs
-            std::string onesCall = cNode->getOutput(0)->getName() + " = torch::ones({" + rowDims
+            std::string onesCall =  generateOutputString(cNode) + " = torch::ones({" + rowDims
             + ", " + colDims + "}, options_" + cNode->getOutput(0)->getName() + ");";
             model.getForward()->addCode(onesCall);
         }
@@ -564,12 +571,11 @@ public:\n\
 
                 // TODO generate this based on the program
                 std::string tempFowradCall = "std::vector<torch::Tensor>\n\
-forward(torch::Tensor input_dense,   // B\n\
-      int nrows){";
+forward(torch::Tensor t_iden,   // B){";
                 model.getForwardCall()->addCode(tempFowradCall);
 
-                std::string resInit = "torch::Tensor res = input_dense;";
-                model.getForward()->addCode(resInit);
+                // std::string resInit = "torch::Tensor res = input_dense;";
+                // model.getForward()->addCode(resInit);
 
                 auto loopNode = dynamic_cast<TrainingLoopNode*>(outNode);
 
