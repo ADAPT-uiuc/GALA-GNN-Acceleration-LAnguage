@@ -316,7 +316,7 @@ public:
         return "torch::Tensor " + cNode->getOutput(0)->getName();
     }
 
-    void generateOpCode(ComputeNode* cNode, int& fcCount, bool outOfLoop = false,
+    void generateOpCode(ComputeNode* cNode, int& fcCount, bool outOfLoop,
         std::unordered_set<std::string> &encounteredAutograds)
     {
         if (cNode->getOp() == LOAD_OP)
