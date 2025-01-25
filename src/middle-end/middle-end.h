@@ -206,9 +206,9 @@ public:
                                 }
 
                                 // Next node
+                                // TODO Change later. Currently this is very brittle.
                                 auto nextNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix + 1));
-                                if (nextNode->getOp() == AGGREGATE_MUL_SUM_OP ||
-                                    nextNode->getOp() == ROW_BROADCAST_OP)
+                                if (nextNode->getOp() == AGGREGATE_MUL_SUM_OP)
                                 {
                                     changed = true;
 
@@ -220,6 +220,8 @@ public:
                                     auto nextInput = nextNode->getInput(0);
                                     auto nextOutput = nextNode->getOutput(0);
 
+                                    // What you write to is going to change
+
                                     output->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
 
                                     // New next node
@@ -229,7 +231,31 @@ public:
                                     // New prev node
                                     nextNode->setInputDataNode(0, input);
                                     nextNode->setOutputDataNode(0, output);
+                                } else if (nextNode->getOp() == ROW_BROADCAST_OP)
+                                {
+                                    changed = true;
+
+                                    // Swap the nodes in the CIR
+                                    lNode->swapNodes(ix, ix + 1);
+
+                                    // Change the data for the DIR
+                                    // The res input to the current FFN should be the res input to the next op
+                                    auto nextInput = nextNode->getInput(1); // These have different indices
+                                    auto nextOutput = nextNode->getOutput(0);
+
+                                    // What you write to is going to change
+
+                                    output->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+
+                                    // New next node
+                                    cNode->setInputDataNode(0, output);
+                                    cNode->setOutputDataNode(0, nextOutput);
+
+                                    // New prev node
+                                    nextNode->setInputDataNode(1, input);  // These have different indices
+                                    nextNode->setOutputDataNode(0, output);
                                 }
+
                             }
                         }
                     } while (changed);
@@ -261,8 +287,7 @@ public:
 
                                     // Next node
                                     auto nextNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix + 1));
-                                    if (nextNode->getOp() == AGGREGATE_MUL_SUM_OP ||
-                                        nextNode->getOp() == ROW_BROADCAST_OP)
+                                    if (nextNode->getOp() == AGGREGATE_MUL_SUM_OP)
                                     {
                                         changed = true;
 
@@ -283,6 +308,27 @@ public:
                                         // New prev node
                                         nextNode->setInputDataNode(0, input);
                                         nextNode->setOutputDataNode(0, output);
+                                    } else if (nextNode->getOp() == ROW_BROADCAST_OP)
+                                    {
+                                        changed = true;
+
+                                        // Swap the nodes in the CIR
+                                        lNode->swapNodes(ix, ix + 1);
+
+                                        // Change the data for the DIR
+                                        // The res input to the current FFN should be the res input to the next op
+                                        auto nextInput = nextNode->getInput(1);
+                                        auto nextOutput = nextNode->getOutput(0);
+
+                                        output->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+
+                                        // New next node
+                                        cNode->setInputDataNode(0, output);
+                                        cNode->setOutputDataNode(0, nextOutput);
+
+                                        // New prev node
+                                        nextNode->setInputDataNode(1, input);
+                                        nextNode->setOutputDataNode(0, output);
                                     }
                                 } else if (output->getDataInfo()->getDimCol() < input->getDataInfo()->getDimCol())
                                 {
@@ -294,8 +340,7 @@ public:
 
                                     // Next node
                                     auto prevNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix - 1));
-                                    if (prevNode->getOp() == AGGREGATE_MUL_SUM_OP ||
-                                        prevNode->getOp() == ROW_BROADCAST_OP)
+                                    if (prevNode->getOp() == AGGREGATE_MUL_SUM_OP)
                                     {
                                         changed = true;
 
@@ -315,6 +360,27 @@ public:
 
                                         // New next node
                                         prevNode->setInputDataNode(0, input);
+                                        prevNode->setOutputDataNode(0, output);
+                                    } else if (prevNode->getOp() == ROW_BROADCAST_OP)
+                                    {
+                                        changed = true;
+
+                                        // Swap the nodes in the CIR
+                                        lNode->swapNodes(ix, ix - 1);
+
+                                        // Change the data for the DIR
+                                        // The res input to the current FFN should be the res input to the next op
+                                        auto prevInput = prevNode->getInput(1);
+                                        auto prevOutput = prevNode->getOutput(0);
+
+                                        input->getDataInfo()->setDims(-1, output->getDataInfo()->getDimCol());
+
+                                        // New prev node
+                                        cNode->setInputDataNode(0, prevInput);
+                                        cNode->setOutputDataNode(0, input);
+
+                                        // New next node
+                                        prevNode->setInputDataNode(1, input);
                                         prevNode->setOutputDataNode(0, output);
                                     }
                                 }
