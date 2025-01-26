@@ -132,10 +132,11 @@ public:
         if (cFact != 0)
         {
             res += coarsenedKernelCall(cNode, cFact - 1, cFact, weighted);
-        } else if (prevLayer == -1)
-        {
-            res += coarsenedKernelCall(cNode, cFact, cFact, weighted);
         }
+        // else if (prevLayer == -1)
+        // {
+        //     res += coarsenedKernelCall(cNode, cFact, cFact, weighted);
+        // }
         res += "  }\n";
 
         // This should be the path if no computation was done earlier
