@@ -118,6 +118,7 @@ int main(int argc, char **argv) {
 	degreesOp.addInputData(&onesData);
 	degreesOp.addInputData(&transformedGraph);
 	degreesOp.addOutputData(&degreesData);
+	degreesOp.addOpt(COARSE_COPT, 2);
 	trainingLoop.addLoopNode(&degreesOp);
 	auto degreesOpOnesDependency = RelationEdge(&onesData, ALL_RELATION, &degreesData, ALL_RELATION);
 	dependencies.push_back(&degreesOpOnesDependency);
