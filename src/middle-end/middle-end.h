@@ -352,7 +352,7 @@ public:
                                         auto prevInput = prevNode->getInput(0);
                                         auto prevOutput = prevNode->getOutput(0);
 
-                                        input->getDataInfo()->setDims(-1, output->getDataInfo()->getDimCol());
+                                        prevInput->getDataInfo()->setDims(-1, output->getDataInfo()->getDimCol());
 
                                         // New prev node
                                         cNode->setInputDataNode(0, prevInput);
@@ -373,7 +373,7 @@ public:
                                         auto prevInput = prevNode->getInput(1);
                                         auto prevOutput = prevNode->getOutput(0);
 
-                                        input->getDataInfo()->setDims(-1, output->getDataInfo()->getDimCol());
+                                        prevInput->getDataInfo()->setDims(-1, output->getDataInfo()->getDimCol());
 
                                         // New prev node
                                         cNode->setInputDataNode(0, prevInput);
