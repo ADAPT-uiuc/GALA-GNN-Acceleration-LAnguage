@@ -380,7 +380,7 @@ public:
     int classes =\n\
     *std::max_element(labels.vals_ptr(), labels.vals_ptr() + labels.nvals()) + 1;\n\
     global_classes = classes;\n\
-    global_emb_size = emb_size";
+    global_emb_size = emb_size;";
 
             preCode.addCode(fileLoadCode);
         } else if (cNode->getOp() == AGGREGATE_MUL_SUM_OP)
@@ -396,7 +396,7 @@ public:
             {
                 encounteredAutograds.insert(getKernelName(cNode));
                 std::string autoGradFunction = ""
-"class " + getKernelName(cNode) + "_AutoGrad : public torch::autograd::Function<GatherForward> {\n\
+"class " + getKernelName(cNode) + "_AutoGrad : public torch::autograd::Function<" + getKernelName(cNode) + "_AutoGrad> {\n\
 public:\n\
     static torch::Tensor forward(torch::autograd::AutogradContext *ctx,\n\
                                  torch::Tensor input_dense, int li) {\n\
@@ -664,7 +664,7 @@ net->parameters(), torch::optim::AdamOptions(1e-2).weight_decay(5e-4));";
     // Reset gradients.\n\
     optimizer.zero_grad();\n\
     torch::Tensor prediction =\n\
-        net->forward(t_iden, nrows)[0];\n\
+        net->forward(t_iden)[0];\n\
     torch::Tensor prediction_train = prediction.index({t_train_mask});\n\
     torch::Tensor labels_train = t_labs.index({t_train_mask});\n\
     auto criterion = torch::nn::CrossEntropyLoss();\n\
