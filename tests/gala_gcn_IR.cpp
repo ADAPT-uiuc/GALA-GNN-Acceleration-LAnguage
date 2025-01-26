@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
 	graphTrgraph.addTransformation(&tileTransformation);
 	transforms.push_back(&graphTrgraph);
 
-	featInfo.setDims(-1, 605);
+	featInfo.setDims(-1, 602);
 
 	auto trainingLoop = TrainingLoopNode(100);
 
@@ -141,7 +141,7 @@ int main(int argc, char **argv) {
 	// 1st normalization calculation
 	auto normFeat1 = ForwardNode(UPDATE_NODE, ROW_BROADCAST_OP);
 	auto normFeat1Info = DataInfo(RM_DTYPE);
-	normFeat1Info.setDims(-1, 605);
+	normFeat1Info.setDims(-1, 602);
 	auto rootNormFeat1Level = DataLevel(&normFeat1Info, true);
 	auto normFeat1Data = DataNode("res", INT32, INT32, F32, &rootNormFeat1Level);
 	normFeat1.addInputData(&normData);
@@ -158,7 +158,7 @@ int main(int argc, char **argv) {
     // Add aggregate operation
     auto aggregate = ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
     auto outputInfo = DataInfo(RM_DTYPE);
-    outputInfo.setDims(-1, 605); // -1=N=232965, the number of nodes in the graph
+    outputInfo.setDims(-1, 602); // -1=N=232965, the number of nodes in the graph
     auto rootOutputLevel = DataLevel(&outputInfo, true);
     auto outputData = DataNode("res", INT32, INT32, F32, &rootOutputLevel);
 	aggregate.addInputData(&normFeat1Data);
@@ -187,7 +187,7 @@ int main(int argc, char **argv) {
 	auto rootResLevel = DataLevel(&resInfo, true);
 	auto resData = DataNode("res", INT32, INT32, F32, &rootResLevel);
 	// set dimenions from the new schedule information
-	weightInfo.setDims(605, 32); //
+	weightInfo.setDims(602, 32); //
 	resInfo.setDims(-1, 32); // -1=N=232965, the number of nodes in the graph
     ffn.addInputData(&outputData);
     ffn.addInputData(&weightData);
