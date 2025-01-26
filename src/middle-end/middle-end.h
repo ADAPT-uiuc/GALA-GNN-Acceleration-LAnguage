@@ -274,11 +274,13 @@ public:
                                 DataNode* output = cNode->getOutput(0);
                                 DataNode* input = cNode->getInput(0);
 
+                                int inCols = cNode->getInput(1)->getDataInfo()->getDimRow();
+                                int outCols = cNode->getInput(1)->getDataInfo()->getDimCol();
+
                                 // If the output is larger than the input then move the weight update as far forward
                                 // as possible
-                                if (output->getDataInfo()->getDimCol() > input->getDataInfo()->getDimCol())
+                                if (outCols > inCols)
                                 {
-
                                     // Check next operation and get the complexity
                                     if (lNode->getLoopNodeNum() <= (ix + 1))
                                     {
@@ -330,7 +332,7 @@ public:
                                         nextNode->setInputDataNode(1, input);
                                         nextNode->setOutputDataNode(0, output);
                                     }
-                                } else if (output->getDataInfo()->getDimCol() < input->getDataInfo()->getDimCol())
+                                } else if (outCols < inCols)
                                 {
                                     // Check next operation and get the complexity
                                     if (0 > (ix - 1))
