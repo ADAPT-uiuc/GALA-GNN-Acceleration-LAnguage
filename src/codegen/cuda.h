@@ -83,8 +83,8 @@ public:
                 + std::to_string(32 * (cFact)) + ");\n\
         dim3 blockDim(32, 8);\n";
             } else {
-                res += "    dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols);\n\
-        dim3 blockDim(32, 8);\n";
+                res += "    dim3 gridDim(((int)(nrows - 1) / 8) + 1, 1);\n\
+        dim3 blockDim((int)dcols, 8);\n";
             }
         } else
         {
