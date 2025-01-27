@@ -375,7 +375,7 @@ public:
   torch::Tensor total_vals_" + dNode->getName() + ";\n\
   torch::Tensor total_bounds_" + dNode->getName() + ";\n\
   std::vector<iT> tile_offsets_" + dNode->getName() + " =\n\
-    static_ord_col_breakpoints<SM>(&" + dNode->getName() + ", " + tr->getParam(0) +");\n\
+    static_ord_col_breakpoints<SM>(&" + srcNode->getName() + ", " + tr->getParam(0) +");\n\
   iT segments_" + dNode->getName() + " = tile_offsets_" + dNode->getName() + ".size() - 1;\n\
   total_offsets_" + dNode->getName() + " = torch::zeros({(" + dNode->getName() + ".nrows() + 1) * (segments_"
                     + dNode->getName() + ")}, options_int_tile);\n\
