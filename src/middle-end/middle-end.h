@@ -131,6 +131,7 @@ public:
 
         bool foundLeaning = false;
         int nodesMoved = 0;
+        std::string inputName = "";
         // Iterate through the list of operations in the training loop till you hit a learned operation
         for (int i = 0; i < program.size(); i++)
         {
@@ -145,12 +146,23 @@ public:
                     auto cNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix));
                     if (cNode->getOp() == FFN_OP)
                     {
+                        cNode->getInput(0)->setName(inputName);
                         foundLeaning = true;
                         break;
                     } else
                     {
                         // Add and remove
                         program.insert(program.begin() + i + nodesMoved, cNode);
+                        if (inputName == "")
+                        {
+                            if (cNode->getOpType() == AGGREGATE_NODE)
+                            {
+                                inputName = cNode->getInput(0)->getName();
+                            } else if (cNode->getOpType() == ROW_BROADCAST_OP)
+                            {
+                                inputName = cNode->getInput(1)->getName();
+                            }
+                        }
                         nodesMoved++;
                     }
                     ix++;

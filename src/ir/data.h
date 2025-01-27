@@ -254,6 +254,7 @@ public:
 
     // getters/setters
     std::string getName() { return this->name; }
+    void setName(std::string newName) { this->name = newName; }
 
     // Data level
     DataLevel* getData() { return this->rootLevel; }

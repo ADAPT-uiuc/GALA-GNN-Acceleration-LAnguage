@@ -142,7 +142,9 @@ private:
 
     // These are in the main funciton
     // Model component definition (The init of a Torch model)
-    Code modelUse;
+    Code modelPreCall;
+    Code modelCall;
+    Code modelPostCall;
     // Model Training Invariant
     Code modelInv;
     // Code for the model use
@@ -201,9 +203,17 @@ public:
     }
 
     // Use
-    Code* getUse()
+    Code* getPreCall()
     {
-        return &this->modelUse;
+        return &this->modelPreCall;
+    }
+    Code* getCall()
+    {
+        return &this->modelCall;
+    }
+    Code* getPostCall()
+    {
+        return &this->modelPostCall;
     }
     // Invariant
     Code* getInv()
@@ -519,6 +529,8 @@ public:\n\
             {
                 std::string powerCall = "   " + generateOutputString(cNode) + " = torch::pow(t_iden, " + cNode->getParam(0) + ").detach();";
                 model.getInv()->addCode(powerCall);
+                std::string tempPassDegree = "," + cNode->getOutput(0)->getName();
+                model.getCall()->addCode(tempPassDegree);
             } else
             {
                 std::string powerCall = "        " + generateOutputString(cNode) + " = torch::pow(" + cNode->getInput(0)->getName() + ", " + cNode->getParam(0) + ");";
@@ -703,27 +715,28 @@ forward(torch::Tensor t_iden){";
                     }
                 }
                 tempModelInit += ");";
-                model.getUse()->addCode(tempModelInit);
+                model.getPreCall()->addCode(tempModelInit);
 
                 std::string modelTransfer = "net->to(device);";
-                model.getUse()->addCode(modelTransfer);
+                model.getPreCall()->addCode(modelTransfer);
 
                 if (loopNode->getOptimizer() == ADAM)
                 {
                     std::string optmCode = "torch::optim::Adam optimizer(\n\
 net->parameters(), torch::optim::AdamOptions(1e-2).weight_decay(5e-4));";
-                    model.getUse()->addCode(optmCode);
+                    model.getPreCall()->addCode(optmCode);
                 } else
                 {
                     std::cout << "Optimizer not supported." << std::endl;
                 }
 
                 // TODO generate this using the test loop
-                std::string tempTrainLoop = "for (size_t epoch = 1; epoch <= num_iters; ++epoch) {\n\
+                std::string tempTrainLoopPreCall = "for (size_t epoch = 1; epoch <= num_iters; ++epoch) {\n\
     // Reset gradients.\n\
     optimizer.zero_grad();\n\
     torch::Tensor prediction =\n\
-        net->forward(t_iden)[0];\n\
+        net->forward(t_iden";
+                std::string tempTrainLoopPostCall = ")[0];\n\
     torch::Tensor prediction_train = prediction.index({t_train_mask});\n\
     torch::Tensor labels_train = t_labs.index({t_train_mask});\n\
     auto criterion = torch::nn::CrossEntropyLoss();\n\
@@ -739,7 +752,8 @@ net->parameters(), torch::optim::AdamOptions(1e-2).weight_decay(5e-4));";
               << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])\n\
               << std::endl;\n\
 }";
-                model.getUse()->addCode(tempTrainLoop);
+                model.getPreCall()->addCode(tempTrainLoopPreCall);
+                model.getPostCall()->addCode(tempTrainLoopPostCall);
             }
         }
 
@@ -873,7 +887,9 @@ std::vector<torch::Tensor> global_bounds;";
         this->writeCode(*model.getForward(), outStreamModel);
         this->writeCode(preCode, outStreamModel);
         this->writeCode(*model.getInv(), outStreamModel);
-        this->writeCode(*model.getUse(), outStreamModel);
+        this->writeCode(*model.getPreCall(), outStreamModel);
+        this->writeCode(*model.getCall(), outStreamModel);
+        this->writeCode(*model.getPostCall(), outStreamModel);
         this->writeCode(postCode, outStreamModel);
 
         this->closeStream();
