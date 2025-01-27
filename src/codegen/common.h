@@ -377,10 +377,10 @@ public:
   std::vector<iT> tile_offsets_" + dNode->getName() + " =\n\
     static_ord_col_breakpoints<SM>(&" + srcNode->getName() + ", " + tr->getParam(0) +");\n\
   iT segments_" + dNode->getName() + " = tile_offsets_" + dNode->getName() + ".size() - 1;\n\
-  total_offsets_" + dNode->getName() + " = torch::zeros({(" + dNode->getName() + ".nrows() + 1) * (segments_"
+  total_offsets_" + dNode->getName() + " = torch::zeros({(" + srcNode->getName() + ".nrows() + 1) * (segments_"
                     + dNode->getName() + ")}, options_int_tile);\n\
-  total_cols_" + dNode->getName() + " = torch::zeros({" + dNode->getName() + ".nvals()}, options_int_tile);\n\
-  total_vals_" + dNode->getName() + " = torch::zeros({" + dNode->getName() + ".nvals()}, options_float_tile);\n\
+  total_cols_" + dNode->getName() + " = torch::zeros({" + srcNode->getName() + ".nvals()}, options_int_tile);\n\
+  total_vals_" + dNode->getName() + " = torch::zeros({" + srcNode->getName() + ".nvals()}, options_float_tile);\n\
   total_bounds_" + dNode->getName() + " = torch::zeros({2 * (segments_" + dNode->getName() + ")}, options_int_tile);\n\
   ord_col_tiling_torch(tile_offsets_" + dNode->getName() + ", total_offsets_" + dNode->getName() +
                         ", total_cols_" + dNode->getName() + ", total_vals_" + dNode->getName() + ",\n\
