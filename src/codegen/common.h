@@ -887,8 +887,8 @@ std::vector<torch::Tensor> global_bounds;";
         this->writeCode(*model.getForward(), outStreamModel);
         this->writeCode(preCode, outStreamModel);
         this->writeCode(*model.getInv(), outStreamModel);
-        this->writeCode(*model.getPreCall(), outStreamModel);
-        this->writeCode(*model.getCall(), outStreamModel);
+        this->writeCode(*model.getPreCall(), outStreamModel, "");
+        this->writeCode(*model.getCall(), outStreamModel, "");
         this->writeCode(*model.getPostCall(), outStreamModel);
         this->writeCode(postCode, outStreamModel);
 
