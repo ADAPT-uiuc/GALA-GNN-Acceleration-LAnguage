@@ -522,8 +522,7 @@ public:\n\
             if (isColTile){
                 autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
         int segments = global_segments[2 * li];\n\
-        return " + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph,\
-                              value_graph, bounds, segments);";
+        return {" + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph, value_graph, bounds, segments), torch::Tensor()};";
             } else
             {
                 autoGradFunction += "\
