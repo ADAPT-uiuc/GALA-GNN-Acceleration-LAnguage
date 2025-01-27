@@ -358,6 +358,7 @@ public:
 
     std::string generateTransformation(DataNode* srcNode, std::vector<TransformEdge*>& transforms)
     {
+        std::string resString = "";
         for (int ix = 0; ix < transforms.size(); ix++)
         {
             auto transform = transforms[ix];
@@ -367,7 +368,7 @@ public:
                 auto tr = transform->getTransformation(0);
                 if (tr->getTransformation() == COL_TILE_DOPT)
                 {
-                    std::string resString =  "  std::vector<SM *> tiled_" + dNode->getName() +";\n\
+                    resString +=  "  std::vector<SM *> tiled_" + dNode->getName() +";\n\
   tiled_" + dNode->getName() + ".push_back(&" + dNode->getName() + ");\n\
   torch::Tensor total_offsets_" + dNode->getName() + ";\n\
   torch::Tensor total_cols_" + dNode->getName() + ";\n\
@@ -404,6 +405,7 @@ public:
                 }
             }
         }
+        return resString;
 
     }
 

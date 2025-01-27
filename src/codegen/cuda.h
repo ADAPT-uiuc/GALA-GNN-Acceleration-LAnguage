@@ -467,7 +467,7 @@ int start_vals = 0;";
   float *dA_values"+std::to_string(indexData)+";\n\
 \n\
   CUDA_CHECK(cudaMalloc((void **)&dA_columns"+std::to_string(indexData)+", nvals"+std::to_string(indexData)+" * sizeof(int)));\n\
-  CUDA_CHECK(cudaMalloc((void **)&dA_values"+std::to_string(indexData)+", nvals"+std::to_string(indexData)+" * sizeof(float)));\n\"
+  CUDA_CHECK(cudaMalloc((void **)&dA_values"+std::to_string(indexData)+", nvals"+std::to_string(indexData)+" * sizeof(float)));\n";
                     if (isColTile)
                     {
                         inputTransferCode += "\n\
@@ -492,7 +492,7 @@ int start_vals = 0;";
   CUDA_CHECK(cudaMemcpy(dA_values"+std::to_string(indexData)+", adj"+std::to_string(indexData)+".vals_ptr(), nvals"+std::to_string(indexData)+" * sizeof(float),\n\
                         cudaMemcpyHostToDevice));\n\
   torch::Tensor t_offsets"+std::to_string(indexData)+" =\n\
-      torch::from_blob(dA_csrOffsets"+std::to_string(indexData)+", {nrows+ 1}, options_cu_int);\n;
+      torch::from_blob(dA_csrOffsets"+std::to_string(indexData)+", {nrows+ 1}, options_cu_int);\n";
                     }
 
                     inputTransferCode += "  torch::Tensor t_cols"+std::to_string(indexData)+" = torch::from_blob(dA_columns"+std::to_string(indexData)+", {nvals"+std::to_string(indexData)+"}, options_cu_int);\n\
