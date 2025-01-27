@@ -468,13 +468,12 @@ public:
     *std::max_element(labels.vals_ptr(), labels.vals_ptr() + labels.nvals()) + 1;\n\
     global_classes = classes;\n\
     global_emb_size = emb_size;";
+            preCode.addCode(fileLoadCode);
 
             // Graph output
             auto outputGraph = cNode->getOutput(1);
-
-
-            preCode.addCode(fileLoadCode);
-
+            std::string transformationCode = generateTransformation(outputGraph, transforms);
+            preCode.addCode(transformationCode);
         } else if (cNode->getOp() == AGGREGATE_MUL_SUM_OP)
         {
             bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);
