@@ -98,7 +98,7 @@ public:
             }
         }
 
-        std::string weightedStr = weighted ? "val_ptr, " : "";
+        std::string weightedStr = weighted ? "&val_ptr[start_vals], " : "";
 
         if (prevLayer == -1)
         {
@@ -106,12 +106,12 @@ public:
             {
                 res += "    " + getKernelName(cNode) + "_kernel" + std::to_string(cFact - 1) + "<<<gridDim, blockDim, 0, stream"
                 + std::to_string(cFact) + ">>>(\n\
-        oden_array, offset_ptr," + (weightedStr) + " iden_ptr, col_ptr, nrows, dcols);\n";
+        oden_array, &offset_ptr[i1 * (nrows + 1)]," + (weightedStr) + " iden_ptr, &col_ptr[start_vals], nrows, dcols);\n";
             } else
             {
 
                 res += "    " + getKernelName(cNode) + "_kernel0<<<gridDim, blockDim, 0, stream0>>>(\n\
-        oden_array, offset_ptr," + (weightedStr) + " iden_ptr, col_ptr, nrows, dcols);\n";
+        oden_array, &offset_ptr[i1 * (nrows + 1)]," + (weightedStr) + " iden_ptr, &col_ptr[start_vals], nrows, dcols);\n";
             }
         } else
         {
@@ -119,12 +119,12 @@ public:
             {
                 res += "    " + getKernelName(cNode) + "_kernel" + std::to_string(cFact - 1) + "_offset<<<gridDim, blockDim, 0, stream"
                 + std::to_string(cFact) + ">>>(\n\
-        oden_array, offset_ptr," + (weightedStr) +" iden_ptr, col_ptr, nrows, dcols, ((int)dcols /"
+        oden_array, &offset_ptr[i1 * (nrows + 1)]," + (weightedStr) +" iden_ptr, &col_ptr[start_vals], nrows, dcols, ((int)dcols /"
                 + std::to_string(32 * (cFact + 1)) + ") * " + std::to_string(32 * (cFact + 1)) + ");\n";
             } else
             {
                 res += "    " + getKernelName(cNode) + "_kernel0_offset<<<gridDim, blockDim, 0, stream0>>>(\n\
-        oden_array, offset_ptr," + (weightedStr) + " iden_ptr, col_ptr, nrows, dcols, ((int)dcols /"
+        oden_array, &offset_ptr[i1 * (nrows + 1)]," + (weightedStr) + " iden_ptr, &col_ptr[start_vals], nrows, dcols, ((int)dcols /"
                 + std::to_string(32 * (cFact + 1)) + ") * " + std::to_string(32 * (cFact + 1)) + ");\n";
             }
         }
@@ -172,6 +172,8 @@ public:
                     maxCoarsening = (int)opt.second;
                 }
             }
+
+            bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);
 
             std::string kernelCodeStr = "";
 
@@ -298,8 +300,13 @@ C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +\n\
             "torch::Tensor " + getKernelName(cNode) + "_call(torch::Tensor input_dense,\n\
                    torch::Tensor offset_graph,\n\
                    torch::Tensor columns_graph,\n\
-                   torch::Tensor value_graph) {\n\
-auto nrows = offset_graph.numel() - 1;\n\
+                   torch::Tensor value_graph\n";
+            if (isColTile)
+            {
+                aggrKernelCall += ", torch::Tensor bounds,\n int segments";
+            }
+            aggrKernelCall += ") {\n\
+auto nrows = global_nrows;\n\
 auto nvals = columns_graph.numel();\n\
 auto full_iden = input_dense.numel();\n\
 auto dcols = full_iden / nrows;\n\
@@ -318,6 +325,18 @@ int *offset_ptr = offset_graph.data_ptr<int>();\n\
 int *col_ptr = columns_graph.data_ptr<int>();\n\
 float *val_ptr = value_graph.data_ptr<float>();\n";
 
+            if (isColTile)
+            {
+                aggrKernelCall += "int *bounds_ptr = bounds.data_ptr<int>();\n\
+for (int i = 0; i < segments; i++) {\n\
+  int i1 = i;\n\
+  int start_vals = bounds_ptr[i1 * 2];";
+            } else
+            {
+                aggrKernelCall += "int i1 = 0;\n\
+int start_vals = 0;";
+            }
+
             aggrKernelCall += "cudaStream_t ";
             for (int cFact = 0; cFact < maxCoarsening + 1; cFact++)
             {
@@ -330,6 +349,10 @@ float *val_ptr = value_graph.data_ptr<float>();\n";
             aggrKernelCall += ";\n";
 
             aggrKernelCall += coarsenedKernelCall(cNode, maxCoarsening, -1, isWeighted);
+            if (isColTile)
+            {
+                aggrKernelCall += "}";
+            }
             aggrKernelCall += "return output_dense;\n\
 }";
             // Adding the kernel call and setting the name
@@ -438,13 +461,29 @@ float *val_ptr = value_graph.data_ptr<float>();\n";
                     encounteredStrings.insert(inputData->getName());
 
                     inputInfo->setIndex(indexData);
-                    inputTransferCode += "  int *dA_csrOffsets"+std::to_string(indexData)+",\
- *dA_columns"+std::to_string(indexData)+"; \n\
+
+                    bool isColTile = hasDOpt(inputData, COL_TILE_DOPT);
+                    inputTransferCode += "  int *dA_csrOffsets"+std::to_string(indexData)+", *dA_columns"+std::to_string(indexData)+"; \n\
   float *dA_values"+std::to_string(indexData)+";\n\
 \n\
-  CUDA_CHECK(cudaMalloc((void **)&dA_csrOffsets"+std::to_string(indexData)+", (nrows + 1) * sizeof(int)));\n\
   CUDA_CHECK(cudaMalloc((void **)&dA_columns"+std::to_string(indexData)+", nvals"+std::to_string(indexData)+" * sizeof(int)));\n\
-  CUDA_CHECK(cudaMalloc((void **)&dA_values"+std::to_string(indexData)+", nvals"+std::to_string(indexData)+" * sizeof(float)));\n\
+  CUDA_CHECK(cudaMalloc((void **)&dA_values"+std::to_string(indexData)+", nvals"+std::to_string(indexData)+" * sizeof(float)));\n\"
+                    if (isColTile)
+                    {
+                        inputTransferCode += "\n\
+  CUDA_CHECK(cudaMalloc((void **)&dA_csrOffsets"+std::to_string(indexData)+", (nrows + 1) * segments_" + inputData->getName() + " * sizeof(int)));\n\
+\n\
+  CUDA_CHECK(cudaMemcpy(dA_csrOffsets"+std::to_string(indexData)+", offset_ptr_" + inputData->getName() + ",\n\
+                        (nrows + 1) * segments_" + inputData->getName() + " * sizeof(int), cudaMemcpyHostToDevice));\n\
+  CUDA_CHECK(cudaMemcpy(dA_columns"+std::to_string(indexData)+", col_ptr_" + inputData->getName() + ", nvals"+std::to_string(indexData)+" * sizeof(int),\n\
+                        cudaMemcpyHostToDevice));\n\
+  CUDA_CHECK(cudaMemcpy(dA_values"+std::to_string(indexData)+", val_ptr_" + inputData->getName() + ", nvals"+std::to_string(indexData)+" * sizeof(float),\n\
+                        cudaMemcpyHostToDevice));\n\
+  torch::Tensor t_offsets"+std::to_string(indexData)+" =\n\
+      torch::from_blob(dA_csrOffsets"+std::to_string(indexData)+", {(nrows+ 1) * segments_" + inputData->getName() + "}, options_cu_int);\n";
+                    } else
+                    {
+                        inputTransferCode += "  CUDA_CHECK(cudaMalloc((void **)&dA_csrOffsets"+std::to_string(indexData)+", (nrows + 1) * sizeof(int)));\n\
 \n\
   CUDA_CHECK(cudaMemcpy(dA_csrOffsets"+std::to_string(indexData)+", adj"+std::to_string(indexData)+".offset_ptr(),\n\
                         (nrows + 1) * sizeof(int), cudaMemcpyHostToDevice));\n\
@@ -453,8 +492,10 @@ float *val_ptr = value_graph.data_ptr<float>();\n";
   CUDA_CHECK(cudaMemcpy(dA_values"+std::to_string(indexData)+", adj"+std::to_string(indexData)+".vals_ptr(), nvals"+std::to_string(indexData)+" * sizeof(float),\n\
                         cudaMemcpyHostToDevice));\n\
   torch::Tensor t_offsets"+std::to_string(indexData)+" =\n\
-      torch::from_blob(dA_csrOffsets"+std::to_string(indexData)+", {nrows+ 1}, options_cu_int);\n\
-  torch::Tensor t_cols"+std::to_string(indexData)+" = torch::from_blob(dA_columns"+std::to_string(indexData)+", {nvals"+std::to_string(indexData)+"}, options_cu_int);\n\
+      torch::from_blob(dA_csrOffsets"+std::to_string(indexData)+", {nrows+ 1}, options_cu_int);\n;
+                    }
+
+                    inputTransferCode += "  torch::Tensor t_cols"+std::to_string(indexData)+" = torch::from_blob(dA_columns"+std::to_string(indexData)+", {nvals"+std::to_string(indexData)+"}, options_cu_int);\n\
 \n\
   torch::Tensor t_vals"+std::to_string(indexData)+" =\n\
       torch::from_blob(dA_values"+std::to_string(indexData)+", {nvals"+std::to_string(indexData)+"}, options_cu_float_ngrad);\n";
@@ -463,6 +504,7 @@ float *val_ptr = value_graph.data_ptr<float>();\n";
   global_columns_graph.push_back(t_cols"+std::to_string(indexData)+");\n\
   global_value_graph.push_back(t_vals"+std::to_string(indexData)+");\n";
 
+                    // These are graphs for backprop
                     if (!inputInfo->getDirected())
                     {
                         inputTransferCode += "  global_offset_graph.push_back(t_offsets"+std::to_string(indexData)+");\n\

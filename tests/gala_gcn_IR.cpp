@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
     // Graph
     auto graphInfo = DataInfo(CSR_STYPE, true, true);
     auto rootGraphLevel = DataLevel(&graphInfo, true);
-    auto graphData = DataNode("graph", INT32, INT32, F32, &rootGraphLevel);
+    auto graphData = DataNode("adj0", INT32, INT32, F32, &rootGraphLevel);
     // Feat
     auto featInfo = DataInfo(RM_DTYPE);
     featInfo.setDims(-1, -2);
@@ -332,7 +332,7 @@ int main(int argc, char **argv) {
 	auto genCode = CUDAGenerator(ctx, outputPath);
 	GALATransformations::complexityOperatorReordering(program, dependencies, associations, transforms);
 	GALATransformations::trainingInvariantCodeMotion(program, dependencies, associations, transforms);
-	genCode.writeCode(program);
+	genCode.writeCode(program, dependencies, associations, transforms);
 
     // Should be enough for now
 	std::cout << "Works!" << std::endl;

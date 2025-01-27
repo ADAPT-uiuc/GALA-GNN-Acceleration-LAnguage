@@ -322,7 +322,8 @@ public:
     DataOptimization getTransformation() { return this->transformation; }
 
     std::vector<std::string> *getParams() { return &this->params; }
-
+    std::string getParam(int ix) { return this->params.at(ix); }
+    int getNumParam() { return (int)this->params.size(); }
     void addParam(std::string param) { this->params.push_back(param); }
 };
 
@@ -334,6 +335,8 @@ public:
 
     // Only have the getters for the relations
     void addTransformation(TransformData *trns) { transformations.push_back(trns); }
+    TransformData* getTransformation(int ix) { return this->transformations.at(ix); }
+    int getNumTransformations() { return this->transformations.size(); }
 };
 
 #endif //GNN_ACCELERATION_LANGUAGE_DATA_H

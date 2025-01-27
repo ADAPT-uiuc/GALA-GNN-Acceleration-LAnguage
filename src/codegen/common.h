@@ -309,6 +309,19 @@ public:
         }
     }
 
+    bool hasDOpt(DataNode* dNode, DataOptimization op)
+    {
+        auto opts = dNode->getDataInfo()->getOpts();
+        for (int ix = 0; ix < opts->size(); ix++)
+        {
+            auto opt = opts->at(ix);
+            if (opt.first == op)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 
     std::string getKernelName(ComputeNode* cNode)
     {
@@ -343,9 +356,61 @@ public:
         return "torch::Tensor " + cNode->getOutput(0)->getName();
     }
 
+    std::string generateTransformation(DataNode* srcNode, std::vector<TransformEdge*>& transforms)
+    {
+        for (int ix = 0; ix < transforms.size(); ix++)
+        {
+            auto transform = transforms[ix];
+            if (transform->getNode1() == srcNode)
+            {
+                auto dNode = transform->getNode2();
+                auto tr = transform->getTransformation(0);
+                if (tr->getTransformation() == COL_TILE_DOPT)
+                {
+                    std::string resString =  "  std::vector<SM *> tiled_" + dNode->getName() +";\n\
+  tiled_" + dNode->getName() + ".push_back(&" + dNode->getName() + ");\n\
+  torch::Tensor total_offsets_" + dNode->getName() + ";\n\
+  torch::Tensor total_cols_" + dNode->getName() + ";\n\
+  torch::Tensor total_vals_" + dNode->getName() + ";\n\
+  torch::Tensor total_bounds_" + dNode->getName() + ";\n\
+  std::vector<iT> tile_offsets_" + dNode->getName() + " =\n\
+    static_ord_col_breakpoints<SM>(&" + dNode->getName() + ", " + tr->getParam(0) +");\n\
+  iT segments_" + dNode->getName() + " = tile_offsets_" + dNode->getName() + ".size() - 1;\n\
+  total_offsets_" + dNode->getName() + " = torch::zeros({(" + dNode->getName() + ".nrows() + 1) * (segments"
+                    + dNode->getName() + ")}, options_int);\n\
+  total_cols_" + dNode->getName() + " = torch::zeros({" + dNode->getName() + ".nvals()}, options_int_tile);\n\
+  total_vals_" + dNode->getName() + " = torch::zeros({" + dNode->getName() + ".nvals()}, options_float_tile);\n\
+  total_bounds_" + dNode->getName() + " = torch::zeros({2 * (segments_" + dNode->getName() + ")}, options_int_tile);\n\
+  ord_col_tiling_torch(tile_offsets_" + dNode->getName() + ", total_offsets_" + dNode->getName() +
+                        ", total_cols_" + dNode->getName() + ", total_vals_" + dNode->getName() + ",\n\
+    total_bounds_" + dNode->getName() + ", &" + dNode->getName() + ");\n\
+  iT *offset_ptr_" + dNode->getName() + " = total_offsets_" + dNode->getName() + ".data_ptr<iT>();\n\
+  iT *col_ptr_" + dNode->getName() + " = total_cols_" + dNode->getName() + ".data_ptr<iT>();\n\
+  vT *val_ptr_" + dNode->getName() + " = total_vals_" + dNode->getName() + ".data_ptr<vT>();";
+
+                    resString += "global_segments.push_back(segments_" + dNode->getName() + ")\n";
+                    resString += "global_bounds.push_back(total_bounds_" + dNode->getName() + ")\n";
+                    if (!dNode->getDataInfo()->getDirected())
+                    {
+                        resString += "global_segments.push_back(segments_" + dNode->getName() + ")\n";
+                        resString += "global_bounds.push_back(total_bounds_" + dNode->getName() + ")\n";
+                    } else
+                    {
+                        // TODO Handle this
+                        resString += "\nERROR!\n";
+                    }
+
+                    return resString;
+                }
+            }
+        }
+
+    }
+
     void generateOpCode(ComputeNode* cNode, int& fcCount, bool outOfLoop,
         std::unordered_set<std::string> &encounteredAutograds,
-        std::vector<int> &inputSizes)
+        std::vector<int> &inputSizes,
+        std::vector<TransformEdge*>& transforms)
     {
         if (cNode->getOp() == LOAD_OP)
         {
@@ -402,10 +467,15 @@ public:
     global_classes = classes;\n\
     global_emb_size = emb_size;";
 
+            // Graph output
+            auto outputGraph = cNode->getOutput(1);
+
+
             preCode.addCode(fileLoadCode);
+
         } else if (cNode->getOp() == AGGREGATE_MUL_SUM_OP)
         {
-            bool isColTile = false;
+            bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);
 
             // TODO get if col_tile from the data
              // Also add the autograd function which should be generated based on the program
@@ -428,8 +498,8 @@ public:\n\
             if (isColTile){
                 autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
         int segments = global_segments[2 * li];\n\
-         return gather_forward_gcn(input_dense, offset_graph, columns_graph,\n\
-                            value_graph, bounds, global_nrows, segments);\n";
+         return " + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph,\n\
+                            value_graph, bounds, segments);\n";
             } else
             {
                 autoGradFunction += "        return " + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph,\n\
@@ -493,7 +563,7 @@ public:\n\
 
         } else if (cNode->getOp() == AGGREGATE_MUL_SUM_DIRECT)
         {
-            bool isColTile = false;
+            bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);
 
             if (outOfLoop)
             {
@@ -504,9 +574,9 @@ public:\n\
 
                 if (isColTile){
                     directAggrCall += "  torch::Tensor bounds_ones = global_bounds[2 * " + std::to_string(inGraphIndx) + "];\n\
-  int segments_ones = global_segments[2 * " + std::to_string(inGraphIndx) + "];\n\
-  torch::Tensor " + cNode->getOutput(0)->getName() + " = " + getKernelName(cNode) + "_call(" + cNode->getInput(0)->getName() + ", offset_graph_ones, columns_graph_ones,\n\
-    value_graph_ones, bounds_ones, global_nrows, segments_ones);\n";
+  int segments_ones = global_segments[2 * " + std::to_string(inGraphIndx) + "];\n"
+                    + generateOutputString(cNode) + " = " + getKernelName(cNode) + "_call(" + cNode->getInput(0)->getName() + ", offset_graph_ones, columns_graph_ones,\n\
+    value_graph_ones, bounds_ones, segments_ones);\n";
                 } else
                 {
                     directAggrCall += "  " + generateOutputString(cNode) +" = " + getKernelName(cNode) + "_call(" + cNode->getInput(0)->getName() + ", offset_graph_ones, columns_graph_ones,\n\
@@ -523,9 +593,9 @@ public:\n\
 
                 if (isColTile){
                     directAggrCall += "        torch::Tensor bounds_ones = global_bounds[2 * " + std::to_string(inGraphIndx) + "];\n\
-        int segments_ones = global_segments[2 * " + std::to_string(inGraphIndx) + "];\n\
-          torch::Tensor " + cNode->getOutput(0)->getName() + " = " + getKernelName(cNode) + "_call(" + cNode->getInput(0)->getName() + ", offset_graph_ones, columns_graph_ones,\n\
-                            value_graph_ones, bounds_ones, global_nrows, segments_ones);\n";
+        int segments_ones = global_segments[2 * " + std::to_string(inGraphIndx) + "];\n        "
+                    + generateOutputString(cNode) + " = " + getKernelName(cNode) + "_call(" + cNode->getInput(0)->getName() + ", offset_graph_ones, columns_graph_ones,\n\
+                            value_graph_ones, bounds_ones, segments_ones);\n";
                 } else
                 {
                     directAggrCall += "        " + generateOutputString(cNode) +" = " + getKernelName(cNode) + "_call(" + cNode->getInput(0)->getName() + ", offset_graph_ones, columns_graph_ones,\n\
@@ -654,7 +724,8 @@ public:\n\
     }
 
 // TODO Put this in the common codegen? Doesn't seem to have any context specific content yet
-    void generateCode(std::vector<CIRNode*>& program)
+    void generateCode(std::vector<CIRNode*>& program,
+        std::vector<TransformEdge*>& transforms)
     {
         std::vector<int> inputSizes;
 
@@ -668,7 +739,7 @@ public:\n\
             auto oNode = dynamic_cast<ComputeNode*>(outNode);
             if (oNode)
             {
-                generateOpCode(oNode, fcCount, true, encounteredAutograds, inputSizes);
+                generateOpCode(oNode, fcCount, true, encounteredAutograds, inputSizes, transforms);
 
                 // Generate the transfer code after the load operation
                 if (oNode->getOp() == LOAD_OP)
@@ -701,7 +772,7 @@ forward(torch::Tensor t_iden";
                 {
                     CIRNode* inNode = loopNode->getNode(ix);
                     auto cNode = dynamic_cast<ComputeNode*>(inNode);
-                    generateOpCode(cNode, fcCount, false, encounteredAutograds, inputSizes);
+                    generateOpCode(cNode, fcCount, false, encounteredAutograds, inputSizes, transforms);
                 }
                 CIRNode* inNode = loopNode->getNode(loopNode->getLoopNodeNum()-1);
                 auto cNode = dynamic_cast<ComputeNode*>(inNode);
@@ -867,7 +938,12 @@ bool global_is_directed;\n\
 std::vector<torch::Tensor> global_offset_graph;\n\
 std::vector<torch::Tensor> global_columns_graph;\n\
 std::vector<torch::Tensor> global_value_graph;\n\
-std::vector<torch::Tensor> global_bounds;";
+std::vector<torch::Tensor> global_bounds;\n\
+auto options_int_tile = \n\
+  torch::TensorOptions().dtype(torch::kInt).requires_grad(false);\n\
+auto options_float_tile = \n\
+  torch::TensorOptions().dtype(torch::kFloat).requires_grad(true)";
+
         importCode.addCode(tempStdCommon);
 
         std::string mainFuncCode  = "int main(int argc, char **argv) {\n\
@@ -881,7 +957,10 @@ std::vector<torch::Tensor> global_bounds;";
         preCode.addCode(mainFuncCode);
     }
 
-    void writeCode(std::vector<CIRNode*> &program)
+    void writeCode(std::vector<CIRNode*> &program,
+        std::vector<RelationEdge*>& dependencies,
+        std::vector<RelationEdge*>& associations,
+        std::vector<TransformEdge*>& transforms)
     {
         // Kernel code - Architecture dependant
         // CMake (also has write for now?)
@@ -890,7 +969,7 @@ std::vector<torch::Tensor> global_bounds;";
         initKernels(program);
         commonPerCode(program);
 
-        generateCode(program);
+        generateCode(program, transforms);
 
         this->writeCode(cmakeCode, outStreamCMake);
         this->writeCode(importCode, outStreamModel);
