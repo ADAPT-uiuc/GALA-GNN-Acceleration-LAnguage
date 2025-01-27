@@ -543,7 +543,7 @@ public:\n\
                 std::string tempPassDegree = "," + cNode->getOutput(0)->getName();
                 model.getCall()->addCode(tempPassDegree);
 
-                std::string tempPassDegreeForward = "," + cNode->getOutput(0)->getName();
+                std::string tempPassDegreeForward = ", torch::Tenosr " + cNode->getOutput(0)->getName();
                 model.getForwardCallInternal()->addCode(tempPassDegreeForward);
             } else
             {
