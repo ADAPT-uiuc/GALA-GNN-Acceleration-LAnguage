@@ -369,7 +369,7 @@ public:
                 if (tr->getTransformation() == COL_TILE_DOPT)
                 {
                     resString +=  "  std::vector<SM *> tiled_" + dNode->getName() +";\n\
-  tiled_" + dNode->getName() + ".push_back(&" + dNode->getName() + ");\n\
+  tiled_" + dNode->getName() + ".push_back(&" + srcNode->getName() + ");\n\
   torch::Tensor total_offsets_" + dNode->getName() + ";\n\
   torch::Tensor total_cols_" + dNode->getName() + ";\n\
   torch::Tensor total_vals_" + dNode->getName() + ";\n\
@@ -377,24 +377,24 @@ public:
   std::vector<iT> tile_offsets_" + dNode->getName() + " =\n\
     static_ord_col_breakpoints<SM>(&" + dNode->getName() + ", " + tr->getParam(0) +");\n\
   iT segments_" + dNode->getName() + " = tile_offsets_" + dNode->getName() + ".size() - 1;\n\
-  total_offsets_" + dNode->getName() + " = torch::zeros({(" + dNode->getName() + ".nrows() + 1) * (segments"
-                    + dNode->getName() + ")}, options_int);\n\
+  total_offsets_" + dNode->getName() + " = torch::zeros({(" + dNode->getName() + ".nrows() + 1) * (segments_"
+                    + dNode->getName() + ")}, options_int_tile);\n\
   total_cols_" + dNode->getName() + " = torch::zeros({" + dNode->getName() + ".nvals()}, options_int_tile);\n\
   total_vals_" + dNode->getName() + " = torch::zeros({" + dNode->getName() + ".nvals()}, options_float_tile);\n\
   total_bounds_" + dNode->getName() + " = torch::zeros({2 * (segments_" + dNode->getName() + ")}, options_int_tile);\n\
   ord_col_tiling_torch(tile_offsets_" + dNode->getName() + ", total_offsets_" + dNode->getName() +
                         ", total_cols_" + dNode->getName() + ", total_vals_" + dNode->getName() + ",\n\
-    total_bounds_" + dNode->getName() + ", &" + dNode->getName() + ");\n\
+    total_bounds_" + dNode->getName() + ", &" + srcNode->getName() + ");\n\
   iT *offset_ptr_" + dNode->getName() + " = total_offsets_" + dNode->getName() + ".data_ptr<iT>();\n\
   iT *col_ptr_" + dNode->getName() + " = total_cols_" + dNode->getName() + ".data_ptr<iT>();\n\
   vT *val_ptr_" + dNode->getName() + " = total_vals_" + dNode->getName() + ".data_ptr<vT>();";
 
-                    resString += "global_segments.push_back(segments_" + dNode->getName() + ")\n";
-                    resString += "global_bounds.push_back(total_bounds_" + dNode->getName() + ")\n";
+                    resString += "global_segments.push_back(segments_" + dNode->getName() + ")\n;";
+                    resString += "global_bounds.push_back(total_bounds_" + dNode->getName() + ")\n;";
                     if (!dNode->getDataInfo()->getDirected())
                     {
-                        resString += "global_segments.push_back(segments_" + dNode->getName() + ")\n";
-                        resString += "global_bounds.push_back(total_bounds_" + dNode->getName() + ")\n";
+                        resString += "global_segments.push_back(segments_" + dNode->getName() + ")\n;";
+                        resString += "global_bounds.push_back(total_bounds_" + dNode->getName() + ")\n;";
                     } else
                     {
                         // TODO Handle this
