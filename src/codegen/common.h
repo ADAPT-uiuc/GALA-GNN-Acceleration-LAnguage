@@ -537,7 +537,7 @@ public:\n\
         {
             if (outOfLoop)
             {
-                std::string powerCall = "   " + generateOutputString(cNode) + " = torch::pow(t_iden, " + cNode->getParam(0) + ").detach();";
+                std::string powerCall = "   " + generateOutputString(cNode) + " = torch::pow(" + cNode->getInput(0)->getName() + ", " + cNode->getParam(0) + ").detach();";
                 model.getInv()->addCode(powerCall);
                 // TODO: Temporary method to add kernel call
                 std::string tempPassDegree = "," + cNode->getOutput(0)->getName();
