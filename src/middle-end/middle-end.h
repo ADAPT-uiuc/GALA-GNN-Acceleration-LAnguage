@@ -155,10 +155,10 @@ public:
                         program.insert(program.begin() + i + nodesMoved, cNode);
                         if (inputName == "")
                         {
-                            if (cNode->getOpType() == AGGREGATE_NODE)
+                            if (cNode->getOp() == AGGREGATE_MUL_SUM_OP)
                             {
                                 inputName = cNode->getInput(0)->getName();
-                            } else if (cNode->getOpType() == ROW_BROADCAST_OP)
+                            } else if (cNode->getOp() == ROW_BROADCAST_OP)
                             {
                                 inputName = cNode->getInput(1)->getName();
                             }
