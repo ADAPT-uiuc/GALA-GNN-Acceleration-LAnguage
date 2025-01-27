@@ -940,11 +940,7 @@ bool global_is_directed;\n\
 std::vector<torch::Tensor> global_offset_graph;\n\
 std::vector<torch::Tensor> global_columns_graph;\n\
 std::vector<torch::Tensor> global_value_graph;\n\
-std::vector<torch::Tensor> global_bounds;\n\
-auto options_int_tile = \n\
-  torch::TensorOptions().dtype(torch::kInt).requires_grad(false);\n\
-auto options_float_tile = \n\
-  torch::TensorOptions().dtype(torch::kFloat).requires_grad(true)";
+std::vector<torch::Tensor> global_bounds;\n";
 
         importCode.addCode(tempStdCommon);
 
@@ -955,7 +951,11 @@ auto options_float_tile = \n\
 \n\
   typedef typename DM::itype diT;\n\
   typedef typename DM::ntype dnT;\n\
-  typedef typename DM::vtype dvT;";
+  typedef typename DM::vtype dvT;\n\
+  auto options_int_tile = \n\
+    torch::TensorOptions().dtype(torch::kInt).requires_grad(false);\n\
+  auto options_float_tile = \n\
+    torch::TensorOptions().dtype(torch::kFloat).requires_grad(true);\n";
         preCode.addCode(mainFuncCode);
     }
 
