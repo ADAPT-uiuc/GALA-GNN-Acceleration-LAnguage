@@ -160,7 +160,9 @@ private:
     Code modelInitCall;
     // Model forward
     Code modelForward;
-    Code modelForwardCall;
+    Code modelForwardCallPre;
+    Code modelForwardCallInternal;
+    Code modelForwardCallPost;
 
 
 public:
@@ -187,9 +189,17 @@ public:
     {
         return &this->modelDef;
     }
-    Code* getForwardCall()
+    Code* getForwardCallPre()
     {
-        return &this->modelForwardCall;
+        return &this->modelForwardCallPre;
+    }
+    Code* getForwardCallInternal()
+    {
+        return &this->modelForwardCallInternal;
+    }
+    Code* getForwardCallPost()
+    {
+        return &this->modelForwardCallPost;
     }
 
     // Init
@@ -529,8 +539,12 @@ public:\n\
             {
                 std::string powerCall = "   " + generateOutputString(cNode) + " = torch::pow(t_iden, " + cNode->getParam(0) + ").detach();";
                 model.getInv()->addCode(powerCall);
+                // TODO: Temporary method to add kernel call
                 std::string tempPassDegree = "," + cNode->getOutput(0)->getName();
                 model.getCall()->addCode(tempPassDegree);
+
+                std::string tempPassDegreeForward = "," + cNode->getOutput(0)->getName();
+                model.getForwardCallInternal()->addCode(tempPassDegreeForward);
             } else
             {
                 std::string powerCall = "        " + generateOutputString(cNode) + " = torch::pow(" + cNode->getInput(0)->getName() + ", " + cNode->getParam(0) + ");";
@@ -669,9 +683,11 @@ public:\n\
                 model.getInitCall()->addCode(modelCall);
 
                 // TODO generate this based on the program
-                std::string tempFowradCall = "std::vector<torch::Tensor>\n\
-forward(torch::Tensor t_iden){";
-                model.getForwardCall()->addCode(tempFowradCall);
+                std::string tempFowradCallPre = "std::vector<torch::Tensor>\n\
+forward(torch::Tensor t_iden";
+                model.getForwardCallPre()->addCode(tempFowradCallPre);
+                std::string tempFowradCallPost = "){\n";
+                model.getForwardCallPost()->addCode(tempFowradCallPost);
 
                 // std::string resInit = "torch::Tensor res = input_dense;";
                 // model.getForward()->addCode(resInit);
