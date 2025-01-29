@@ -125,7 +125,10 @@ public:
             newGraph.getDataInfo()->setDirected(true);
             auto subGraphTransformation = TransformData(SUBGRAPH_DOPT);
             subGraphTransformation.addParam(std::to_string(ic));
-            subGraphTransformation.addParam("0");
+            if (ic < countAggregations - 1)
+            {
+                subGraphTransformation.addParam("0");
+            }
             auto graphSubgraph = TransformEdge(initialGraphNode, &newGraph);
             graphSubgraph.addTransformation(&subGraphTransformation);
             transforms.push_back(&graphSubgraph);

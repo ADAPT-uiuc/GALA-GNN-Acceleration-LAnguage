@@ -426,21 +426,23 @@ public:
   iT *col_ptr_" + dNode->getName() + "_b = total_cols_" + dNode->getName() + "_b.data_ptr<iT>();\n\
   vT *val_ptr_" + dNode->getName() + "_b = total_vals_" + dNode->getName() + "_b.data_ptr<vT>();\n";
                     }
-
-                    return resString;
                 } else if (tr->getTransformation() == SUBGRAPH_DOPT)
                 {
-                    resString +=  " std::vector<SM *> forward_adj;\n\
+                    if (tr->getNumParam() == 1)
+                    {
+                        resString +=  " std::vector<SM *> forward_adj;\n\
   std::vector<SM *> backward_adj;\n\
   getMaskSubgraphs(&adj0, &train_mask, " + tr->getParam(0) + ", forward_adj, backward_adj);\n";
-                    for (int i = 0; i < std::stoi(tr->getParam(0)); i++)
-                    {
-                        int iy = std::stoi(tr->getParam(0)) - (i + 1);
-                        int iz = i + 1;
-                        resString += "  SM *adj" + std::to_string(iz) + " = forward_adj[" + std::to_string(iy) +"];\n\
+                        for (int i = 0; i < std::stoi(tr->getParam(0)); i++)
+                        {
+                            int iy = std::stoi(tr->getParam(0)) - (i + 1);
+                            int iz = i + 1;
+                            resString += "  SM *adj" + std::to_string(iz) + " = forward_adj[" + std::to_string(iy) +"];\n\
   SM *adj" + std::to_string(iz) + "_b = backward_adj[" + std::to_string(iy) +"];\n\
   nT nvals" + std::to_string(iz) + " = adj" + std::to_string(iz) + "->nvals();";
+                        }
                     }
+                    generateTransformation(dNode, transforms);
                 }
             }
         }
