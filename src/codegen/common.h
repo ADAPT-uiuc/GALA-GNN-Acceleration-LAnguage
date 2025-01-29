@@ -432,10 +432,10 @@ public:
                     {
                         resString +=  " std::vector<SM *> forward_adj;\n\
   std::vector<SM *> backward_adj;\n\
-  getMaskSubgraphs(&adj0, &train_mask, " + tr->getParam(0) + ", forward_adj, backward_adj);\n";
-                        for (int i = 0; i < std::stoi(tr->getParam(0)); i++)
+  getMaskSubgraphs(&adj0, &train_mask, " + tr->getParam(1) + ", forward_adj, backward_adj);\n";
+                        for (int i = 0; i < std::stoi(tr->getParam(1)); i++)
                         {
-                            int iy = std::stoi(tr->getParam(0)) - (i + 1);
+                            int iy = std::stoi(tr->getParam(1)) - (i + 1);
                             int iz = i + 1;
                             resString += "  SM *adj" + std::to_string(iz) + " = forward_adj[" + std::to_string(iy) +"];\n\
   SM *adj" + std::to_string(iz) + "_b = backward_adj[" + std::to_string(iy) +"];\n\
