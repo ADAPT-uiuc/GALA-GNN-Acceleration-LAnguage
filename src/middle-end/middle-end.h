@@ -147,6 +147,7 @@ public:
             }
         }
 
+        countAggregations = 0;
         // This pass actually assigns the subgraphs and the transformed graphs
         for (int i = 0; i < program.size(); i++)
         {
