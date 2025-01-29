@@ -425,6 +425,9 @@ public:
   iT *offset_ptr_" + dNode->getName() + "_b = total_offsets_" + dNode->getName() + "_b.data_ptr<iT>();\n\
   iT *col_ptr_" + dNode->getName() + "_b = total_cols_" + dNode->getName() + "_b.data_ptr<iT>();\n\
   vT *val_ptr_" + dNode->getName() + "_b = total_vals_" + dNode->getName() + "_b.data_ptr<vT>();\n";
+
+                        resString += "  global_segments.push_back(segments_" + dNode->getName() + "_b);\n";
+                        resString += "  global_bounds.push_back(total_bounds_" + dNode->getName() + "_b);\n";
                     }
                 } else if (tr->getTransformation() == SUBGRAPH_DOPT)
                 {
