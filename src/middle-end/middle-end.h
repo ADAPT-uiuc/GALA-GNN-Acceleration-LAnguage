@@ -119,7 +119,7 @@ public:
 
         // Add new transformation to the original graph (Also need to create sub-objects, these would then process
         // their transformations)
-        for (int ic = 0 ; ic < countAggregations; ic++)
+        for (int ic = 1 ; ic < countAggregations + 1; ic++)
         {
             // TODO Find a better way to clone
             auto graphInfo = new DataInfo(CSR_STYPE, true, initialGraphNode->getDataInfo()->getWeighted());
