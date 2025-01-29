@@ -406,7 +406,7 @@ public:
                             tilingParam = tr->getParam(0);
                         }
                         resString +=  "  std::vector<SM *> tiled_" + dNode->getName() +"_b;\n\
-  tiled_" + dNode->getName() + "_b.push_back(&" + srcNode->getName() + ");\n\
+  tiled_" + dNode->getName() + "_b.push_back(&" + srcNode->getName() + "_b);\n\
   torch::Tensor total_offsets_" + dNode->getName() + "_b;\n\
   torch::Tensor total_cols_" + dNode->getName() + "_b;\n\
   torch::Tensor total_vals_" + dNode->getName() + "_b;\n\
@@ -854,7 +854,7 @@ forward(torch::Tensor t_iden";
                 if (loopNode->getOptimizer() == ADAM)
                 {
                     std::string optmCode = "torch::optim::Adam optimizer(\n\
-net->parameters(), torch::optim::AdamOptions(1e-2).weight_decay(5e-4));";
+    net->parameters(), torch::optim::AdamOptions(1e-2).weight_decay(5e-4));\n";
                     model.getPreCall()->addCode(optmCode);
                 } else
                 {
