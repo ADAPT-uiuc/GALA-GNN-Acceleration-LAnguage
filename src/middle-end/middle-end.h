@@ -131,10 +131,11 @@ public:
             if (ic < countAggregations - 1)
             {
                 subGraphTransformation->addParam("0");
-            } else
-            {
-                std::cout << "Subgraph param: " << ic << std::endl;
             }
+            // else
+            // {
+            //     std::cout << "Subgraph param: " << ic << std::endl;
+            // }
             auto graphSubgraph = new TransformEdge(initialGraphNode, newGraph);
             graphSubgraph->addTransformation(subGraphTransformation);
             transforms.push_back(graphSubgraph);
