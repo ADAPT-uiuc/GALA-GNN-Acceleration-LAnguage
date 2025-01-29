@@ -180,7 +180,7 @@ private:
     bool independent;
 public:
     // Constructors
-    DataLevel(DataItem* item, bool independence) {
+    DataLevel(DataItem* item = nullptr, bool independence = false) {
       this->nextItem = item;
       this->independent = independence;
     }
@@ -249,17 +249,29 @@ public:
     }
 
     DataNode cloneNew(std::string newName) {
-        // // TODO Create a complete new clone.
-        // DataItem* nextLevel = this->rootLevel;
-        // auto currentLevel = dynamic_cast<DataLevel*>(this->rootLevel);
-        // while (currentLevel)
-        // {
-        //     nextLevel = currentLevel->next();
-        //     currentLevel = dynamic_cast<DataLevel*>(nextLevel);
-        // }
-        // return dynamic_cast<DataInfo*>(nextLevel);
+        // TODO Create a complete new clone.
+        DataLevel newRootLevel = DataLevel();
+        DataLevel originalRootLevel= newRootLevel;
+        DataLevel newBaseLevel;
+        newRootLevel.setIndependence(this->rootLevel->getIndependence());
+
+        DataItem* nextLevel = this->rootLevel->next();
+        auto currentLevel = dynamic_cast<DataLevel*>(this->rootLevel);
+        while (currentLevel)
+        {
+            newBaseLevel = DataLevel();
+            newBaseLevel.setIndependence(currentLevel->getIndependence());
+            newRootLevel.setNext(&newBaseLevel);
+            newRootLevel = newBaseLevel;
+
+            nextLevel = currentLevel->next();
+            currentLevel = dynamic_cast<DataLevel*>(nextLevel);
+        }
+        auto currentInfo = dynamic_cast<DataInfo*>(nextLevel);
+        auto newDataInfo = DataInfo(currentInfo->getFormat(), currentInfo->getWeighted(), currentInfo->getDirected());
+        newRootLevel.setNext(&newDataInfo);
         return DataNode(newName, this->indexType, this->edgeType, this->valueType,
-                        this->rootLevel);
+                        &originalRootLevel);
     }
     DataNode cloneData() {
         return DataNode(this->name, this->indexType, this->edgeType, this->valueType,
