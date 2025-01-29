@@ -157,7 +157,7 @@ public:
                     transformedRootGraphLevel);
 
                 auto subTrGraphCopyTransformation = new TransformData(opt.first);
-                subTrGraphCopyTransformation->addParam(std::to_string(ic));
+                // subTrGraphCopyTransformation->addParam(std::to_string(ic));
                 subTrGraphCopyTransformation->addParam(opt.second);
                 auto graphTrSubgraph = new TransformEdge(newGraph, newTransformedGraph);
                 graphTrSubgraph->addTransformation(subTrGraphCopyTransformation);
