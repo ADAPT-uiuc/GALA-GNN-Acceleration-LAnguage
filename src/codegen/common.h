@@ -442,7 +442,7 @@ public:
   nT nvals" + std::to_string(iz) + " = adj" + std::to_string(iz) + "->nvals();";
                         }
                     }
-                    generateTransformation(dNode, transforms);
+                    resString += generateTransformation(dNode, transforms);
                 }
             }
         }

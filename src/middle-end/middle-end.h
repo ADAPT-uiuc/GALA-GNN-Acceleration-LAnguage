@@ -122,43 +122,43 @@ public:
         for (int ic = 0 ; ic < countAggregations; ic++)
         {
             // TODO Find a better way to clone
-            auto graphInfo = DataInfo(CSR_STYPE, true, initialGraphNode->getDataInfo()->getWeighted());
-            auto rootGraphLevel = DataLevel(&graphInfo, true);
-            auto newGraph = DataNode(std::to_string(ic), INT32, INT32, F32, &rootGraphLevel);
+            auto graphInfo = new DataInfo(CSR_STYPE, true, initialGraphNode->getDataInfo()->getWeighted());
+            auto rootGraphLevel = new DataLevel(graphInfo, true);
+            auto newGraph = new DataNode(std::to_string(ic), INT32, INT32, F32, rootGraphLevel);
 
-            auto subGraphTransformation = TransformData(SUBGRAPH_DOPT);
-            subGraphTransformation.addParam(std::to_string(ic));
+            auto subGraphTransformation = new TransformData(SUBGRAPH_DOPT);
+            subGraphTransformation->addParam(std::to_string(ic));
             if (ic < countAggregations - 1)
             {
-                subGraphTransformation.addParam("0");
+                subGraphTransformation->addParam("0");
             }
-            auto graphSubgraph = TransformEdge(initialGraphNode, &newGraph);
-            graphSubgraph.addTransformation(&subGraphTransformation);
-            transforms.push_back(&graphSubgraph);
+            auto graphSubgraph = new TransformEdge(initialGraphNode, newGraph);
+            graphSubgraph->addTransformation(subGraphTransformation);
+            transforms.push_back(graphSubgraph);
 
             // Rough solution for now. If this is a transformed graph, then just add new
             if (graphTransformed)
             {
                 auto opt = transformedGraphNode->getDataInfo()->getOpts()->at(0);
 
-                auto transformedGraphInfo = DataInfo(CSR_STYPE, true,
+                auto transformedGraphInfo = new DataInfo(CSR_STYPE, true,
                     transformedGraphNode->getDataInfo()->getWeighted());
-                transformedGraphInfo.addOpt(opt.first, opt.second);
-                auto transformedTileGraphLevel = DataLevel(&transformedGraphInfo, false);
-                auto transformedRootGraphLevel = DataLevel(&transformedTileGraphLevel, true);
-                auto newTransformedGraph = DataNode("graph_tile"+std::to_string(ic),
+                transformedGraphInfo->addOpt(opt.first, opt.second);
+                auto transformedTileGraphLevel = new DataLevel(transformedGraphInfo, false);
+                auto transformedRootGraphLevel = new DataLevel(transformedTileGraphLevel, true);
+                auto newTransformedGraph = new DataNode("graph_tile"+std::to_string(ic),
                     transformedGraphNode->getIType(),
                     transformedGraphNode->getNType(),
                     transformedGraphNode->getVType(),
-                    &transformedRootGraphLevel);
+                    transformedRootGraphLevel);
 
-                auto subTrGraphCopyTransformation = TransformData(opt.first);
-                subTrGraphCopyTransformation.addParam(std::to_string(ic));
-                subTrGraphCopyTransformation.addParam(opt.second);
-                auto graphTrSubgraph = TransformEdge(transformedGraphNode, &newTransformedGraph);
-                graphTrSubgraph.addTransformation(&subTrGraphCopyTransformation);
-                transforms.push_back(&graphTrSubgraph);
-                finalGraphs.push_back(&newTransformedGraph);
+                auto subTrGraphCopyTransformation = new TransformData(opt.first);
+                subTrGraphCopyTransformation->addParam(std::to_string(ic));
+                subTrGraphCopyTransformation->addParam(opt.second);
+                auto graphTrSubgraph = new TransformEdge(transformedGraphNode, newTransformedGraph);
+                graphTrSubgraph->addTransformation(subTrGraphCopyTransformation);
+                transforms.push_back(graphTrSubgraph);
+                finalGraphs.push_back(newTransformedGraph);
             }
         }
 
