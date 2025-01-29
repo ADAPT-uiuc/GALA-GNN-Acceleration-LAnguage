@@ -47,6 +47,7 @@ enum RelationDim {
 enum DataOptimization {
     COL_TILE_DOPT, // Column tile a graph (TODO or slice a tensor?)
     SAMPLE_DOPT, // Sample from a given graph
+    SUBGRAPH_DOPT, // Subgraph creation
     // TODO the optimization types below are planned but not implmeneted yet
 //    PARTITION_DOPT, // Graph - Partition the graph
 //    REORDER_DOPT, // Graph - Reorder the graph
@@ -247,6 +248,10 @@ public:
         this->valueType = vT;
     }
 
+    DataNode cloneNew(std::string newName) {
+        return DataNode(newName, this->indexType, this->edgeType, this->valueType,
+                        this->rootLevel);
+    }
     DataNode cloneData() {
         return DataNode(this->name, this->indexType, this->edgeType, this->valueType,
                         this->rootLevel);

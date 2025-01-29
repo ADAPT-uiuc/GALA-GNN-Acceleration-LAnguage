@@ -40,41 +40,155 @@ public:
         return -1;
     }
 
+    // DataNode *createGraphCopyWithIndex(ComputeNode* cNode, int index)
+    // {
+    //     auto graphInput =  cNode->getInput(1);
+    //     auto graphInfo = graphInput->getDataInfo();
+    //     auto newInfo = DataInfo(graphInfo->getFormat(), graphInfo->getDirected(), graphInfo->getWeighted());
+    //     // Add all the existing optimizations
+    //     for (auto opt: graphInfo->getOpts())
+    //     {
+    //         newInfo.addOpt(opt.first, opt.second);
+    //     }
+    // }
+
     static void trainingSubGraph(std::vector<CIRNode*>& program,
         std::vector<RelationEdge*>& dependencies,
         std::vector<RelationEdge*>& associations,
         std::vector<TransformEdge*>& transforms)
     {
+        int countAggregations = 0;
+        DataNode* initialGraphNode;
+        DataNode* transformedGraphNode;
+
         // Iterate through program to locate the training loop
         for (int i = 0; i < program.size(); i++)
         {
+            std::string outName = "";
             CIRNode* outNode = program[i];
             auto lNode = dynamic_cast<TrainingLoopNode*>(outNode);
             // Do this transformation only if you have
             if (lNode)
             {
-                int countAggregations = 0;
-
                 // TODO Create the initial input graph.
                 //  i.e. add computations to the IR to create these results
 
-                for (int ix = lNode->getLoopNodeNum() - 1; ix >= 0; ix--)
+                for (int ix = 0; ix < lNode->getLoopNodeNum(); ix++)
                 {
                     // TODO Change this to a stringed set of aggregations not just aggregation
                     //  i.e. result of aggregation 1 is used by aggregation 2
                     //  if the aggregations are separate then they can still be independent
                     auto inNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix));
-                    if (inNode->getOpType() == AGGREGATE_NODE)
+                    if (inNode->getOp() == AGGREGATE_MUL_SUM_OP)
                     {
-                        countAggregations++;
-                        // TODO create the new graph
-                        //  i.e. add computations to the IR to create these results
-
-                    } else
-                    {
-                        // TODO Use the most recent input graph as a graph input if graph is used
-                        // Use previous
+                        if (outName == "")
+                        {
+                            countAggregations++;
+                            outName = inNode->getOutput(0)->getName();
+                            transformedGraphNode = inNode->getInput(1);
+                        } else
+                        {
+                            if (outName == inNode->getInput(0)->getName())
+                            {
+                                countAggregations++;
+                            }
+                        }
                     }
+                }
+            } else
+            {
+                auto inNode = dynamic_cast<ComputeNode*>(outNode);
+                if (inNode->getOp() == AGGREGATE_MUL_SUM_OP)
+                {
+                    countAggregations++;
+                    // TODO Add index to be used by the subgraph operation and copy all the transformations in it.
+                } else if (inNode->getOp() == LOAD_OP)
+                {
+                    initialGraphNode = inNode->getOutput(1);
+                }
+            }
+        }
+
+        bool graphTransformed = false;
+        if (initialGraphNode == transformedGraphNode)
+        {
+            graphTransformed = true;
+        }
+
+        std::vector<DataNode*> finalGraphs;
+
+        // Add new transformation to the original graph (Also need to create sub-objects, these would then process
+        // their transformations)
+        for (int ic = 0 ; ic < countAggregations; ic++)
+        {
+            auto newGraph = initialGraphNode->cloneNew("adj"+std::to_string(ic));
+            newGraph.getDataInfo()->setDirected(true);
+            auto subGraphTransformation = TransformData(SUBGRAPH_DOPT);
+            subGraphTransformation.addParam(std::to_string(ic));
+            subGraphTransformation.addParam("0");
+            auto graphSubgraph = TransformEdge(initialGraphNode, &newGraph);
+            graphSubgraph.addTransformation(&subGraphTransformation);
+            transforms.push_back(&graphSubgraph);
+
+            // Rough solution for now. If this is a transformed graph, then just add new
+            if (graphTransformed)
+            {
+                auto newTransformedGraph = transformedGraphNode->cloneNew(transformedGraphNode->getName()
+                    + std::to_string(ic));
+                newTransformedGraph.getDataInfo()->setDirected(true);
+                auto opt = newTransformedGraph.getDataInfo()->getOpts()->at(0);
+                auto subTrGraphCopyTransformation = TransformData(opt.first);
+                subTrGraphCopyTransformation.addParam(std::to_string(ic));
+                subTrGraphCopyTransformation.addParam(opt.second);
+                auto graphTrSubgraph = TransformEdge(transformedGraphNode, &newTransformedGraph);
+                graphTrSubgraph.addTransformation(&subTrGraphCopyTransformation);
+                transforms.push_back(&graphTrSubgraph);
+                finalGraphs.push_back(&newTransformedGraph);
+            }
+        }
+
+        // This pass actually assigns the subgraphs and the transformed graphs
+        for (int i = 0; i < program.size(); i++)
+        {
+            std::string outName = "";
+            CIRNode* outNode = program[i];
+            auto lNode = dynamic_cast<TrainingLoopNode*>(outNode);
+            // Do this transformation only if you have
+            if (lNode)
+            {
+                // TODO Create the initial input graph.
+                //  i.e. add computations to the IR to create these results
+
+                for (int ix = 0; ix < lNode->getLoopNodeNum(); ix++)
+                {
+                    // TODO Change this to a stringed set of aggregations not just aggregation
+                    //  i.e. result of aggregation 1 is used by aggregation 2
+                    //  if the aggregations are separate then they can still be independent
+                    auto inNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix));
+                    if (inNode->getOp() == AGGREGATE_MUL_SUM_OP)
+                    {
+                        if (outName == "")
+                        {
+                            inNode->setInputDataNode(countAggregations, finalGraphs.at(countAggregations));
+                            countAggregations++;
+                        } else
+                        {
+                            if (outName == inNode->getInput(0)->getName())
+                            {
+                                inNode->setInputDataNode(countAggregations, finalGraphs.at(countAggregations));
+                                countAggregations++;
+                            }
+                        }
+                    }
+                }
+            } else
+            {
+                auto inNode = dynamic_cast<ComputeNode*>(outNode);
+                if (inNode->getOp() == AGGREGATE_MUL_SUM_OP)
+                {
+                    inNode->setInputDataNode(countAggregations, finalGraphs.at(countAggregations));
+                    countAggregations++;
+                    // TODO Add index to be used by the subgraph operation and copy all the transformations in it.
                 }
             }
         }

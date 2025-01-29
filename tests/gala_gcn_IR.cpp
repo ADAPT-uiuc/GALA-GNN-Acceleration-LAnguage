@@ -135,8 +135,8 @@ int main(int argc, char **argv) {
 	powerOp.addInputData(&degreesData);
 	powerOp.addOutputData(&normData);
 	trainingLoop.addLoopNode(&powerOp);
-	auto powerOpOnesDependency = RelationEdge(&degreesData, ALL_RELATION, &onesData, ALL_RELATION);
-	dependencies.push_back(&powerOpOnesDependency);
+	auto powerOpNormDependency = RelationEdge(&degreesData, ALL_RELATION, &normData, ALL_RELATION);
+	dependencies.push_back(&powerOpNormDependency);
 
 	// 1st normalization calculation
 	auto normFeat1 = ForwardNode(UPDATE_NODE, ROW_BROADCAST_OP);
