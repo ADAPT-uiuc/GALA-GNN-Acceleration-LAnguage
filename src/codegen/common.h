@@ -387,7 +387,7 @@ public:
     total_bounds_" + dNode->getName() + ", &" + srcNode->getName() + ");\n\
   iT *offset_ptr_" + dNode->getName() + " = total_offsets_" + dNode->getName() + ".data_ptr<iT>();\n\
   iT *col_ptr_" + dNode->getName() + " = total_cols_" + dNode->getName() + ".data_ptr<iT>();\n\
-  vT *val_ptr_" + dNode->getName() + " = total_vals_" + dNode->getName() + ".data_ptr<vT>();";
+  vT *val_ptr_" + dNode->getName() + " = total_vals_" + dNode->getName() + ".data_ptr<vT>();\n";
 
                     resString += "  global_segments.push_back(segments_" + dNode->getName() + ");\n";
                     resString += "  global_bounds.push_back(total_bounds_" + dNode->getName() + ");\n";

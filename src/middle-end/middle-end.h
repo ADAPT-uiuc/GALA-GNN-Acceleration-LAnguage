@@ -128,7 +128,7 @@ public:
 
             auto subGraphTransformation = new TransformData(SUBGRAPH_DOPT);
             subGraphTransformation->addParam(std::to_string(ic));
-            if (ic < countAggregations - 1)
+            if (ic < countAggregations)
             {
                 subGraphTransformation->addParam("0");
             }
