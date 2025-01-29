@@ -439,7 +439,7 @@ public:
                             int iz = i + 1;
                             resString += "  SM *adj" + std::to_string(iz) + " = forward_adj[" + std::to_string(iy) +"];\n\
   SM *adj" + std::to_string(iz) + "_b = backward_adj[" + std::to_string(iy) +"];\n\
-  nT nvals" + std::to_string(iz) + " = adj" + std::to_string(iz) + "->nvals();";
+  nT nvals" + std::to_string(iz) + " = adj" + std::to_string(iz) + "->nvals();\n";
                         }
                     }
                     resString += generateTransformation(dNode, transforms);
