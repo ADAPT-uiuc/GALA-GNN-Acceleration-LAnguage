@@ -332,6 +332,7 @@ int main(int argc, char **argv) {
 	auto genCode = CUDAGenerator(ctx, outputPath);
 	GALATransformations::complexityOperatorReordering(program, dependencies, associations, transforms);
 	GALATransformations::trainingInvariantCodeMotion(program, dependencies, associations, transforms);
+	GALATransformations::trainingSubGraph(program, dependencies, associations, transforms);
 	genCode.writeCode(program, dependencies, associations, transforms);
 
     // Should be enough for now
