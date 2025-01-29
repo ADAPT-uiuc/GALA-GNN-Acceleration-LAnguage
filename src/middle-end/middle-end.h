@@ -170,13 +170,13 @@ public:
                     {
                         if (outName == "")
                         {
-                            inNode->setInputDataNode(countAggregations, finalGraphs.at(countAggregations));
+                            inNode->setInputDataNode(1, finalGraphs.at(countAggregations));
                             countAggregations++;
                         } else
                         {
                             if (outName == inNode->getInput(0)->getName())
                             {
-                                inNode->setInputDataNode(countAggregations, finalGraphs.at(countAggregations));
+                                inNode->setInputDataNode(1, finalGraphs.at(countAggregations));
                                 countAggregations++;
                             }
                         }
@@ -187,7 +187,7 @@ public:
                 auto inNode = dynamic_cast<ComputeNode*>(outNode);
                 if (inNode->getOp() == AGGREGATE_MUL_SUM_OP)
                 {
-                    inNode->setInputDataNode(countAggregations, finalGraphs.at(countAggregations));
+                    inNode->setInputDataNode(1, finalGraphs.at(countAggregations));
                     countAggregations++;
                     // TODO Add index to be used by the subgraph operation and copy all the transformations in it.
                 }
