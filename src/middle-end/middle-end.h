@@ -110,7 +110,7 @@ public:
         }
 
         bool graphTransformed = false;
-        if (initialGraphNode == transformedGraphNode)
+        if (initialGraphNode != transformedGraphNode)
         {
             graphTransformed = true;
         }
