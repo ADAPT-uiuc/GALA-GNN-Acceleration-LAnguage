@@ -87,47 +87,50 @@ extern int yydebug;
     FEAT_ATTR = 288,               /* FEAT_ATTR  */
     RELU = 289,                    /* RELU  */
     LABEL_ATTR = 290,              /* LABEL_ATTR  */
-    RABBIT_REORDER_OP = 291,       /* RABBIT_REORDER_OP  */
-    SAMPLE_RANDOM_OP = 292,        /* SAMPLE_RANDOM_OP  */
-    COLTILE = 293,                 /* COLTILE  */
-    AGGR = 294,                    /* AGGR  */
-    FEAT_SIZE_ASSIGN = 295,        /* FEAT_SIZE_ASSIGN  */
-    LABEL_SIZE_ASSIGN = 296,       /* LABEL_SIZE_ASSIGN  */
-    COARSEN = 297,                 /* COARSEN  */
-    INTEGER = 298,                 /* INTEGER  */
-    FLOAT = 299,                   /* FLOAT  */
-    LBRACE = 300,                  /* LBRACE  */
-    RBRACE = 301,                  /* RBRACE  */
-    LSQBRA = 302,                  /* LSQBRA  */
-    RSQBRA = 303,                  /* RSQBRA  */
-    DOT = 304,                     /* DOT  */
-    COMMA = 305,                   /* COMMA  */
-    IF = 306,                      /* IF  */
-    ELSE = 307,                    /* ELSE  */
-    DO = 308,                      /* DO  */
-    WHILE = 309,                   /* WHILE  */
-    TR = 310,                      /* TR  */
-    FA = 311,                      /* FA  */
-    NOT = 312,                     /* NOT  */
-    AND = 313,                     /* AND  */
-    OR = 314,                      /* OR  */
-    NOTEQ = 315,                   /* NOTEQ  */
-    EQ = 316,                      /* EQ  */
-    GREATER = 317,                 /* GREATER  */
-    LESS = 318,                    /* LESS  */
-    GREATEREQ = 319,               /* GREATEREQ  */
-    LESSEQ = 320,                  /* LESSEQ  */
-    PLUS = 321,                    /* PLUS  */
-    MINUS = 322,                   /* MINUS  */
-    MULTIPLY = 323,                /* MULTIPLY  */
-    DIVIDE = 324,                  /* DIVIDE  */
-    FFN = 325,                     /* FFN  */
-    DATASET = 326,                 /* DATASET  */
-    NONLN = 327,                   /* NONLN  */
-    SENSEI_OP = 328,               /* SENSEI_OP  */
-    INT = 329,                     /* INT  */
-    NEW = 330,                     /* NEW  */
-    NULL_KEY = 331                 /* NULL_KEY  */
+    DEGREE_ATTR = 291,             /* DEGREE_ATTR  */
+    NODE_ATTR = 292,               /* NODE_ATTR  */
+    RABBIT_REORDER_OP = 293,       /* RABBIT_REORDER_OP  */
+    SAMPLE_RANDOM_OP = 294,        /* SAMPLE_RANDOM_OP  */
+    POW = 295,                     /* POW  */
+    COLTILE = 296,                 /* COLTILE  */
+    AGGR = 297,                    /* AGGR  */
+    FEAT_SIZE_ASSIGN = 298,        /* FEAT_SIZE_ASSIGN  */
+    LABEL_SIZE_ASSIGN = 299,       /* LABEL_SIZE_ASSIGN  */
+    COARSEN = 300,                 /* COARSEN  */
+    INTEGER = 301,                 /* INTEGER  */
+    FLOAT = 302,                   /* FLOAT  */
+    LBRACE = 303,                  /* LBRACE  */
+    RBRACE = 304,                  /* RBRACE  */
+    LSQBRA = 305,                  /* LSQBRA  */
+    RSQBRA = 306,                  /* RSQBRA  */
+    DOT = 307,                     /* DOT  */
+    COMMA = 308,                   /* COMMA  */
+    IF = 309,                      /* IF  */
+    ELSE = 310,                    /* ELSE  */
+    DO = 311,                      /* DO  */
+    WHILE = 312,                   /* WHILE  */
+    TR = 313,                      /* TR  */
+    FA = 314,                      /* FA  */
+    NOT = 315,                     /* NOT  */
+    AND = 316,                     /* AND  */
+    OR = 317,                      /* OR  */
+    NOTEQ = 318,                   /* NOTEQ  */
+    EQ = 319,                      /* EQ  */
+    GREATER = 320,                 /* GREATER  */
+    LESS = 321,                    /* LESS  */
+    GREATEREQ = 322,               /* GREATEREQ  */
+    LESSEQ = 323,                  /* LESSEQ  */
+    PLUS = 324,                    /* PLUS  */
+    MINUS = 325,                   /* MINUS  */
+    MULTIPLY = 326,                /* MULTIPLY  */
+    DIVIDE = 327,                  /* DIVIDE  */
+    FFN = 328,                     /* FFN  */
+    DATASET = 329,                 /* DATASET  */
+    NONLN = 330,                   /* NONLN  */
+    SENSEI_OP = 331,               /* SENSEI_OP  */
+    INT = 332,                     /* INT  */
+    NEW = 333,                     /* NEW  */
+    NULL_KEY = 334                 /* NULL_KEY  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -136,7 +139,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 26 "frontend.y"
+#line 160 "frontend.y"
 
     int ival;
     float fval;
@@ -145,7 +148,7 @@ union YYSTYPE
     ForwardNode* forwardNode;
     TrainingLoopNode* trainingLoopNode;
 
-#line 149 "build/frontend.tab.h"
+#line 152 "build/frontend.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

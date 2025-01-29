@@ -29,8 +29,7 @@
 load_dataset { return LOAD; }
 dsl.get_aggregate { return AGGR_INIT; }
 fn { return FN_ARG; }
-dsl.fn. { return DSL_FN; }
-mul_sum { return MUL_SUM; }
+fn.mul_sum { return MUL_SUM; }
 dsl. {return DSL_DOT; }
 set_undirected { return SET_UNDIRECTED; }
 set_unweighted { return SET_UNWEIGHTED; }
@@ -40,9 +39,10 @@ coarsen { return COARSEN; }
 dsl.reorder.rabbit { return RABBIT_REORDER_OP; }
 dsl.sample.random  { return SAMPLE_RANDOM_OP; }
 nn.ffn { return FFN; }
+fn.pow { return POW; }
 out= { return FFN_OUT; }
 size { return SIZE_FN; }
-dsl.non_ln.ReLU { return RELU; }
+non_ln.ReLU { return RELU; }
 dsl.nn.loss.RMSE { return RMSE_LOSS; }
 dsl.nn.optmz.ADAM { return ADAM_T; }
 DSL_Dataset { return DATASET; }
@@ -51,8 +51,10 @@ aggregate { return AGGR; }
 model { return MODEL_W; }
 layer { return LAYER; }
 graphs { return GRAPH_ATTR; }
+node { return NODE_ATTR; }
 feats { return FEAT_ATTR; }
 labels { return LABEL_ATTR; }
+degrees { return DEGREE_ATTR; }
 eval { return EVAL; }
 train { return TRAIN; }
 loss { return LOSS; }
@@ -98,7 +100,7 @@ new { return NEW; }
 [ \t\r\n] {}
 \/\/.* {}
 #.* {}
-[0-9]+\.[0-9]+ {
+-?[0-9]+\.[0-9]+ {
     yylval.sval = strdup(yytext);
     return FLOAT; 
 }

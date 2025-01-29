@@ -36,6 +36,7 @@ $(BISON_GEN_C) $(BISON_GEN_H): $(BISON_SRC) | $(BUILD_DIR)
 # Rule to generate the Flex scanner
 $(LEX_GEN): $(LEX_SRC) | $(BUILD_DIR)
 	$(FLEX) -o $(LEX_GEN) $(LEX_SRC)
+#   $(FLEX) -o $(LEX_GEN) -d $(LEX_SRC) <-- when debugging the syntax
 
 # Ensure the build directory exists
 $(BUILD_DIR):

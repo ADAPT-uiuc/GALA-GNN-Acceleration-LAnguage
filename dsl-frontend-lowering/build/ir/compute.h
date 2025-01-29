@@ -35,16 +35,26 @@ enum ComputeOp {
     DEGREES_OP,
     POWER_OP,
     APPLY_EDGES_OP, // SDDMM
-    AGGREGATE_OP, // SpMM
-    MUL_SUM_OP,
+    AGGREGATE_MUL_SUM_OP, // SpMM
+    AGGREGATE_MUL_SUM_DIRECT, // No autograd
     FFN_OP, // Can also be UPDATE
     BIAS_OP,
-    NON_LNR_OP,
+    NON_LNR_OP_RELU,
+    NON_LNR_OP_LOG_SOFTMAX,
+    NON_LNR_OP_SOFTMAX,
+    NON_LNR_OP_LEAKY_RELU,
+    ROW_BROADCAST_OP,
+    SCALAR_ADD_EPS_MULTIPLY_OP,
+    ADD_OP, // Tensor add
+    MUL_OP, // Tensor multiply
     // Control statements
     IF_CONTROL,
     TRAIN_CONTROL,
     // Transformation
-    TRANSFORM_OP
+    TRANSFORM_OP,
+    // Data creation ops
+    ONES_OP,
+    EPSILON_OP,
 };
 
 enum CompOptimization {
@@ -55,6 +65,9 @@ enum CompOptimization {
 // TODO - Add node / edge aggregation types.
 
 class CIRNode{
+public:
+    CIRNode() {};
+    virtual ~CIRNode() {};
 };
 
 class ComputeNode : public CIRNode {
@@ -67,6 +80,8 @@ private:
     std::vector<DataNode*> inputData;
     std::vector<DataNode*> outputData;
     std::vector<std::pair<CompOptimization, float>> opts;
+
+    std::string kernelName;
 
     // Points in the program are commented out for now
 //    // Program start point
@@ -81,6 +96,7 @@ public:
 
     // Op -- Also used to identify between the
     ComputeOp getOp() { return this->op;}
+    OpType getOpType() { return this->opType;}
 
 
     // Get opts
@@ -91,6 +107,11 @@ public:
   	void addOpt(CompOptimization opt, float param) {
     	opts.push_back(std::make_pair(opt, param));
   	};
+    int getNumOpts() { return (int)opts.size(); };
+    std::pair<CompOptimization, float>* getOpt(int idx)
+    {
+        return &opts.at(idx);
+    }
 
     // Params can only add new (No need to remove any)
     void addParam(std::string new_param) { this->params.push_back(new_param); }
@@ -98,9 +119,37 @@ public:
     std::string getParam(int ix) { return this->params.at(ix); }
 
     // Data items should be constant once added (No need to remove elements)
-    //  TODO it can change if any data transformationsare done on it.
+    //  TODO it can change if any data transformations are done on it.
     void addInputData(DataNode *new_input) { this->inputData.push_back(new_input); }
     void addOutputData(DataNode *new_output) { this->outputData.push_back(new_output); }
+
+    long getNumInputs()
+    {
+       return this->inputData.size();
+    }
+    DataNode* getInput(int ix)
+    {
+        return this->inputData[ix];
+    }
+    void setInputDataNode(int ix, DataNode* new_input)
+    {
+        this->inputData[ix] = new_input;
+    }
+    long getNumOutputs()
+    {
+        return this->outputData.size();
+    }
+    DataNode* getOutput(int ix)
+    {
+        return this->outputData[ix];
+    }
+    void setOutputDataNode(int ix, DataNode* new_input)
+    {
+        this->outputData[ix] = new_input;
+    }
+
+    void setKernelName(std::string name) { this->kernelName = name; }
+    std::string getKernelName() { return this->kernelName; }
 };
 
 class ForwardNode : public ComputeNode {
@@ -137,13 +186,23 @@ public:
     int getIter() { return this->numIter; }
     int getValidStep() { return this->stepValid; }
     int getTestStep() { return this->stepTest; }
+    LossFunction getLossFunc() { return this->lossFunc; }
+    NNOptimizer getOptimizer() { return this->optimizer; }
 
     void clearLoopNodes() { this->loop.clear(); }
     void addLoopNode(ForwardNode *newNode) { this->loop.push_back(newNode); }
     int getLoopNodeNum() { return this->loop.size(); }
 
     std::vector<ForwardNode *> *getLoopNodes() { return &loop; }
-    ComputeNode *getNode(int i) { return this->loop.at(i); }
+    ForwardNode *getNode(int i) { return this->loop.at(i); }
+    void eraseFirstNLoopNodes(int n)
+    {
+        for (int i_n = 0; i_n < n; i_n++)
+        {
+            this->loop.erase(this->loop.begin());
+        }
+    }
+    void swapNodes(int i, int j) { std::swap(this->loop[i], this->loop[j]); }
 };
 
 //class TrainingLoopNode : public ComputeNode {
