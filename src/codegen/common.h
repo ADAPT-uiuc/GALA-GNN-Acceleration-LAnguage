@@ -428,7 +428,7 @@ public:
                     }
                 } else if (tr->getTransformation() == SUBGRAPH_DOPT)
                 {
-                    if (tr->getNumParam() == 1)
+                    if (tr->getNumParam() == 2)
                     {
                         resString +=  " std::vector<SM *> forward_adj;\n\
   std::vector<SM *> backward_adj;\n\
