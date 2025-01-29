@@ -139,7 +139,7 @@ public:
             // Rough solution for now. If this is a transformed graph, then just add new
             if (graphTransformed)
             {
-                auto opt = transformedGraphNode.getDataInfo()->getOpts()->at(0);
+                auto opt = transformedGraphNode->getDataInfo()->getOpts()->at(0);
 
                 auto transformedGraphInfo = DataInfo(CSR_STYPE, true,
                     transformedGraphNode->getDataInfo()->getWeighted());
