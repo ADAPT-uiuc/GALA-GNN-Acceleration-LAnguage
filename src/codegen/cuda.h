@@ -528,7 +528,7 @@ int start_vals = 0;";
                         cudaMemcpyHostToDevice));\n\
   CUDA_CHECK(cudaMemcpy(dA_values"+std::to_string(indexData)+"_b, val_ptr_" + inputData->getName() + "_b, nvals"+std::to_string(indexData)+" * sizeof(float),\n\
                         cudaMemcpyHostToDevice));\n\
-  torch::Tensor t_offsets"+std::to_string(indexData)+" =\n\
+  torch::Tensor t_offsets"+std::to_string(indexData)+"_b =\n\
       torch::from_blob(dA_csrOffsets"+std::to_string(indexData)+"_b, {(nrows+ 1) * segments_" + inputData->getName() + "_b}, options_cu_int);\n";
                     } else
                     {
