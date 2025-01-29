@@ -437,8 +437,8 @@ public:
                         {
                             int iy = std::stoi(tr->getParam(1)) - (i + 1);
                             int iz = i + 1;
-                            resString += "  SM *adj" + std::to_string(iz) + " = forward_adj[" + std::to_string(iy) +"];\n\
-  SM *adj" + std::to_string(iz) + "_b = backward_adj[" + std::to_string(iy) +"];\n\
+                            resString += "  SM adj" + std::to_string(iz) + " = *forward_adj[" + std::to_string(iy) +"];\n\
+  SM adj" + std::to_string(iz) + "_b = *backward_adj[" + std::to_string(iy) +"];\n\
   nT nvals" + std::to_string(iz) + " = adj" + std::to_string(iz) + "->nvals();\n";
                         }
                     }
