@@ -124,7 +124,7 @@ public:
             // TODO Find a better way to clone
             auto graphInfo = new DataInfo(CSR_STYPE, true, initialGraphNode->getDataInfo()->getWeighted());
             auto rootGraphLevel = new DataLevel(graphInfo, true);
-            auto newGraph = new DataNode(std::to_string(ic), INT32, INT32, F32, rootGraphLevel);
+            auto newGraph = new DataNode("adj"+std::to_string(ic), INT32, INT32, F32, rootGraphLevel);
 
             auto subGraphTransformation = new TransformData(SUBGRAPH_DOPT);
             subGraphTransformation->addParam(std::to_string(ic));
@@ -159,7 +159,7 @@ public:
                 auto subTrGraphCopyTransformation = new TransformData(opt.first);
                 subTrGraphCopyTransformation->addParam(std::to_string(ic));
                 subTrGraphCopyTransformation->addParam(opt.second);
-                auto graphTrSubgraph = new TransformEdge(transformedGraphNode, newTransformedGraph);
+                auto graphTrSubgraph = new TransformEdge(newGraph, newTransformedGraph);
                 graphTrSubgraph->addTransformation(subTrGraphCopyTransformation);
                 transforms.push_back(graphTrSubgraph);
                 finalGraphs.push_back(newTransformedGraph);
