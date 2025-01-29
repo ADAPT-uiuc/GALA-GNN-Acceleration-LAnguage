@@ -249,6 +249,15 @@ public:
     }
 
     DataNode cloneNew(std::string newName) {
+        // // TODO Create a complete new clone.
+        // DataItem* nextLevel = this->rootLevel;
+        // auto currentLevel = dynamic_cast<DataLevel*>(this->rootLevel);
+        // while (currentLevel)
+        // {
+        //     nextLevel = currentLevel->next();
+        //     currentLevel = dynamic_cast<DataLevel*>(nextLevel);
+        // }
+        // return dynamic_cast<DataInfo*>(nextLevel);
         return DataNode(newName, this->indexType, this->edgeType, this->valueType,
                         this->rootLevel);
     }

@@ -362,7 +362,7 @@ public:
         for (int ix = 0; ix < transforms.size(); ix++)
         {
             auto transform = transforms[ix];
-            if (transform->getNode1() == srcNode)
+            if (transform->getNode1()->getName() == srcNode->getName())
             {
                 auto dNode = transform->getNode2();
                 auto tr = transform->getTransformation(0);
