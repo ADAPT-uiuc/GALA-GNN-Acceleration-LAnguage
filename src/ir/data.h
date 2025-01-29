@@ -249,7 +249,6 @@ public:
     }
 
     DataNode cloneNew(std::string newName) {
-        // TODO Create a complete new clone.
         DataLevel newRootLevel = DataLevel();
         DataLevel originalRootLevel= newRootLevel;
         DataLevel newBaseLevel;
@@ -270,8 +269,11 @@ public:
         auto currentInfo = dynamic_cast<DataInfo*>(nextLevel);
         auto newDataInfo = DataInfo(currentInfo->getFormat(), currentInfo->getWeighted(), currentInfo->getDirected());
         newRootLevel.setNext(&newDataInfo);
-        return DataNode(newName, this->indexType, this->edgeType, this->valueType,
-                        &originalRootLevel);
+        return DataNode(newName,
+            this->indexType,
+            this->edgeType,
+            this->valueType,
+            &originalRootLevel);
     }
     DataNode cloneData() {
         return DataNode(this->name, this->indexType, this->edgeType, this->valueType,

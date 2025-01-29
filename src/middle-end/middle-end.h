@@ -121,8 +121,11 @@ public:
         // their transformations)
         for (int ic = 0 ; ic < countAggregations; ic++)
         {
-            auto newGraph = initialGraphNode->cloneNew("adj"+std::to_string(ic));
-            newGraph.getDataInfo()->setDirected(true);
+            // TODO Find a better way to clone
+            auto graphInfo = DataInfo(CSR_STYPE, true, initialGraphNode->getDataInfo()->getWeighted());
+            auto rootGraphLevel = DataLevel(&graphInfo, true);
+            auto newGraph = DataNode(std::to_string(ic), INT32, INT32, F32, &rootGraphLevel);
+
             auto subGraphTransformation = TransformData(SUBGRAPH_DOPT);
             subGraphTransformation.addParam(std::to_string(ic));
             if (ic < countAggregations - 1)
@@ -136,10 +139,19 @@ public:
             // Rough solution for now. If this is a transformed graph, then just add new
             if (graphTransformed)
             {
-                auto newTransformedGraph = transformedGraphNode->cloneNew(transformedGraphNode->getName()
-                    + std::to_string(ic));
-                newTransformedGraph.getDataInfo()->setDirected(true);
-                auto opt = newTransformedGraph.getDataInfo()->getOpts()->at(0);
+                auto opt = transformedGraphNode.getDataInfo()->getOpts()->at(0);
+
+                auto transformedGraphInfo = DataInfo(CSR_STYPE, true,
+                    transformedGraphNode->getDataInfo()->getWeighted());
+                transformedGraphInfo.addOpt(opt.first, opt.second);
+                auto transformedTileGraphLevel = DataLevel(&transformedGraphInfo, false);
+                auto transformedRootGraphLevel = DataLevel(&transformedTileGraphLevel, true);
+                auto newTransformedGraph = DataNode("graph_tile"+std::to_string(ic),
+                    transformedGraphNode->getIType(),
+                    transformedGraphNode->getNType(),
+                    transformedGraphNode->getVType(),
+                    &transformedRootGraphLevel);
+
                 auto subTrGraphCopyTransformation = TransformData(opt.first);
                 subTrGraphCopyTransformation.addParam(std::to_string(ic));
                 subTrGraphCopyTransformation.addParam(opt.second);
