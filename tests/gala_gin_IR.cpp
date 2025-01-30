@@ -188,7 +188,7 @@ int main(int argc, char **argv) {
     auto outputInfo_2 = DataInfo(RM_DTYPE);
     outputInfo.setDims(-1, 32); // -1=N=232965, the number of nodes in the graph
     auto rootOutputLevel_2 = DataLevel(&outputInfo_2, true);
-    auto outputData_2 = DataNode("res", INT32, INT32, F32, &rootOutputLevel_2);
+    auto outputData_2 = DataNode("res_n", INT32, INT32, F32, &rootOutputLevel_2);
 	aggregate_2.addInputData(&reluData);
 	aggregate_2.addInputData(&transformedGraph);
     aggregate_2.addOutputData(&outputData_2);

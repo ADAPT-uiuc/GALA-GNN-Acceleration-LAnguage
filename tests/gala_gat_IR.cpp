@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
 	associations.push_back(&inOutAttenRAssociation);
 
 	// Edge aggregation
-	auto aggregateEdge = ForwardNode(AGGREGATE_EDGE, AGGREGATE_MUL_SUM_OP);
+	auto aggregateEdge = ForwardNode(AGGREGATE_EDGE, AGGREGATE_EDGE_MUL_SUM_OP);
 	auto aggrEdgeInfo = DataInfo(CSR_STYPE, transformedGraphInfo.getDirected(), true);
 	// aggrEdgeInfo.setDims(-4, 1); //-4=E=114M (E = Edges)
 	auto rootAggrEdgeLevel = DataLevel(&aggrEdgeInfo, true);

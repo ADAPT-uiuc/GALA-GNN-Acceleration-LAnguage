@@ -358,6 +358,129 @@ int start_vals = 0;";
             // Adding the kernel call and setting the name
             kernelCallCode.addCode(aggrKernelCall);
             cNode->setKernelName("gather_forward");
+        } else if (cNode->getOp() == NON_LNR_OP_SOFTMAX) {
+            std::string kernelCodeStr = "extern \"C\" __global__ void __launch_bounds__(256)\n\
+    default_function_kernel_spmm_backward_sddmm_32_nln(\n\
+        float *__restrict__ C, // Output dense\n\
+        int *__restrict__ J_indptr_data,\n\
+        float *__restrict__ A, // Input values\n\
+        int *__restrict__ J_indices_data, int nrows) {\n\
+  if (((((int)blockIdx.x) * 32) + ((int)threadIdx.x)) < nrows) {\n\
+    float local_C = 1e-12;\n\
+    for (int j = 0;\n\
+         j <\n\
+         (J_indptr_data[(((((int)blockIdx.x) * 32) + ((int)threadIdx.x)) + 1)] -\n\
+          J_indptr_data[((((int)blockIdx.x) * 32) + ((int)threadIdx.x))]);\n\
+         ++j) {\n\
+      local_C = (local_C + (A[(j + J_indptr_data[((((int)blockIdx.x) * 32) +\n\
+                                                  ((int)threadIdx.x))])]));\n\
+    }\n\
+    C[((((int)blockIdx.x) * 32) + ((int)threadIdx.x))] =\n\
+        C[((((int)blockIdx.x) * 32) + ((int)threadIdx.x))] + local_C;\n\
+  }\n\
+}\n";
+            kernelCode.addCode(kernelCodeStr);
+
+            std::string kernelCallCodeStr = "torch::Tensor node_spmv_backward_of_sddmm_nln(torch::Tensor offset_graph,\n\
+                                          torch::Tensor columns_graph,\n\
+                                          torch::Tensor value_graph,\n\
+                                          torch::Tensor bounds, int nrows,\n\
+                                          int segments, bool is_directed) {\n\
+  // Output\n\
+  auto options = torch::TensorOptions()\n\
+                     .dtype(torch::kFloat)\n\
+                     .requires_grad(true)\n\
+                     .device(torch::kCUDA, 0);\n\
+  auto output_dense = torch::zeros({nrows, 1}, options);\n\
+  float *oden_array = output_dense.data_ptr<float>();\n\
+\n\
+  // Sparse\n\
+  int *offset_ptr = offset_graph.data_ptr<int>();\n\
+  int *col_ptr = columns_graph.data_ptr<int>();\n\
+  float *val_ptr = value_graph.data_ptr<float>();\n\
+  int *bounds_ptr = bounds.data_ptr<int>();\n\
+\n\
+  for (int i = 0; i < segments; i++) {\n\
+    int i1 = i;\n\
+    int start_vals = bounds_ptr[i1 * 2];\n\
+\n\
+    cudaStream_t stream1;\n\
+\n\
+    cudaStreamCreate(&stream1);\n\
+    dim3 gridDim_rem(((int)(nrows - 1) / 32) + 1);\n\
+    dim3 blockDim_rem(32);\n\
+    default_function_kernel_spmm_backward_sddmm_32_nln<<<gridDim_rem, blockDim_rem,\n\
+                                                     0, stream1>>>(\n\
+        oden_array, &offset_ptr[i1 * (nrows + 1)], &val_ptr[start_vals],\n\
+        &col_ptr[start_vals], nrows);\n\
+  }\n\
+\n\
+  return output_dense;\n\
+}";
+            kernelCallCode.addCode(kernelCallCodeStr);
+
+        
+        } else if (cNode->getOp() == AGGREGATE_EDGE_MUL_SUM_OP) {
+            std::string kernelCodeStr = "extern \"C\" __global__ void __launch_bounds__(256)\n\
+    default_function_kernel_spmm_backward_sddmm_32_eaggr(\n\
+        float *__restrict__ C, // Output dense\n\
+        int *__restrict__ J_indptr_data,\n\
+        float *__restrict__ A, // Input values\n\
+        int *__restrict__ J_indices_data, int nrows) {\n\
+  if (((((int)blockIdx.x) * 32) + ((int)threadIdx.x)) < nrows) {\n\
+    float local_C = 1e-12;\n\
+    for (int j = 0;\n\
+         j <\n\
+         (J_indptr_data[(((((int)blockIdx.x) * 32) + ((int)threadIdx.x)) + 1)] -\n\
+          J_indptr_data[((((int)blockIdx.x) * 32) + ((int)threadIdx.x))]);\n\
+         ++j) {\n\
+      local_C = (local_C + (A[(j + J_indptr_data[((((int)blockIdx.x) * 32) +\n\
+                                                  ((int)threadIdx.x))])]));\n\
+    }\n\
+    C[((((int)blockIdx.x) * 32) + ((int)threadIdx.x))] =\n\
+        C[((((int)blockIdx.x) * 32) + ((int)threadIdx.x))] + local_C;\n\
+  }\n\
+}\n";
+            kernelCode.addCode(kernelCodeStr);
+
+            std::string kernelCallCodeStr = "torch::Tensor node_spmv_backward_of_sddmm_eaggr(torch::Tensor offset_graph,\n\
+                                          torch::Tensor columns_graph,\n\
+                                          torch::Tensor value_graph,\n\
+                                          torch::Tensor bounds, int nrows,\n\
+                                          int segments, bool is_directed) {\n\
+  // Output\n\
+  auto options = torch::TensorOptions()\n\
+                     .dtype(torch::kFloat)\n\
+                     .requires_grad(true)\n\
+                     .device(torch::kCUDA, 0);\n\
+  auto output_dense = torch::zeros({nrows, 1}, options);\n\
+  float *oden_array = output_dense.data_ptr<float>();\n\
+\n\
+  // Sparse\n\
+  int *offset_ptr = offset_graph.data_ptr<int>();\n\
+  int *col_ptr = columns_graph.data_ptr<int>();\n\
+  float *val_ptr = value_graph.data_ptr<float>();\n\
+  int *bounds_ptr = bounds.data_ptr<int>();\n\
+\n\
+  for (int i = 0; i < segments; i++) {\n\
+    int i1 = i;\n\
+    int start_vals = bounds_ptr[i1 * 2];\n\
+\n\
+    cudaStream_t stream1;\n\
+\n\
+    cudaStreamCreate(&stream1);\n\
+    dim3 gridDim_rem(((int)(nrows - 1) / 32) + 1);\n\
+    dim3 blockDim_rem(32);\n\
+    default_function_kernel_spmm_backward_sddmm_32_eaggr<<<gridDim_rem, blockDim_rem,\n\
+                                                     0, stream1>>>(\n\
+        oden_array, &offset_ptr[i1 * (nrows + 1)], &val_ptr[start_vals],\n\
+        &col_ptr[start_vals], nrows);\n\
+  }\n\
+\n\
+  return output_dense;\n\
+}";
+            kernelCallCode.addCode(kernelCallCodeStr);
+
         }
     }
 

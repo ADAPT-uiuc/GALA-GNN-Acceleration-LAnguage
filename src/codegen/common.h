@@ -453,7 +453,7 @@ public:
 
     }
 
-    void generateOpCode(ComputeNode* cNode, int& fcCount, bool outOfLoop,
+    void generateOpCode(ComputeNode* cNode, int& fcCount, int& epCount, bool outOfLoop, bool& hasFFNEdgeUpdate,
         std::unordered_set<std::string> &encounteredAutograds,
         std::vector<int> &inputSizes,
         std::vector<TransformEdge*>& transforms)
@@ -682,6 +682,16 @@ public:\n\
         {
             std::string reluCall = "        " + generateOutputString(cNode) + " = torch::relu(" + cNode->getInput(0)->getName() + ");";
             model.getForward()->addCode(reluCall);
+        } else if (cNode->getOp() == NON_LNR_OP_LEAKY_RELU)
+        {
+            if (encounteredAutograds.find(getKernelName(cNode)) == encounteredAutograds.end())
+            {
+                encounteredAutograds.insert(getKernelName(cNode));
+                std::string leakyReluInit = "     torch::nn::LeakyReLU leaky_relu(torch::nn::LeakyReLUOptions().negative_slope(0.2))";
+                model.getForward()->addCode(leakyReluInit);
+            }
+            std::string leakyReluCall += "     " + generateOutputString(cNode) + " = leaky_relu->forward(" + cNode->getInput(0)->getName() + ");";
+            model.getForward()->addCode(leakyReluCall);
         } else if (cNode->getOp() == FFN_OP)
         {
             // TODO Check if input and output names are same. If they are use same, if not use something else
@@ -728,6 +738,23 @@ public:\n\
                 model.getForward()->addCode(forwardCall);
             }
             fcCount++;
+        } else if (cNode->getOp() == SCALAR_ADD_EPS_MULTIPLY_OP)
+        {
+            std::string epDef = "torch::Tensor eps" + std::to_string(epCount) + "{nullptr};";
+            model.getDef()->addCode(epDef);
+
+            std::string epInit = "ep" + std::to_string(epCount) + " = register_parameter(\"eps"
+            + std::to_string(epCount) + "\", torch::Tensor({" + cNode->getParam(1) + "}));";
+            model.getInit()->addCode(epInit);
+
+            // TODO add the inputs to the forward call based on the actual inputs
+            std::string forwardCall = generateOutputString(cNode) + " = (1 + " + std::to_string(epCount) + ") * " + cNode->getInput(0)->getName() + ";";
+            model.getForward()->addCode(forwardCall);
+            epCount++;
+        } else if (cNode->getOp() == ADD_OP)
+        {
+            std::string forwardCall = generateOutputString(cNode) + " = " + cNode->getInput(0)->getName() + " + " + cNode->getInput(1)->getName() + ";";
+            model.getForward()->addCode(forwardCall);
         } else if (cNode->getOp() == ONES_OP)
         {
             auto outputInfo = cNode->getOutput(0)->getDataInfo();
@@ -762,8 +789,6 @@ public:\n\
                 + ", " + colDims + "}, options_" + cNode->getOutput(0)->getName() + ");";
                 model.getForward()->addCode(onesCall);
             }
-
-
         }
     }
 
@@ -772,18 +797,20 @@ public:\n\
         std::vector<TransformEdge*>& transforms)
     {
         std::vector<int> inputSizes;
+        int fcCount = 0;
+        int epCount = 0;
+        bool hasFFNEdgeUpdate = false;
 
         // TODO add data transformations before data preparation.
         //  Should come from a middle end transformation.
         std::unordered_set<std::string> encounteredAutograds;
         for (int i = 0; i < program.size(); i++)
         {
-            int fcCount = 0;
             CIRNode* outNode = program[i];
             auto oNode = dynamic_cast<ComputeNode*>(outNode);
             if (oNode)
             {
-                generateOpCode(oNode, fcCount, true, encounteredAutograds, inputSizes, transforms);
+                generateOpCode(oNode, fcCount, epCount, true, hasFFNEdgeUpdate, encounteredAutograds, inputSizes, transforms);
 
                 // Generate the transfer code after the load operation
                 if (oNode->getOp() == LOAD_OP)
@@ -816,7 +843,7 @@ forward(torch::Tensor t_iden";
                 {
                     CIRNode* inNode = loopNode->getNode(ix);
                     auto cNode = dynamic_cast<ComputeNode*>(inNode);
-                    generateOpCode(cNode, fcCount, false, encounteredAutograds, inputSizes, transforms);
+                    generateOpCode(cNode, fcCount, epCount, false, hasFFNEdgeUpdate, encounteredAutograds, inputSizes, transforms);
                 }
                 CIRNode* inNode = loopNode->getNode(loopNode->getLoopNodeNum()-1);
                 auto cNode = dynamic_cast<ComputeNode*>(inNode);
