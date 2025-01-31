@@ -329,10 +329,10 @@ public:
         if (cNode->getOpType() == AGGREGATE_NODE)
         {
             kernelName += "aggregate_node";
-        } else if (cNode->getOpType() == NON_LNR_OP_SOFTMAX)
+        } else if (cNode->getOp() == NON_LNR_OP_SOFTMAX)
         {
             kernelName += "non_lnr_op_softmax";
-        } else if (cNode->getOpType() == AGGREGATE_EDGE_MUL_SUM_OP)
+        } else if (cNode->getOp() == AGGREGATE_EDGE_MUL_SUM_OP)
         {
             kernelName += "aggregate_edge";
         } else
