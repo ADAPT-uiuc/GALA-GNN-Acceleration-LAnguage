@@ -329,6 +329,12 @@ public:
         if (cNode->getOpType() == AGGREGATE_NODE)
         {
             kernelName += "aggregate_node";
+        } else if (cNode->getOpType() == NON_LNR_OP_SOFTMAX)
+        {
+            kernelName += "non_lnr_op_softmax";
+        } else if (cNode->getOpType() == AGGREGATE_EDGE_MUL_SUM_OP)
+        {
+            kernelName += "aggregate_edge";
         } else
         {
             kernelName += "unsupported";
@@ -518,93 +524,269 @@ public:
             auto outputGraph = cNode->getOutput(1);
             std::string transformationCode = generateTransformation(outputGraph, transforms);
             preCode.addCode(transformationCode);
-        } else if (cNode->getOp() == AGGREGATE_MUL_SUM_OP)
+        } else if (cNode->getOp() == AGGREGATE_EDGE_MUL_SUM_OP)
         {
             bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);
-
-            // TODO get if col_tile from the data
-             // Also add the autograd function which should be generated based on the program
-             // TODO change the function call based on the optimizations
-             //  Global_i@s_directed does not need to be passed. You do do neet to pass segments.
 
             if (encounteredAutograds.find(getKernelName(cNode)) == encounteredAutograds.end())
             {
                 encounteredAutograds.insert(getKernelName(cNode));
-                std::string autoGradFunction = ""
-"class " + getKernelName(cNode) + "_AutoGrad : public torch::autograd::Function<" + getKernelName(cNode) + "_AutoGrad> {\n\
+                std::string autoGradFunction = "class " + getKernelName(cNode) + "_Autograd : public torch::autograd::Function<" + getKernelName(cNode) + "_Autograd> {\n\
 public:\n\
-    static torch::Tensor forward(torch::autograd::AutogradContext *ctx,\n\
-                                 torch::Tensor input_dense, int li) {\n\
-        ctx->saved_data[\"li\"] = li;\n\
+  static torch::Tensor forward(torch::autograd::AutogradContext *ctx,\n\
+                               torch::Tensor input_dense1,\n\
+                               torch::Tensor input_dense2,\n\
+                               torch::Tensor value_graph,\n\
+                               int li) {\n";
+                autoGradFunction += "        ctx->saved_data[\"li\"] = li;\n\
         torch::Tensor offset_graph = global_offset_graph[2 * li];\n\
-        torch::Tensor columns_graph = global_columns_graph[2 * li];\n\
-        torch::Tensor value_graph = global_value_graph[2 * li];\n";
+        torch::Tensor columns_graph = global_columns_graph[2 * li];\n";
 
-            if (isColTile){
-                autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
+                if (isColTile){
+                    autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
         int segments = global_segments[2 * li];\n\
-         return " + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph,\n\
-                            value_graph, bounds, segments);\n";
-            } else
-            {
-                autoGradFunction += "        return " + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph,\n\
-                                  value_graph);\n";
-            }
+        return edge_sddvv(input_dense1, input_dense2, offset_graph, columns_graph,\n\
+                            value_graph, bounds, global_nrows, segments)";
+                } else
+                {
+                    autoGradFunction += "unsupported\n";
+                }
+                autoGradFunction += "}\n";
 
-            autoGradFunction += "    }\n\
-\n\
-    static torch::autograd::tensor_list\n\
-    backward(torch::autograd::AutogradContext *ctx,\n\
-             torch::autograd::tensor_list grad_outputs) {\n\
-        torch::Tensor input_dense = grad_outputs[0];\n\
-        int li = ctx->saved_data[\"li\"].toInt();\n\
+                autoGradFunction += " static torch::autograd::tensor_list\n\
+                    backward(torch::autograd::AutogradContext *ctx,\n\
+                             torch::autograd::tensor_list grad_outputs) {\n\
+                    torch::Tensor d_value_graph = grad_outputs[0];\n";
+                autoGradFunction += " int li = ctx->saved_data[\"li\"].toInt();\n\
         torch::Tensor offset_graph = global_offset_graph[2 * li + 1];\n\
         torch::Tensor columns_graph = global_columns_graph[2 * li + 1];\n\
-        torch::Tensor value_graph = global_value_graph[2 * li + 1];\n";
-
-            if (isColTile){
-                autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
-        int segments = global_segments[2 * li];\n\
-        return {" + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph, value_graph, bounds, segments), torch::Tensor()};";
-            } else
-            {
-                autoGradFunction += "\
-        return {" + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph,\n\
-                                   value_graph), torch::Tensor()};\n";
-            }
-
-    autoGradFunction += "\
+        torch::Tensor bounds = global_bounds[2 * li + 1];\n\
+        int segments = global_segments[2 * li + 1];\n\
+        torch::Tensor back_res = node_spmv_backward_of_sddmm_nln(\n\
+                    offset_graph, columns_graph, // This should be the reverse graph\n\
+                    d_value_graph, bounds, global_nrows, segments);\n\
+        return {back_res,\n\
+                back_res,\n\
+                torch::Tensor(),\n\
     }\n\
-};";
-        kernelCallCode.addCode(autoGradFunction);
+};\n";
+                kernelCallCode.addCode(autoGradFunction);
             }
-            if (outOfLoop)
+            auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
+            std::string tempForwardAggrCall = generateOutputString(cNode) + " = " + getKernelName(cNode)
+            + "_AutoGrad::apply(attn_l, attn_r, value_graph, " + std::to_string(inGraphIndx) + ");";
+            model.getForward()->addCode(tempForwardAggrCall);
+        } else if (cNode->getOp() == NON_LNR_OP_SOFTMAX)
+        {
+            bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);
+
+            if (encounteredAutograds.find(getKernelName(cNode)) == encounteredAutograds.end())
             {
-                // TODO later make this better
-                auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
-                std::string tempForwardAggrCall =  "t_iden = " + getKernelName(cNode)
-                + "_AutoGrad::apply(t_iden, " + std::to_string(inGraphIndx) + ");";
-                model.getInv()->addCode(tempForwardAggrCall);
+                encounteredAutograds.insert(getKernelName(cNode));
+                std::string autoGradFunction = "class " + getKernelName(cNode) + "_Autograd : public torch::autograd::Function<" + getKernelName(cNode) + "_Autograd> {\n\
+public:\n\
+  static torch::Tensor forward(torch::autograd::AutogradContext *ctx,\n\
+                               torch::Tensor value_graph,\n\
+                               int li) {\n";
+                autoGradFunction += "        ctx->saved_data[\"li\"] = li;\n\
+        torch::Tensor offset_graph = global_offset_graph[2 * li];\n\
+        torch::Tensor columns_graph = global_columns_graph[2 * li];\n";
+
+                if (isColTile){
+                    autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
+        int segments = global_segments[2 * li];\n";
+                } else
+                {
+                    autoGradFunction += "unsupported\n";
+                }
+
+                autoGradFunction += "    torch::Tensor val_exp = torch::exp(value_graph);\n\
+    val_exp = torch::clamp(val_exp, 0.0, 1e12);\n\
+    torch::Tensor row_sum = node_spmv_backward_of_sddmm(\n\
+        offset_graph, columns_graph, val_exp, bounds, global_nrows,\n\
+        segments);\n\
+    auto options = torch::TensorOptions()\n\
+                       .dtype(torch::kFloat)\n\
+                       .requires_grad(true)\n\
+                       .device(torch::kCUDA, 0);\n\
+    row_sum = torch::reciprocal(row_sum);\n\
+    val_exp = inplace_softmax_sddvv(row_sum, offset_graph, columns_graph, \n\
+                                    val_exp, bounds, global_nrows, segments);n\n\
+    ctx->save_for_backward({val_exp});\n\
+    return val_exp;\n\
+  }\n\
+  static torch::autograd::tensor_list\n\
+  backward(torch::autograd::AutogradContext *ctx,\n\
+           torch::autograd::tensor_list grad_outputs) {\n\
+    torch::Tensor d_value_graph = grad_outputs[0];\n\
+    auto saved = ctx->get_saved_variables();\n";
+                autoGradFunction += " int li = ctx->saved_data[\"li\"].toInt();\n\
+        torch::Tensor offset_graph = global_offset_graph[2 * li + 1];\n\
+        torch::Tensor columns_graph = global_columns_graph[2 * li + 1];\n";
+
+                if (isColTile){
+                    autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li + 1];\n\
+        int segments = global_segments[2 * li + 1];\n";
+                } else
+                {
+                    autoGradFunction += "unsupported\n";
+                }
+                autoGradFunction += "    torch::Tensor value_graph = saved[0]; // n x 1\n\
+    torch::Tensor sds = value_graph * d_value_graph; // e x 1\n\
+    torch::Tensor accum = node_spmv_backward_of_sddmm(\n\
+        offset_graph, columns_graph, sds, bounds, global_nrows, segments); // n x 1\n\
+    torch::Tensor res = inplace_softmax_sddvv_mult(\n\
+        accum, offset_graph, columns_graph, value_graph, bounds, global_nrows,\n\
+        segments);\n\
+    res = sds - res;\n\
+    return {res, torch::Tensor()};\n\
+  }\n\
+};\n";
+                kernelCallCode.addCode(autoGradFunction);
+            }
+            auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
+            std::string tempForwardAggrCall = generateOutputString(cNode) + " = " + getKernelName(cNode)
+            + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");";
+            model.getForward()->addCode(tempForwardAggrCall);
+        } else if (cNode->getOp() == AGGREGATE_MUL_SUM_OP)
+        {
+            if (hasFFNEdgeUpdate)
+            {
+                bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);
+                if (encounteredAutograds.find(getKernelName(cNode)) == encounteredAutograds.end())
+                {
+                    encounteredAutograds.insert(getKernelName(cNode));
+                    std::string autoGradFunction = ""
+    "class " + getKernelName(cNode) + "_AutoGrad : public torch::autograd::Function<" + getKernelName(cNode) + "_AutoGrad> {\n\
+    public:\n\
+        static torch::Tensor forward(torch::autograd::AutogradContext *ctx,\n\
+                                     torch::Tensor input_dense, torch::Tensor value_graph, int li) {\n\
+            ctx->saved_data[\"li\"] = li;\n\
+            torch::Tensor offset_graph = global_offset_graph[2 * li];\n\
+            torch::Tensor columns_graph = global_columns_graph[2 * li];\n\
+            ctx->save_for_backward(\n\
+                {value_graph, input_dense});\n";
+                if (isColTile){
+                    autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
+            int segments = global_segments[2 * li];\n\
+             return " + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph,\n\
+                                value_graph, bounds, segments);\n";
+                } else
+                {
+                    autoGradFunction += "        return " + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph,\n\
+                                      value_graph);\n";
+                }
+                autoGradFunction += "    }\n\
+    \n\
+        static torch::autograd::tensor_list\n\
+        backward(torch::autograd::AutogradContext *ctx,\n\
+                 torch::autograd::tensor_list grad_outputs) {\n\
+            torch::Tensor dZ = grad_outputs[0];\n\
+            auto saved = ctx->get_saved_variables();\n\
+            torch::Tensor value_graph = saved[0];\n\
+            torch::Tensor X = saved[1];\n\
+            return {gather_forward_gcn(dZ, offset_graph, columns_graph, value_graph,\n\
+                                       bounds, global_nrows, global_segments,\n\
+                                       global_is_directed),\n\
+                    edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
+                               global_nrows, segments),\n\
+                torch::Tensor()};\n\
+        }\n\
+    };\n";
+                if (isColTile){
+                    autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
+            int segments = global_segments[2 * li];\n\
+            return {" + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph, value_graph, bounds, segments), torch::Tensor()};";
+                } else
+                {
+                    autoGradFunction += "\
+            return {" + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph,\n\
+                                       value_graph), torch::Tensor()};\n";
+                }
+        autoGradFunction += "\
+        }\n\
+    };";
+            kernelCallCode.addCode(autoGradFunction);
+                }
+                if (outOfLoop)
+                {
+                    // TODO later make this better
+                    auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
+                    std::string tempForwardAggrCall =  "t_iden = " + getKernelName(cNode)
+                    + "_AutoGrad::apply(t_iden, " + std::to_string(inGraphIndx) + ");";
+                    model.getInv()->addCode(tempForwardAggrCall);
+                } else
+                {
+                    auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
+                    std::string tempForwardAggrCall = generateOutputString(cNode) + " = " + getKernelName(cNode)
+                    + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");";
+                    model.getForward()->addCode(tempForwardAggrCall);
+                }
             } else
             {
-                auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
-                std::string tempForwardAggrCall = generateOutputString(cNode) + " = " + getKernelName(cNode)
-                + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");";
-                model.getForward()->addCode(tempForwardAggrCall);
+                bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);
+                if (encounteredAutograds.find(getKernelName(cNode)) == encounteredAutograds.end())
+                {
+                    encounteredAutograds.insert(getKernelName(cNode));
+                    std::string autoGradFunction = ""
+    "class " + getKernelName(cNode) + "_AutoGrad : public torch::autograd::Function<" + getKernelName(cNode) + "_AutoGrad> {\n\
+    public:\n\
+        static torch::Tensor forward(torch::autograd::AutogradContext *ctx,\n\
+                                     torch::Tensor input_dense, int li) {\n\
+            ctx->saved_data[\"li\"] = li;\n\
+            torch::Tensor offset_graph = global_offset_graph[2 * li];\n\
+            torch::Tensor columns_graph = global_columns_graph[2 * li];\n\
+            torch::Tensor value_graph = global_value_graph[2 * li];\n";
+                if (isColTile){
+                    autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
+            int segments = global_segments[2 * li];\n\
+             return " + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph,\n\
+                                value_graph, bounds, segments);\n";
+                } else
+                {
+                    autoGradFunction += "        return " + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph,\n\
+                                      value_graph);\n";
+                }
+                autoGradFunction += "    }\n\
+    \n\
+        static torch::autograd::tensor_list\n\
+        backward(torch::autograd::AutogradContext *ctx,\n\
+                 torch::autograd::tensor_list grad_outputs) {\n\
+            torch::Tensor input_dense = grad_outputs[0];\n\
+            int li = ctx->saved_data[\"li\"].toInt();\n\
+            torch::Tensor offset_graph = global_offset_graph[2 * li + 1];\n\
+            torch::Tensor columns_graph = global_columns_graph[2 * li + 1];\n\
+            torch::Tensor value_graph = global_value_graph[2 * li + 1];\n";
+                if (isColTile){
+                    autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
+            int segments = global_segments[2 * li];\n\
+            return {" + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph, value_graph, bounds, segments), torch::Tensor()};";
+                } else
+                {
+                    autoGradFunction += "\
+            return {" + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph,\n\
+                                       value_graph), torch::Tensor()};\n";
+                }
+        autoGradFunction += "\
+        }\n\
+    };";
+            kernelCallCode.addCode(autoGradFunction);
+                }
+                if (outOfLoop)
+                {
+                    // TODO later make this better
+                    auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
+                    std::string tempForwardAggrCall =  "t_iden = " + getKernelName(cNode)
+                    + "_AutoGrad::apply(t_iden, " + std::to_string(inGraphIndx) + ");";
+                    model.getInv()->addCode(tempForwardAggrCall);
+                } else
+                {
+                    auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
+                    std::string tempForwardAggrCall = generateOutputString(cNode) + " = " + getKernelName(cNode)
+                    + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");";
+                    model.getForward()->addCode(tempForwardAggrCall);
+                }
             }
-
-        // if (outOfLoop)
-        // {
-        //     auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
-        //     std::string tempForwardAggrCall = "t_iden = " + getKernelName(cNode) + "_AutoGrad::apply(t_iden, " + std::to_string(inGraphIndx) + ");";
-        //     model.getInv()->addCode(tempForwardAggrCall);
-        // } else
-        // {
-        //     auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
-        //     std::string tempForwardAggrCall = "res = " + getKernelName(cNode) + "_AutoGrad::apply(res, " + std::to_string(inGraphIndx) + ");";
-        //     model.getForward()->addCode(tempForwardAggrCall);
-        // }
-
         } else if (cNode->getOp() == AGGREGATE_MUL_SUM_DIRECT)
         {
             bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);
@@ -690,7 +872,7 @@ public:\n\
                 std::string leakyReluInit = "     torch::nn::LeakyReLU leaky_relu(torch::nn::LeakyReLUOptions().negative_slope(0.2))";
                 model.getForward()->addCode(leakyReluInit);
             }
-            std::string leakyReluCall += "     " + generateOutputString(cNode) + " = leaky_relu->forward(" + cNode->getInput(0)->getName() + ");";
+            std::string leakyReluCall = "     " + generateOutputString(cNode) + " = leaky_relu->forward(" + cNode->getInput(0)->getName() + ");";
             model.getForward()->addCode(leakyReluCall);
         } else if (cNode->getOp() == FFN_OP)
         {

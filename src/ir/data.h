@@ -96,6 +96,7 @@ private:
   std::vector<std::pair<DataOptimization, string>> opts;
   bool isDirected;
   bool isWeighted;
+  bool isSparse = false;
   int dimRow;
   int dimCol;
     // To be used by the global meta-data array
@@ -130,6 +131,16 @@ public:
   }
   void setDirected(bool directed) {
     this->isDirected = directed;
+  }
+
+  // Get and set if sparse
+  bool getSparse()
+  {
+      return this->isSparse;
+  }
+  void setSparse(bool sparse)
+  {
+      this->isSparse = sparse;
   }
 
   // Get and set weighted

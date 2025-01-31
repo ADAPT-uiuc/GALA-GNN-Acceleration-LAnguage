@@ -615,7 +615,7 @@ struct GAT : torch::nn::Module {
           torch::Tensor columns_graph, // A_sparse_col_ids
           torch::Tensor value_graph,   // A_sparse_values
           torch::Tensor bounds,        // A_sparse_tile_bounds
-          int nrows, int segments, int slope) {
+          int nrows, int segments, float slope) {
     global_nrows = nrows;
     global_segments = segments;
     torch::nn::LeakyReLU leaky_relu(
