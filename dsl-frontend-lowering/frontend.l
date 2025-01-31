@@ -39,10 +39,16 @@ coarsen { return COARSEN; }
 dsl.reorder.rabbit { return RABBIT_REORDER_OP; }
 dsl.sample.random  { return SAMPLE_RANDOM_OP; }
 nn.ffn { return FFN; }
+scalar_init { return SCALAR_INIT; }
+fn.softmax { return SOFTMAX; }
+nn.init_weight { return INIT_WEIGHT; }
 fn.pow { return POW; }
+src { return SRC_ATTR; }
+dst { return DST_ATTR; }
 out= { return FFN_OUT; }
 size { return SIZE_FN; }
 non_ln.ReLU { return RELU; }
+non_ln.LeakyReLU { return LEAKY_RELU; }
 dsl.nn.loss.RMSE { return RMSE_LOSS; }
 dsl.nn.optmz.ADAM { return ADAM_T; }
 DSL_Dataset { return DATASET; }

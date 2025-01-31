@@ -87,6 +87,7 @@ void yyerror(const char *s);
 vector<CIRNode*> program;
 TrainingLoopNode* mainTrainingLoop;
 int iters = -1;
+int debug = 0;
 int numLayers = 0;
 vector<RelationEdge*> dependencies;
 vector<RelationEdge*> associations;
@@ -99,6 +100,7 @@ map<string, int> trainArgs;
 // the external input (defaultInput) is the last thing in the trainingNodeLoop
 // also the graph (transformed graph) is used as an input, but just for the aggregate node
 void addAggregate_CIR(DataNode* defaultInput, DataNode* graph){
+    if (debug) cout << "aggregate" << '\n';
     ForwardNode* aggregate = new ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
     DataInfo* outputInfo = new DataInfo(RM_DTYPE);
     outputInfo->setDims(-1, -2); // -1=N=232965, the number of nodes in the graph
@@ -123,6 +125,7 @@ void addAggregate_CIR(DataNode* defaultInput, DataNode* graph){
     dependencies.push_back(inOutAggrRelationGraph);
 }
 void addFFN_CIR(DataNode* defaultInput){
+    if (debug) cout << "ffn" << '\n';
     ForwardNode* ffn = new ForwardNode(UPDATE_NODE, FFN_OP);
     // weight as matrix in DIR
     DataInfo* weightInfo = new DataInfo(RM_DTYPE);
@@ -151,6 +154,7 @@ void addFFN_CIR(DataNode* defaultInput){
     associations.push_back(inOutWeightAssociation);
 }
 void addNormalization_CIR(DataNode* defaultInput){
+    if (debug) cout << "normalization setup\n";
     ForwardNode* powerOp = new ForwardNode(POINTWISE, POWER_OP);
 	powerOp->addParam("-0.5");
 	DataInfo* normInfo = new DataInfo(RM_DTYPE);
@@ -164,6 +168,7 @@ void addNormalization_CIR(DataNode* defaultInput){
 	dependencies.push_back(powerOpDegreesDependency);
 }
 void addNormCalc_CIR(DataNode* defaultInput, DataNode* featData){
+    if (debug) cout << "normalization-calculation\n";
 	// 1st normalization calculation
 	ForwardNode* normFeat1 = new ForwardNode(UPDATE_NODE, ROW_BROADCAST_OP);
 	DataInfo* normFeat1Info = new DataInfo(RM_DTYPE);
@@ -182,6 +187,7 @@ void addNormCalc_CIR(DataNode* defaultInput, DataNode* featData){
 	associations.push_back(normFeat1NormFeatAssociation);
 }
 void addReLU_CIR(DataNode* defaultInput){
+    if (debug) cout << "relu\n";
     // ReLU operation
 	ForwardNode* reluOp = new ForwardNode(POINTWISE, NON_LNR_OP_RELU);
 	DataInfo* reluInfo = new DataInfo(RM_DTYPE);
@@ -190,11 +196,13 @@ void addReLU_CIR(DataNode* defaultInput){
 	DataNode* reluData = new DataNode("res-relu", INT32, INT32, F32, rootReluLevel);
 	reluOp->addInputData(defaultInput);
 	reluOp->addOutputData(reluData);
+    dataNodeMap["reluData"] = reluData;
 	mainTrainingLoop->addLoopNode(reluOp);
 	RelationEdge* reluOpOnesDependency = new RelationEdge(defaultInput, ALL_RELATION, reluData, ALL_RELATION);
 	dependencies.push_back(reluOpOnesDependency);
 }
 void addDegrees_CIR(DataNode* defaultInput, DataNode* graph){
+    if (debug) cout << "degrees\n";
     /// Degree op
 	// Ones
 	// NOTE: In the front-end code there is no need for a user to get the degrees() by getting ones, and doing an
@@ -226,8 +234,145 @@ void addDegrees_CIR(DataNode* defaultInput, DataNode* graph){
 	RelationEdge* degreesOpGraphDependency = new RelationEdge(graph, ALL_RELATION, degreesData, ROWS_RELATION);
 	dependencies.push_back(degreesOpGraphDependency);
 }
+void mulScalarEPS_CIR(DataNode* featData){
+    if (debug) cout << "mul-scalar-eps\n";
+    // Scalar multiply res
+	ForwardNode* scalarEps = new ForwardNode(POINTWISE, SCALAR_ADD_EPS_MULTIPLY_OP);
+	scalarEps->addParam("1"); // TODO: change this to user input instead of hardcode
+	DataInfo* scalarInfo = new DataInfo(RM_DTYPE);
+	scalarInfo->setDims(-1, -2);
+	DataLevel* rootScalarEpsLevel = new DataLevel(scalarInfo, true);
+	DataNode* scalarEpsData = new DataNode("res-mulScalarEPS", INT32, INT32, F32, rootScalarEpsLevel);
+	scalarEps->addInputData(featData);
+	scalarEps->addOutputData(scalarEpsData);
+	mainTrainingLoop->addLoopNode(scalarEps);
+	RelationEdge* scalarEpsDependency = new RelationEdge(featData, ALL_RELATION, scalarEpsData, ALL_RELATION);
+	dependencies.push_back(scalarEpsDependency);
 
-#line 231 "build/frontend.tab.c"
+}
+void addScalarEPS_CIR(DataNode* defaultInput, DataNode* aggrOutput){
+    if (debug) cout << "add-scalar-eps\n";
+    // Add epsilon mult and scalar mults
+	ForwardNode* normFeat = new ForwardNode(UPDATE_NODE, ADD_OP);
+	DataInfo* normFeatInfo = new DataInfo(RM_DTYPE);
+	normFeatInfo->setDims(-1, -2);
+	DataLevel* rootNormFeatLevel = new DataLevel(normFeatInfo, true);
+	DataNode* normFeatData = new DataNode("res-addScalarEPS", INT32, INT32, F32, rootNormFeatLevel);
+	normFeat->addInputData(defaultInput);
+	normFeat->addInputData(aggrOutput);
+	normFeat->addOutputData(normFeatData);
+	mainTrainingLoop->addLoopNode(normFeat);
+	RelationEdge* normFeatNormDependency = new RelationEdge(defaultInput, ALL_RELATION, normFeatData, ALL_RELATION);
+	dependencies.push_back(normFeatNormDependency);
+	RelationEdge* normFeatFeatDependency = new RelationEdge(aggrOutput, ALL_RELATION, normFeatData, ALL_RELATION);
+	dependencies.push_back(normFeatFeatDependency);
+	RelationEdge* normFeatNormFeatAssociation = new RelationEdge(defaultInput, ALL_RELATION, aggrOutput, ALL_RELATION);
+	associations.push_back(normFeatNormFeatAssociation);
+}
+void addAttentionWeight_L(DataNode* resData){
+    if (debug) cout << "add attention weight left\n";
+    // Add attention weight operation (L side)
+	// L side
+	ForwardNode* atten_l = new ForwardNode(UPDATE_NODE, FFN_OP);
+	// Weight as a matrix in the DIR
+	DataInfo* attenLWeightInfo = new DataInfo(CM_DTYPE);
+	attenLWeightInfo->setDims(-2, 1); // -2=input embedding dimension, -3=output classes
+	DataLevel* attenLWeightLevel = new DataLevel(attenLWeightInfo, true);
+	DataNode* attenLWeightData = new DataNode("attenLWeight1", INT32, INT32, F32, attenLWeightLevel);
+	// Res DIR
+	DataInfo* attenLInfo = new DataInfo(RM_DTYPE);
+	attenLInfo->setDims(-1, 1); // -1=N=232965, the number of nodes in the graph, -3=output classes
+	DataLevel* rootAttenLLevel = new DataLevel(attenLInfo, true);
+	DataNode* attenLData = new DataNode("attenL", INT32, INT32, F32, rootAttenLLevel);
+    dataNodeMap["attn-l"] = attenLWeightData;
+	// set dimenions from the new schedule information
+	atten_l->addInputData(resData);
+	atten_l->addInputData(attenLWeightData);
+	atten_l->addOutputData(attenLData);
+	mainTrainingLoop->addLoopNode(atten_l);
+	//* Dependencies
+	RelationEdge* inOutAttenLtDepRelationFeat = new RelationEdge(resData, ALL_RELATION, attenLData, ALL_RELATION);
+	RelationEdge* inOutAttenLDepRelationWeight = new RelationEdge(attenLWeightData, COLS_RELATION, attenLData, ROWS_RELATION);
+	dependencies.push_back(inOutAttenLtDepRelationFeat);
+	dependencies.push_back(inOutAttenLDepRelationWeight);
+	RelationEdge* inOutAttenLAssociation = new RelationEdge(resData, ROWS_RELATION, attenLWeightData, COLS_RELATION);
+	associations.push_back(inOutAttenLAssociation);
+}
+void addAttentionWeight_R(DataNode* resData){
+    if (debug) cout << "add attention weight right\n";
+// R side
+	ForwardNode* atten_r = new ForwardNode(UPDATE_NODE, FFN_OP);
+	// Weight as a matrix in the DIR
+	DataInfo* attenRWeightInfo = new DataInfo(CM_DTYPE);
+	attenRWeightInfo->setDims(-2, 1); // -2=input embedding dimension, -3=output classes
+	DataLevel* attenRWeightLevel = new DataLevel(attenRWeightInfo, true);
+	DataNode* attenRWeightData = new DataNode("attenRWeight1", INT32, INT32, F32, attenRWeightLevel);
+	// Res DIR
+	DataInfo* attenRInfo = new DataInfo(RM_DTYPE);
+	attenRInfo->setDims(-1, 1); // -1=N=232965, the number of nodes in the graph, -3=output classes
+	DataLevel* rootAttenRLevel = new DataLevel(attenRInfo, true);
+	DataNode* attenRData = new DataNode("attenR", INT32, INT32, F32, rootAttenRLevel);
+    dataNodeMap["attn-r"] = attenRWeightData;
+	// set dimenions from the new schedule information
+	atten_r->addInputData(resData);
+	atten_r->addInputData(attenRWeightData);
+	atten_r->addOutputData(attenRData);
+	mainTrainingLoop->addLoopNode(atten_r);
+	//* Dependencies
+	RelationEdge* inOutAttenRtDepRelationFeat = new RelationEdge(resData, ALL_RELATION, attenRData, ALL_RELATION);
+	RelationEdge* inOutAttenRDepRelationWeight = new RelationEdge(attenRWeightData, COLS_RELATION, attenRData, ROWS_RELATION);
+	dependencies.push_back(inOutAttenRtDepRelationFeat);
+	dependencies.push_back(inOutAttenRDepRelationWeight);
+	RelationEdge* inOutAttenRAssociation = new RelationEdge(resData, ROWS_RELATION, attenRWeightData, COLS_RELATION);
+	associations.push_back(inOutAttenRAssociation);
+}
+void addEdgeAggregation_CIR(DataNode* attn_l, DataNode* attn_r, DataNode* graph){
+    cout << "edge aggregation\n";
+    ForwardNode* aggregateEdge = new ForwardNode(AGGREGATE_EDGE, AGGREGATE_MUL_SUM_OP);
+    DataInfo* originalGraphInfo = dynamic_cast<DataInfo*>(graph->getData()->next());
+	DataInfo* aggrEdgeInfo = new DataInfo(CSR_STYPE, originalGraphInfo->getDirected(), true);
+	// aggrEdgeInfo.setDims(-4, 1); //-4=E=114M (E = Edges)
+	DataLevel* rootAggrEdgeLevel = new DataLevel(aggrEdgeInfo, true);
+	DataNode* aggrEdgeData = new DataNode("res-edgeAggr", INT32, INT32, F32, rootAggrEdgeLevel);
+	aggregateEdge->addInputData(attn_l);
+	aggregateEdge->addInputData(attn_r);
+	aggregateEdge->addInputData(graph);
+	aggregateEdge->addOutputData(aggrEdgeData);
+	// TODO add optimizations
+	mainTrainingLoop->addLoopNode(aggregateEdge);
+}
+void addLeakyReLU(DataNode* defaultInput, DataNode* graph){
+    cout << "leakyRelu\n"; 
+	// Leaky ReLU operation
+	ForwardNode* leakyReluOp = new ForwardNode(UPDATE_EDGE, NON_LNR_OP_LEAKY_RELU);
+	leakyReluOp->addParam("0.2"); // TODO: avoid hardcoding
+    DataInfo* originalGraphInfo = dynamic_cast<DataInfo*>(graph->getData()->next());
+	DataInfo* leakyReluInfo = new DataInfo(CSR_STYPE, originalGraphInfo->getDirected(), true);
+	// leakyReluInfo.setDims(-4, 1);
+	DataLevel* rootLeakyReluLevel = new DataLevel(leakyReluInfo, true);
+	DataNode* leakyReluData = new DataNode("res-leakyReLU", INT32, INT32, F32, rootLeakyReluLevel);
+	leakyReluOp->addInputData(defaultInput);
+	leakyReluOp->addOutputData(leakyReluData);
+	mainTrainingLoop->addLoopNode(leakyReluOp);
+	RelationEdge* leakyReluOpOnesDependency = new RelationEdge(defaultInput, ALL_RELATION, leakyReluData, ALL_RELATION);
+	dependencies.push_back(leakyReluOpOnesDependency);
+}
+void addSoftmax_CIR(DataNode* defaultInput, DataNode* graph){
+    cout << "softmax\n";
+    ForwardNode* softmaxOp = new ForwardNode(UPDATE_EDGE, NON_LNR_OP_SOFTMAX);
+    DataInfo* originalGraphInfo = dynamic_cast<DataInfo*>(graph->getData()->next());
+	DataInfo* softmaxInfo = new DataInfo(CSR_STYPE, originalGraphInfo->getDirected(), true);
+	// leakyReluInfo.setDims(-4, 1);
+	DataLevel* rootSoftmaxLevel = new DataLevel(softmaxInfo, true);
+	DataNode* softmaxData = new DataNode("ses-softmax", INT32, INT32, F32, rootSoftmaxLevel);
+	softmaxOp->addInputData(defaultInput);
+	softmaxOp->addOutputData(softmaxData);
+	mainTrainingLoop->addLoopNode(softmaxOp);
+	RelationEdge* softmaxOpOnesDependency = new RelationEdge(defaultInput, ALL_RELATION, softmaxData, ALL_RELATION);
+	dependencies.push_back(softmaxOpOnesDependency);
+}
+
+#line 376 "build/frontend.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -293,80 +438,86 @@ enum yysymbol_kind_t
   YYSYMBOL_LABEL_ATTR = 35,                /* LABEL_ATTR  */
   YYSYMBOL_DEGREE_ATTR = 36,               /* DEGREE_ATTR  */
   YYSYMBOL_NODE_ATTR = 37,                 /* NODE_ATTR  */
-  YYSYMBOL_RABBIT_REORDER_OP = 38,         /* RABBIT_REORDER_OP  */
-  YYSYMBOL_SAMPLE_RANDOM_OP = 39,          /* SAMPLE_RANDOM_OP  */
-  YYSYMBOL_POW = 40,                       /* POW  */
-  YYSYMBOL_COLTILE = 41,                   /* COLTILE  */
-  YYSYMBOL_AGGR = 42,                      /* AGGR  */
-  YYSYMBOL_FEAT_SIZE_ASSIGN = 43,          /* FEAT_SIZE_ASSIGN  */
-  YYSYMBOL_LABEL_SIZE_ASSIGN = 44,         /* LABEL_SIZE_ASSIGN  */
-  YYSYMBOL_COARSEN = 45,                   /* COARSEN  */
-  YYSYMBOL_INTEGER = 46,                   /* INTEGER  */
-  YYSYMBOL_FLOAT = 47,                     /* FLOAT  */
-  YYSYMBOL_LBRACE = 48,                    /* LBRACE  */
-  YYSYMBOL_RBRACE = 49,                    /* RBRACE  */
-  YYSYMBOL_LSQBRA = 50,                    /* LSQBRA  */
-  YYSYMBOL_RSQBRA = 51,                    /* RSQBRA  */
-  YYSYMBOL_DOT = 52,                       /* DOT  */
-  YYSYMBOL_COMMA = 53,                     /* COMMA  */
-  YYSYMBOL_IF = 54,                        /* IF  */
-  YYSYMBOL_ELSE = 55,                      /* ELSE  */
-  YYSYMBOL_DO = 56,                        /* DO  */
-  YYSYMBOL_WHILE = 57,                     /* WHILE  */
-  YYSYMBOL_TR = 58,                        /* TR  */
-  YYSYMBOL_FA = 59,                        /* FA  */
-  YYSYMBOL_NOT = 60,                       /* NOT  */
-  YYSYMBOL_AND = 61,                       /* AND  */
-  YYSYMBOL_OR = 62,                        /* OR  */
-  YYSYMBOL_NOTEQ = 63,                     /* NOTEQ  */
-  YYSYMBOL_EQ = 64,                        /* EQ  */
-  YYSYMBOL_GREATER = 65,                   /* GREATER  */
-  YYSYMBOL_LESS = 66,                      /* LESS  */
-  YYSYMBOL_GREATEREQ = 67,                 /* GREATEREQ  */
-  YYSYMBOL_LESSEQ = 68,                    /* LESSEQ  */
-  YYSYMBOL_PLUS = 69,                      /* PLUS  */
-  YYSYMBOL_MINUS = 70,                     /* MINUS  */
-  YYSYMBOL_MULTIPLY = 71,                  /* MULTIPLY  */
-  YYSYMBOL_DIVIDE = 72,                    /* DIVIDE  */
-  YYSYMBOL_FFN = 73,                       /* FFN  */
-  YYSYMBOL_DATASET = 74,                   /* DATASET  */
-  YYSYMBOL_NONLN = 75,                     /* NONLN  */
-  YYSYMBOL_SENSEI_OP = 76,                 /* SENSEI_OP  */
-  YYSYMBOL_INT = 77,                       /* INT  */
-  YYSYMBOL_NEW = 78,                       /* NEW  */
-  YYSYMBOL_NULL_KEY = 79,                  /* NULL_KEY  */
-  YYSYMBOL_YYACCEPT = 80,                  /* $accept  */
-  YYSYMBOL_program = 81,                   /* program  */
-  YYSYMBOL_load_dataset = 82,              /* load_dataset  */
-  YYSYMBOL_algorithm = 83,                 /* algorithm  */
-  YYSYMBOL_statements = 84,                /* statements  */
-  YYSYMBOL_statement = 85,                 /* statement  */
-  YYSYMBOL_layers = 86,                    /* layers  */
-  YYSYMBOL_layer_def = 87,                 /* layer_def  */
-  YYSYMBOL_model = 88,                     /* model  */
-  YYSYMBOL_model_def = 89,                 /* model_def  */
-  YYSYMBOL_layer_inits = 90,               /* layer_inits  */
-  YYSYMBOL_layer_init = 91,                /* layer_init  */
-  YYSYMBOL_model_init = 92,                /* model_init  */
-  YYSYMBOL_model_uses = 93,                /* model_uses  */
-  YYSYMBOL_model_use = 94,                 /* model_use  */
-  YYSYMBOL_gnn_op = 95,                    /* gnn_op  */
-  YYSYMBOL_function = 96,                  /* function  */
-  YYSYMBOL_update_op = 97,                 /* update_op  */
-  YYSYMBOL_schedules = 98,                 /* schedules  */
-  YYSYMBOL_schedule = 99,                  /* schedule  */
-  YYSYMBOL_data_transform = 100,           /* data_transform  */
-  YYSYMBOL_function_transform = 101,       /* function_transform  */
-  YYSYMBOL_data_var = 102,                 /* data_var  */
-  YYSYMBOL_function_init = 103,            /* function_init  */
-  YYSYMBOL_semiring_op = 104,              /* semiring_op  */
-  YYSYMBOL_op = 105,                       /* op  */
-  YYSYMBOL_train_args = 106,               /* train_args  */
-  YYSYMBOL_train_arg = 107,                /* train_arg  */
-  YYSYMBOL_args = 108,                     /* args  */
-  YYSYMBOL_arg = 109,                      /* arg  */
-  YYSYMBOL_bool = 110,                     /* bool  */
-  YYSYMBOL_string = 111                    /* string  */
+  YYSYMBOL_LEAKY_RELU = 38,                /* LEAKY_RELU  */
+  YYSYMBOL_RABBIT_REORDER_OP = 39,         /* RABBIT_REORDER_OP  */
+  YYSYMBOL_SAMPLE_RANDOM_OP = 40,          /* SAMPLE_RANDOM_OP  */
+  YYSYMBOL_POW = 41,                       /* POW  */
+  YYSYMBOL_SCALAR_INIT = 42,               /* SCALAR_INIT  */
+  YYSYMBOL_COLTILE = 43,                   /* COLTILE  */
+  YYSYMBOL_AGGR = 44,                      /* AGGR  */
+  YYSYMBOL_FEAT_SIZE_ASSIGN = 45,          /* FEAT_SIZE_ASSIGN  */
+  YYSYMBOL_LABEL_SIZE_ASSIGN = 46,         /* LABEL_SIZE_ASSIGN  */
+  YYSYMBOL_COARSEN = 47,                   /* COARSEN  */
+  YYSYMBOL_SRC_ATTR = 48,                  /* SRC_ATTR  */
+  YYSYMBOL_DST_ATTR = 49,                  /* DST_ATTR  */
+  YYSYMBOL_INTEGER = 50,                   /* INTEGER  */
+  YYSYMBOL_FLOAT = 51,                     /* FLOAT  */
+  YYSYMBOL_SOFTMAX = 52,                   /* SOFTMAX  */
+  YYSYMBOL_INIT_WEIGHT = 53,               /* INIT_WEIGHT  */
+  YYSYMBOL_LBRACE = 54,                    /* LBRACE  */
+  YYSYMBOL_RBRACE = 55,                    /* RBRACE  */
+  YYSYMBOL_LSQBRA = 56,                    /* LSQBRA  */
+  YYSYMBOL_RSQBRA = 57,                    /* RSQBRA  */
+  YYSYMBOL_DOT = 58,                       /* DOT  */
+  YYSYMBOL_COMMA = 59,                     /* COMMA  */
+  YYSYMBOL_IF = 60,                        /* IF  */
+  YYSYMBOL_ELSE = 61,                      /* ELSE  */
+  YYSYMBOL_DO = 62,                        /* DO  */
+  YYSYMBOL_WHILE = 63,                     /* WHILE  */
+  YYSYMBOL_TR = 64,                        /* TR  */
+  YYSYMBOL_FA = 65,                        /* FA  */
+  YYSYMBOL_NOT = 66,                       /* NOT  */
+  YYSYMBOL_AND = 67,                       /* AND  */
+  YYSYMBOL_OR = 68,                        /* OR  */
+  YYSYMBOL_NOTEQ = 69,                     /* NOTEQ  */
+  YYSYMBOL_EQ = 70,                        /* EQ  */
+  YYSYMBOL_GREATER = 71,                   /* GREATER  */
+  YYSYMBOL_LESS = 72,                      /* LESS  */
+  YYSYMBOL_GREATEREQ = 73,                 /* GREATEREQ  */
+  YYSYMBOL_LESSEQ = 74,                    /* LESSEQ  */
+  YYSYMBOL_PLUS = 75,                      /* PLUS  */
+  YYSYMBOL_MINUS = 76,                     /* MINUS  */
+  YYSYMBOL_MULTIPLY = 77,                  /* MULTIPLY  */
+  YYSYMBOL_DIVIDE = 78,                    /* DIVIDE  */
+  YYSYMBOL_FFN = 79,                       /* FFN  */
+  YYSYMBOL_DATASET = 80,                   /* DATASET  */
+  YYSYMBOL_NONLN = 81,                     /* NONLN  */
+  YYSYMBOL_SENSEI_OP = 82,                 /* SENSEI_OP  */
+  YYSYMBOL_INT = 83,                       /* INT  */
+  YYSYMBOL_NEW = 84,                       /* NEW  */
+  YYSYMBOL_NULL_KEY = 85,                  /* NULL_KEY  */
+  YYSYMBOL_YYACCEPT = 86,                  /* $accept  */
+  YYSYMBOL_program = 87,                   /* program  */
+  YYSYMBOL_load_dataset = 88,              /* load_dataset  */
+  YYSYMBOL_algorithm = 89,                 /* algorithm  */
+  YYSYMBOL_statements = 90,                /* statements  */
+  YYSYMBOL_statement = 91,                 /* statement  */
+  YYSYMBOL_layers = 92,                    /* layers  */
+  YYSYMBOL_layer_def = 93,                 /* layer_def  */
+  YYSYMBOL_model = 94,                     /* model  */
+  YYSYMBOL_model_def = 95,                 /* model_def  */
+  YYSYMBOL_layer_inits = 96,               /* layer_inits  */
+  YYSYMBOL_layer_init = 97,                /* layer_init  */
+  YYSYMBOL_model_init = 98,                /* model_init  */
+  YYSYMBOL_model_uses = 99,                /* model_uses  */
+  YYSYMBOL_model_use = 100,                /* model_use  */
+  YYSYMBOL_gnn_op = 101,                   /* gnn_op  */
+  YYSYMBOL_function = 102,                 /* function  */
+  YYSYMBOL_update_op = 103,                /* update_op  */
+  YYSYMBOL_schedules = 104,                /* schedules  */
+  YYSYMBOL_schedule = 105,                 /* schedule  */
+  YYSYMBOL_data_transform = 106,           /* data_transform  */
+  YYSYMBOL_function_transform = 107,       /* function_transform  */
+  YYSYMBOL_data_var = 108,                 /* data_var  */
+  YYSYMBOL_function_init = 109,            /* function_init  */
+  YYSYMBOL_semiring_op = 110,              /* semiring_op  */
+  YYSYMBOL_op = 111,                       /* op  */
+  YYSYMBOL_train_args = 112,               /* train_args  */
+  YYSYMBOL_train_arg = 113,                /* train_arg  */
+  YYSYMBOL_args = 114,                     /* args  */
+  YYSYMBOL_arg = 115,                      /* arg  */
+  YYSYMBOL_bool = 116,                     /* bool  */
+  YYSYMBOL_string = 117                    /* string  */
 };
 typedef enum yysymbol_kind_t yysymbol_kind_t;
 
@@ -694,19 +845,19 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  5
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   235
+#define YYLAST   244
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  80
+#define YYNTOKENS  86
 /* YYNNTS -- Number of nonterminals.  */
 #define YYNNTS  32
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  73
+#define YYNRULES  81
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  202
+#define YYNSTATES  224
 
 /* YYMAXUTOK -- Last valid token kind.  */
-#define YYMAXUTOK   334
+#define YYMAXUTOK   340
 
 
 /* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
@@ -753,21 +904,23 @@ static const yytype_int8 yytranslate[] =
       45,    46,    47,    48,    49,    50,    51,    52,    53,    54,
       55,    56,    57,    58,    59,    60,    61,    62,    63,    64,
       65,    66,    67,    68,    69,    70,    71,    72,    73,    74,
-      75,    76,    77,    78,    79
+      75,    76,    77,    78,    79,    80,    81,    82,    83,    84,
+      85
 };
 
 #if YYDEBUG
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,   204,   204,   227,   257,   258,   262,   267,   268,   274,
-     345,   351,   373,   379,   380,   383,   396,   398,   431,   432,
-     434,   436,   438,   442,   443,   445,   446,   451,   458,   463,
-     469,   474,   481,   482,   487,   490,   494,   505,   514,   523,
-     534,   564,   579,   582,   590,   595,   600,   605,   610,   616,
-     619,   622,   622,   622,   622,   624,   625,   628,   633,   635,
-     637,   640,   641,   645,   645,   649,   649,   651,   651,   655,
-     655,   660,   660,   661
+       0,   349,   349,   372,   403,   404,   408,   413,   414,   420,
+     565,   571,   593,   599,   600,   603,   616,   618,   665,   666,
+     668,   670,   672,   676,   677,   679,   690,   694,   710,   717,
+     723,   728,   734,   739,   744,   750,   754,   758,   763,   764,
+     769,   772,   776,   787,   796,   805,   816,   846,   861,   864,
+     872,   877,   882,   887,   892,   897,   902,   908,   911,   914,
+     914,   914,   914,   916,   917,   920,   925,   927,   929,   932,
+     933,   937,   937,   941,   941,   943,   943,   947,   947,   952,
+     952,   953
 };
 #endif
 
@@ -789,17 +942,18 @@ static const char *const yytname[] =
   "LOSS", "OPTIMIZER", "ITERS", "VAL_STEP", "RMSE_LOSS", "ADAM_T",
   "AGGR_INIT", "FN_ARG", "MUL_SUM", "DSL_FN", "DSL_DOT", "FFN_OUT",
   "SIZE_FN", "RELAXNLN", "QUANT", "GRAPH_ATTR", "FEAT_ATTR", "RELU",
-  "LABEL_ATTR", "DEGREE_ATTR", "NODE_ATTR", "RABBIT_REORDER_OP",
-  "SAMPLE_RANDOM_OP", "POW", "COLTILE", "AGGR", "FEAT_SIZE_ASSIGN",
-  "LABEL_SIZE_ASSIGN", "COARSEN", "INTEGER", "FLOAT", "LBRACE", "RBRACE",
-  "LSQBRA", "RSQBRA", "DOT", "COMMA", "IF", "ELSE", "DO", "WHILE", "TR",
-  "FA", "NOT", "AND", "OR", "NOTEQ", "EQ", "GREATER", "LESS", "GREATEREQ",
-  "LESSEQ", "PLUS", "MINUS", "MULTIPLY", "DIVIDE", "FFN", "DATASET",
-  "NONLN", "SENSEI_OP", "INT", "NEW", "NULL_KEY", "$accept", "program",
-  "load_dataset", "algorithm", "statements", "statement", "layers",
-  "layer_def", "model", "model_def", "layer_inits", "layer_init",
-  "model_init", "model_uses", "model_use", "gnn_op", "function",
-  "update_op", "schedules", "schedule", "data_transform",
+  "LABEL_ATTR", "DEGREE_ATTR", "NODE_ATTR", "LEAKY_RELU",
+  "RABBIT_REORDER_OP", "SAMPLE_RANDOM_OP", "POW", "SCALAR_INIT", "COLTILE",
+  "AGGR", "FEAT_SIZE_ASSIGN", "LABEL_SIZE_ASSIGN", "COARSEN", "SRC_ATTR",
+  "DST_ATTR", "INTEGER", "FLOAT", "SOFTMAX", "INIT_WEIGHT", "LBRACE",
+  "RBRACE", "LSQBRA", "RSQBRA", "DOT", "COMMA", "IF", "ELSE", "DO",
+  "WHILE", "TR", "FA", "NOT", "AND", "OR", "NOTEQ", "EQ", "GREATER",
+  "LESS", "GREATEREQ", "LESSEQ", "PLUS", "MINUS", "MULTIPLY", "DIVIDE",
+  "FFN", "DATASET", "NONLN", "SENSEI_OP", "INT", "NEW", "NULL_KEY",
+  "$accept", "program", "load_dataset", "algorithm", "statements",
+  "statement", "layers", "layer_def", "model", "model_def", "layer_inits",
+  "layer_init", "model_init", "model_uses", "model_use", "gnn_op",
+  "function", "update_op", "schedules", "schedule", "data_transform",
   "function_transform", "data_var", "function_init", "semiring_op", "op",
   "train_args", "train_arg", "args", "arg", "bool", "string", YY_NULLPTR
 };
@@ -811,7 +965,7 @@ yysymbol_name (yysymbol_kind_t yysymbol)
 }
 #endif
 
-#define YYPACT_NINF (-89)
+#define YYPACT_NINF (-101)
 
 #define yypact_value_is_default(Yyn) \
   ((Yyn) == YYPACT_NINF)
@@ -825,27 +979,29 @@ yysymbol_name (yysymbol_kind_t yysymbol)
    STATE-NUM.  */
 static const yytype_int16 yypact[] =
 {
-      36,    25,    44,    45,    28,   -89,    51,    33,    45,    54,
-     -89,    53,    65,   -89,    78,    92,    33,   -89,   -89,   -89,
-       9,   -89,    98,   -89,   -89,   106,   104,     6,   111,   112,
-      26,   113,   -89,   -29,   114,    73,    77,   -89,   122,    68,
-      69,   123,   125,   126,   119,   122,    99,   -89,   108,   124,
-     127,   128,   -89,   -89,   -89,   -89,   -89,   -89,   122,   -89,
-     129,   130,    83,   132,   -89,   -89,   -89,   133,   -89,   135,
-     139,    12,   -89,   125,   134,   136,   -32,    10,    -1,   141,
-     122,   122,   122,    94,   140,   142,    79,   144,   145,   -89,
-     143,   150,   146,   -89,   -89,   -89,   122,   -89,   118,   107,
-     131,   103,   105,    19,   -89,   120,    15,    41,    43,   -89,
-     -89,   151,   153,   154,   156,   -89,   -89,     0,   -89,   115,
-     157,    17,   158,   -89,   116,   -89,   -89,   -89,   147,   -89,
-     121,   138,    48,    48,   137,   148,   149,     1,   159,   -89,
-     -89,   164,    14,   -89,   -89,   167,   168,   122,   -89,   -89,
-     169,   170,   171,   172,   -89,   173,   174,    30,   176,   178,
-     -89,   -89,   -89,   -89,    18,   177,   179,   180,   181,    16,
-     -89,   -89,   182,   187,   188,   -89,   -89,    29,   -89,   -89,
-     -89,   -89,   -89,   189,   -89,   -89,     7,   -89,   152,   155,
-     183,   191,   160,   161,   190,   -89,   -89,   -89,   -89,     8,
-     192,   -89
+       5,    29,    52,    41,    56,  -101,    74,    18,    41,    76,
+    -101,    81,    96,  -101,    84,    92,    18,  -101,  -101,  -101,
+       7,  -101,    97,  -101,  -101,   102,   101,     8,   105,   107,
+      62,   109,    -8,    58,   110,    71,    72,  -101,   122,   116,
+      35,   125,   123,   134,   132,   122,   114,  -101,   126,   141,
+     148,   149,   150,   151,   152,   153,  -101,  -101,  -101,  -101,
+    -101,  -101,   122,   122,  -101,   155,   156,   108,   154,  -101,
+    -101,  -101,   161,  -101,  -101,  -101,   162,   166,    14,  -101,
+     123,   163,   165,    15,    -4,     0,   167,   122,   122,   122,
+     120,   122,   168,   122,   118,   118,   169,   170,    95,   172,
+     173,  -101,   175,   171,   174,  -101,  -101,  -101,  -101,   122,
+    -101,   146,   129,   157,   127,   128,   -30,  -101,   158,    13,
+      58,   -16,   177,    19,  -101,    -1,  -101,  -101,   182,   184,
+     187,   188,  -101,  -101,     3,  -101,   137,   190,    25,   191,
+    -101,   139,  -101,  -101,  -101,   176,  -101,   122,   159,  -101,
+    -101,   178,    44,    44,   164,   179,   145,     9,   186,  -101,
+    -101,   195,    20,  -101,  -101,   196,    33,   197,   122,  -101,
+    -101,   198,   200,   201,   202,  -101,   203,   206,    27,   205,
+     211,  -101,  -101,  -101,  -101,  -101,    34,   208,   209,   210,
+     212,    21,  -101,  -101,   213,   215,   218,  -101,  -101,    22,
+    -101,  -101,  -101,  -101,  -101,   219,  -101,  -101,    10,  -101,
+     180,   181,   221,   217,   183,   185,   220,  -101,  -101,  -101,
+    -101,    12,   224,  -101
 };
 
 /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -854,44 +1010,46 @@ static const yytype_int16 yypact[] =
 static const yytype_int8 yydefact[] =
 {
        0,     0,     0,     4,     0,     1,     0,     0,     4,     0,
-      13,     0,     0,    42,     0,     0,     2,    32,    34,    35,
-       0,     5,     0,    14,     6,     0,     0,    42,     0,     0,
-       0,     0,    26,     0,     0,     0,     0,    33,     0,     0,
-       0,     0,     0,     0,     0,     0,     0,    61,     0,     0,
-       0,     0,    28,     9,    51,    52,    53,    54,     0,    12,
-       0,     0,     0,     0,    45,    44,    46,     0,    43,     0,
-       0,     0,    16,     0,     0,     0,     0,     0,     0,     0,
-       0,     0,     0,    25,     0,     0,     0,     0,     0,    61,
-       0,     0,     0,    22,    73,     3,     0,    10,     0,     0,
-       0,    64,    66,    68,    62,     0,     0,     0,     0,    38,
-      39,     0,     0,     0,     0,    47,    48,     0,    61,     0,
-       0,     0,     0,     7,    69,    63,    65,    67,     0,    30,
-       0,     0,     0,     0,     0,     0,     0,     0,     0,    55,
-      27,     0,     0,    70,    50,     0,     0,     0,    71,    72,
-       0,     0,     0,     0,    18,     0,     0,     0,     0,     0,
-      15,     8,    49,    31,     0,     0,     0,     0,     0,     0,
-      21,    61,     0,     0,     0,    56,    11,     0,    29,    37,
-      36,    40,    41,     0,    17,    19,     0,    24,     0,     0,
-       0,     0,    57,    59,     0,    23,    58,    60,    61,     0,
-       0,    20
+      13,     0,     0,    48,     0,     0,     2,    38,    40,    41,
+       0,     5,     0,    14,     6,     0,     0,    48,     0,     0,
+       0,     0,    26,     0,     0,     0,     0,    39,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,    69,     0,     0,
+       0,     0,     0,     0,     0,     0,    30,     9,    59,    60,
+      61,    62,     0,     0,    12,     0,     0,     0,     0,    51,
+      50,    52,     0,    49,    55,    56,     0,     0,     0,    16,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,    27,    25,     0,     0,     0,     0,
+       0,    69,     0,     0,     0,    22,    81,     3,    29,     0,
+      10,     0,     0,     0,    72,    74,    76,    70,     0,     0,
+       0,     0,     0,     0,    37,     0,    44,    45,     0,     0,
+       0,     0,    53,    54,     0,    69,     0,     0,     0,     0,
+       7,    77,    71,    73,    75,     0,    32,     0,     0,    35,
+      36,     0,     0,     0,     0,     0,     0,     0,     0,    63,
+      28,     0,     0,    78,    58,     0,     0,     0,     0,    79,
+      80,     0,     0,     0,     0,    18,     0,     0,     0,     0,
+       0,    15,     8,    57,    33,    34,     0,     0,     0,     0,
+       0,     0,    21,    69,     0,     0,     0,    64,    11,     0,
+      31,    43,    42,    46,    47,     0,    17,    19,     0,    24,
+       0,     0,     0,     0,    65,    67,     0,    23,    66,    68,
+      69,     0,     0,    20
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int16 yypgoto[] =
 {
-     -89,   -89,   -89,   194,   -89,    61,   -89,   186,   -89,   -89,
-     -89,   -89,   -89,   -89,   162,   -89,   -89,   -89,   -89,   193,
-     -89,   -89,    -7,   -89,   -89,   -89,   -89,   -89,   -88,   -89,
-      71,   -89
+    -101,  -101,  -101,   225,  -101,    65,  -101,   226,  -101,  -101,
+    -101,  -101,  -101,  -101,   160,  -101,  -101,  -101,  -101,   222,
+    -101,  -101,    -7,  -101,  -101,   -31,  -101,  -101,  -100,  -101,
+      75,  -101
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_uint8 yydefgoto[] =
 {
-       0,     2,     3,     7,   142,     8,     9,    10,    24,    25,
-     169,   185,    42,    72,    73,    31,    32,    52,    16,    17,
-      18,    19,   103,    34,   145,    58,   157,   175,    78,   104,
-     150,    44
+       0,     2,     3,     7,   162,     8,     9,    10,    24,    25,
+     191,   207,    42,    79,    80,    31,    32,    56,    16,    17,
+      18,    19,   116,    34,   165,    62,   178,   197,    85,   117,
+     171,    44
 };
 
 /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -899,98 +1057,103 @@ static const yytype_uint8 yydefgoto[] =
    number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_uint8 yytable[] =
 {
-      20,   117,    13,    13,    13,    33,    99,   136,   155,    20,
-      13,    13,    45,    38,   191,   200,    91,   159,    97,   183,
-      39,    96,   129,    39,   140,   178,   100,   100,   100,     4,
-     137,    62,    27,    11,   100,   100,    13,   172,    76,     1,
-      54,    55,    56,    57,     5,   101,   101,   101,     6,   173,
-     174,    83,    29,   101,   101,    12,    30,    22,    46,    26,
-      49,    39,    98,   160,    92,   184,    50,    39,    27,    39,
-      39,    39,   127,   106,   107,   108,    14,    15,   102,   102,
-     102,    28,    69,   186,    35,    28,   102,   102,    29,   121,
-     111,   112,    30,    39,   130,    39,   131,    63,    36,    51,
-      64,    65,    40,    66,    67,    68,   148,   149,    63,    41,
-     199,    64,    65,    43,    66,    67,    68,    47,    48,    60,
-     113,    53,    59,    61,   114,    13,    75,    70,    71,    74,
-      80,    77,    79,    81,    82,    86,    84,    85,    87,    88,
-     164,    89,    90,    94,    95,   105,    39,   128,   109,   118,
-     110,   115,   116,   119,   122,   123,   125,   132,   126,   133,
-     134,   120,   135,   139,   141,   124,   147,   138,   146,   143,
-      33,   158,   144,   156,   162,   163,   165,   166,   167,   168,
-     171,   170,   177,   152,   176,   179,   194,   180,   181,   182,
-     187,   188,   189,   190,   153,    23,   198,   154,   192,   195,
-     201,   193,    21,   161,   151,     0,     0,     0,     0,    37,
-       0,     0,     0,   196,   197,     0,     0,     0,     0,     0,
-       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,     0,     0,     0,     0,    93
+      20,   134,    63,    13,   110,    33,    13,   112,     1,    20,
+     156,    38,    13,    13,    45,    13,   176,   213,   103,   222,
+     146,    13,   108,   180,   205,    27,   150,   113,    39,   144,
+     113,    67,   160,     4,   194,   157,   113,   113,    83,   113,
+     184,   200,    39,   148,     6,    29,   195,   196,    76,    30,
+     114,    28,     5,   114,   111,    94,    95,    39,   151,   114,
+     114,    11,   114,    14,    15,    39,    46,    58,    59,    60,
+      61,    39,   104,    39,   109,   181,   206,    39,    12,    22,
+     119,   120,   121,    39,   123,   115,   125,    26,   115,   147,
+      35,    39,    39,   208,   115,   115,    49,   115,    36,    27,
+      50,    40,   138,    51,    52,    41,   128,   129,   169,   170,
+      43,    47,    28,    48,    53,    54,    39,    57,    64,    29,
+     221,    65,    66,    30,    68,    13,    78,    69,    70,    77,
+      71,    72,    73,    58,    59,    60,    61,    81,   130,    82,
+     166,    55,   131,    74,    75,    68,    84,    87,    69,    70,
+      86,    71,    72,    73,    88,    89,    90,    91,    92,    93,
+      99,   186,    96,    97,    74,    75,    98,   100,   101,   102,
+     122,   118,   106,   107,   136,   124,    39,   126,   127,   132,
+     133,   135,   139,   140,   149,   145,   142,   143,   152,   137,
+     153,   141,    33,   154,   155,   158,   159,   161,   163,   175,
+     177,   164,   179,   183,   185,   187,   168,   188,   189,   190,
+     167,   192,   193,   198,   173,   199,   201,   202,   203,   210,
+     204,   209,   211,   212,   216,   217,   220,   182,   172,   174,
+     214,   215,   223,    21,     0,    23,     0,     0,    37,     0,
+     105,     0,   218,     0,   219
 };
 
 static const yytype_int16 yycheck[] =
 {
-       7,    89,     3,     3,     3,    12,     7,     7,     7,    16,
-       3,     3,     6,     4,     7,     7,     4,     3,     8,     3,
-      52,    53,     7,    52,     7,     7,    27,    27,    27,     4,
-     118,    38,     3,     5,    27,    27,     3,     7,    45,     3,
-      69,    70,    71,    72,     0,    46,    46,    46,     3,    19,
-      20,    58,    23,    46,    46,     4,    27,     3,    52,     6,
-      34,    52,    52,    49,    52,    49,    40,    52,     3,    52,
-      52,    52,    53,    80,    81,    82,    43,    44,    79,    79,
-      79,    16,    13,   171,     6,    16,    79,    79,    23,    96,
-      11,    12,    27,    52,    53,    52,    53,    29,     6,    73,
-      32,    33,     4,    35,    36,    37,    58,    59,    29,     3,
-     198,    32,    33,     9,    35,    36,    37,     6,     6,    46,
-      41,     8,     8,    46,    45,     3,     7,     4,     3,     3,
-       6,    32,    24,     6,     6,    52,     7,     7,     6,     6,
-     147,     6,     3,     9,     8,     4,    52,    27,     8,     6,
-       8,     7,     7,     3,    36,    48,    53,     6,    53,     6,
-       6,    15,     6,     6,     6,    34,    28,    52,    47,    53,
-     177,     7,    25,    14,     7,     7,     7,     7,     7,     7,
-       6,     8,     4,    46,     8,     8,     3,     8,     8,     8,
-       8,     4,     4,     4,    46,     9,     6,    48,    46,     8,
-       8,    46,     8,   142,   133,    -1,    -1,    -1,    -1,    16,
-      -1,    -1,    -1,    53,    53,    -1,    -1,    -1,    -1,    -1,
-      -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      -1,    -1,    -1,    -1,    -1,    73
+       7,   101,    33,     3,     8,    12,     3,     7,     3,    16,
+       7,     4,     3,     3,     6,     3,     7,     7,     4,     7,
+       7,     3,     7,     3,     3,     3,     7,    27,    58,    59,
+      27,    38,     7,     4,     7,   135,    27,    27,    45,    27,
+       7,     7,    58,    59,     3,    23,    19,    20,    13,    27,
+      50,    16,     0,    50,    58,    62,    63,    58,    59,    50,
+      50,     5,    50,    45,    46,    58,    58,    75,    76,    77,
+      78,    58,    58,    58,    59,    55,    55,    58,     4,     3,
+      87,    88,    89,    58,    91,    85,    93,     6,    85,   120,
+       6,    58,    58,   193,    85,    85,    34,    85,     6,     3,
+      38,     4,   109,    41,    42,     3,    11,    12,    64,    65,
+       9,     6,    16,     6,    52,    53,    58,     8,     8,    23,
+     220,    50,    50,    27,    29,     3,     3,    32,    33,     4,
+      35,    36,    37,    75,    76,    77,    78,     3,    43,     7,
+     147,    79,    47,    48,    49,    29,    32,     6,    32,    33,
+      24,    35,    36,    37,     6,     6,     6,     6,     6,     6,
+       6,   168,     7,     7,    48,    49,    58,     6,     6,     3,
+      50,     4,     9,     8,     3,     7,    58,     8,     8,     7,
+       7,     6,    36,    54,     7,    27,    59,    59,     6,    15,
+       6,    34,   199,     6,     6,    58,     6,     6,    59,    54,
+      14,    25,     7,     7,     7,     7,    28,     7,     7,     7,
+      51,     8,     6,     8,    50,     4,     8,     8,     8,     4,
+       8,     8,     4,     4,     3,     8,     6,   162,   153,    50,
+      50,    50,     8,     8,    -1,     9,    -1,    -1,    16,    -1,
+      80,    -1,    59,    -1,    59
 };
 
 /* YYSTOS[STATE-NUM] -- The symbol kind of the accessing symbol of
    state STATE-NUM.  */
 static const yytype_int8 yystos[] =
 {
-       0,     3,    81,    82,     4,     0,     3,    83,    85,    86,
-      87,     5,     4,     3,    43,    44,    98,    99,   100,   101,
-     102,    83,     3,    87,    88,    89,     6,     3,    16,    23,
-      27,    95,    96,   102,   103,     6,     6,    99,     4,    52,
-       4,     3,    92,     9,   111,     6,    52,     6,     6,    34,
-      40,    73,    97,     8,    69,    70,    71,    72,   105,     8,
-      46,    46,   102,    29,    32,    33,    35,    36,    37,    13,
-       4,     3,    93,    94,     3,     7,   102,    32,   108,    24,
-       6,     6,     6,   102,     7,     7,    52,     6,     6,     6,
-       3,     4,    52,    94,     9,     8,    53,     8,    52,     7,
-      27,    46,    79,   102,   109,     4,   102,   102,   102,     8,
-       8,    11,    12,    41,    45,     7,     7,   108,     6,     3,
-      15,   102,    36,    48,    34,    53,    53,    53,    27,     7,
-      53,    53,     6,     6,     6,     6,     7,   108,    52,     6,
-       7,     6,    84,    53,    25,   104,    47,    28,    58,    59,
-     110,   110,    46,    46,    48,     7,    14,   106,     7,     3,
-      49,    85,     7,     7,   102,     7,     7,     7,     7,    90,
-       8,     6,     7,    19,    20,   107,     8,     4,     7,     8,
-       8,     8,     8,     3,    49,    91,   108,     8,     4,     4,
-       4,     7,    46,    46,     3,     8,    53,    53,     6,   108,
-       7,     8
+       0,     3,    87,    88,     4,     0,     3,    89,    91,    92,
+      93,     5,     4,     3,    45,    46,   104,   105,   106,   107,
+     108,    89,     3,    93,    94,    95,     6,     3,    16,    23,
+      27,   101,   102,   108,   109,     6,     6,   105,     4,    58,
+       4,     3,    98,     9,   117,     6,    58,     6,     6,    34,
+      38,    41,    42,    52,    53,    79,   103,     8,    75,    76,
+      77,    78,   111,   111,     8,    50,    50,   108,    29,    32,
+      33,    35,    36,    37,    48,    49,    13,     4,     3,    99,
+     100,     3,     7,   108,    32,   114,    24,     6,     6,     6,
+       6,     6,     6,     6,   108,   108,     7,     7,    58,     6,
+       6,     6,     3,     4,    58,   100,     9,     8,     7,    59,
+       8,    58,     7,    27,    50,    85,   108,   115,     4,   108,
+     108,   108,    50,   108,     7,   108,     8,     8,    11,    12,
+      43,    47,     7,     7,   114,     6,     3,    15,   108,    36,
+      54,    34,    59,    59,    59,    27,     7,   111,    59,     7,
+       7,    59,     6,     6,     6,     6,     7,   114,    58,     6,
+       7,     6,    90,    59,    25,   110,   108,    51,    28,    64,
+      65,   116,   116,    50,    50,    54,     7,    14,   112,     7,
+       3,    55,    91,     7,     7,     7,   108,     7,     7,     7,
+       7,    96,     8,     6,     7,    19,    20,   113,     8,     4,
+       7,     8,     8,     8,     8,     3,    55,    97,   114,     8,
+       4,     4,     4,     7,    50,    50,     3,     8,    59,    59,
+       6,   114,     7,     8
 };
 
 /* YYR1[RULE-NUM] -- Symbol kind of the left-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr1[] =
 {
-       0,    80,    81,    82,    83,    83,    83,    84,    84,    85,
-      85,    85,    85,    86,    86,    87,    88,    89,    90,    90,
-      91,    92,    93,    94,    94,    95,    95,    96,    96,    97,
-      97,    97,    98,    98,    99,    99,   100,   100,   100,   100,
-     100,   101,   102,   102,   102,   102,   102,   102,   102,   103,
-     104,   105,   105,   105,   105,   106,   106,   107,   107,   107,
-     107,   108,   108,   109,   109,   109,   109,   109,   109,   109,
-     109,   110,   110,   111
+       0,    86,    87,    88,    89,    89,    89,    90,    90,    91,
+      91,    91,    91,    92,    92,    93,    94,    95,    96,    96,
+      97,    98,    99,   100,   100,   101,   101,   101,   102,   102,
+     102,   103,   103,   103,   103,   103,   103,   103,   104,   104,
+     105,   105,   106,   106,   106,   106,   106,   107,   108,   108,
+     108,   108,   108,   108,   108,   108,   108,   109,   110,   111,
+     111,   111,   111,   112,   112,   113,   113,   113,   113,   114,
+     114,   115,   115,   115,   115,   115,   115,   115,   115,   116,
+     116,   117
 };
 
 /* YYR2[RULE-NUM] -- Number of symbols on the right-hand side of rule RULE-NUM.  */
@@ -998,12 +1161,13 @@ static const yytype_int8 yyr2[] =
 {
        0,     2,     3,     7,     0,     2,     2,     0,     2,     4,
        6,    10,     4,     1,     2,     9,     3,     9,     0,     2,
-       7,     7,     2,     9,     7,     3,     1,     6,     2,     7,
-       4,     6,     1,     2,     1,     1,     9,     9,     5,     5,
-       9,     9,     1,     3,     3,     3,     3,     5,     5,     7,
-       1,     1,     1,     1,     1,     0,     2,     3,     4,     3,
-       4,     0,     2,     2,     1,     2,     1,     2,     1,     2,
-       3,     1,     1,     3
+       7,     7,     2,     9,     7,     3,     1,     3,     6,     4,
+       2,     7,     4,     6,     6,     4,     4,     3,     1,     2,
+       1,     1,     9,     9,     5,     5,     9,     9,     1,     3,
+       3,     3,     3,     5,     5,     3,     3,     7,     1,     1,
+       1,     1,     1,     0,     2,     3,     4,     3,     4,     0,
+       2,     2,     1,     2,     1,     2,     1,     2,     3,     1,
+       1,     3
 };
 
 
@@ -1467,7 +1631,7 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* program: load_dataset algorithm schedules  */
-#line 205 "frontend.y"
+#line 350 "frontend.y"
     {
         program.push_back((yyvsp[-2].forwardNode));
         // program.push_back($2);
@@ -1489,12 +1653,13 @@ yyreduce:
             dependencies.push_back(inOutAggrRelationGraph);
         }
     }
-#line 1493 "build/frontend.tab.c"
+#line 1657 "build/frontend.tab.c"
     break;
 
   case 3: /* load_dataset: IDENTIFIER ASSIGN LOAD LPAREN string RPAREN SEMICOLON  */
-#line 228 "frontend.y"
+#line 373 "frontend.y"
     {
+        if (debug == 1) cout << "load graph+feats\n";
         (yyval.forwardNode) = new ForwardNode(POINTWISE, LOAD_OP);
         (yyval.forwardNode)->addParam((yyvsp[-2].sval)); 
         // Graph
@@ -1520,47 +1685,47 @@ yyreduce:
         free((yyvsp[-6].sval));
         free((yyvsp[-2].sval));
     }
-#line 1524 "build/frontend.tab.c"
+#line 1689 "build/frontend.tab.c"
     break;
 
   case 4: /* algorithm: %empty  */
-#line 257 "frontend.y"
+#line 403 "frontend.y"
             { (yyval.trainingLoopNode) = NULL; }
-#line 1530 "build/frontend.tab.c"
+#line 1695 "build/frontend.tab.c"
     break;
 
   case 5: /* algorithm: statement algorithm  */
-#line 259 "frontend.y"
+#line 405 "frontend.y"
     {
         iters = trainArgs.find("iters") != trainArgs.end() ? trainArgs["iters"] : 100;
     }
-#line 1538 "build/frontend.tab.c"
+#line 1703 "build/frontend.tab.c"
     break;
 
   case 6: /* algorithm: layers model  */
-#line 263 "frontend.y"
+#line 409 "frontend.y"
     {              // so for now just one layer+model then schedules
         iters = trainArgs.find("iters") != trainArgs.end() ? trainArgs["iters"] : 100;
     }
-#line 1546 "build/frontend.tab.c"
+#line 1711 "build/frontend.tab.c"
     break;
 
   case 7: /* statements: %empty  */
-#line 267 "frontend.y"
+#line 413 "frontend.y"
              { (yyval.trainingLoopNode) = NULL; }
-#line 1552 "build/frontend.tab.c"
+#line 1717 "build/frontend.tab.c"
     break;
 
   case 8: /* statements: statements statement  */
-#line 269 "frontend.y"
+#line 415 "frontend.y"
     {
         iters = trainArgs.find("iters") != trainArgs.end() ? trainArgs["iters"] : 100;
     }
-#line 1560 "build/frontend.tab.c"
+#line 1725 "build/frontend.tab.c"
     break;
 
   case 9: /* statement: IDENTIFIER ASSIGN gnn_op SEMICOLON  */
-#line 275 "frontend.y"
+#line 421 "frontend.y"
     {
         // TODO: add some code to verify the aggregate function name matches
         if (string((yyvsp[-1].sval)) == "aggregate"){ // aggregate operation
@@ -1628,24 +1793,98 @@ yyreduce:
             }
             addReLU_CIR(defaultInput);
         }
+        else if (string((yyvsp[-1].sval)) == "scalarEps-mul"){
+            DataNode* defaultInput;
+            if (mainTrainingLoop->getLoopNodeNum() == 0){
+                defaultInput = NULL;
+            }
+            else{
+                int lastCIR_idx = mainTrainingLoop->getLoopNodeNum()-1;
+                defaultInput = mainTrainingLoop->getNode(lastCIR_idx)->getOutput(0);
+            }
+            mulScalarEPS_CIR(dataNodeMap["Feat1"]);
+        }
+        else if (string((yyvsp[-1].sval)) == "scalarEps-add"){
+            DataNode* defaultInput;
+            if (mainTrainingLoop->getLoopNodeNum() == 0){
+                defaultInput = NULL;
+            }
+            else{
+                int lastCIR_idx = mainTrainingLoop->getLoopNodeNum()-1;
+                defaultInput = mainTrainingLoop->getNode(lastCIR_idx)->getOutput(0);
+            }
+            addScalarEPS_CIR(defaultInput, dataNodeMap["Output-Aggregate"]);
+        }
+        else if (string((yyvsp[-1].sval)) == "init-l-weight"){
+            DataNode* defaultInput;
+            if (mainTrainingLoop->getLoopNodeNum() == 0){
+                defaultInput = NULL;
+            }
+            else{
+                int lastCIR_idx = mainTrainingLoop->getLoopNodeNum()-1;
+                defaultInput = mainTrainingLoop->getNode(lastCIR_idx)->getOutput(0);
+            }
+            addAttentionWeight_L(dataNodeMap["Res1"]);
+        }
+        else if (string((yyvsp[-1].sval)) == "init-r-weight"){
+            DataNode* defaultInput;
+            if (mainTrainingLoop->getLoopNodeNum() == 0){
+                defaultInput = NULL;
+            }
+            else{
+                int lastCIR_idx = mainTrainingLoop->getLoopNodeNum()-1;
+                defaultInput = mainTrainingLoop->getNode(lastCIR_idx)->getOutput(0);
+            }
+            addAttentionWeight_R(dataNodeMap["Res1"]);
+        }
+        else if (string((yyvsp[-1].sval)) == "leaky-relu"){
+            DataNode* defaultInput; // TODO: change edge aggregation to be its own thing, not inside leakyRelu
+            if (mainTrainingLoop->getLoopNodeNum() == 0){
+                defaultInput = NULL;
+            }
+            else{
+                int lastCIR_idx = mainTrainingLoop->getLoopNodeNum()-1;
+                defaultInput = mainTrainingLoop->getNode(lastCIR_idx)->getOutput(0);
+            }
+            addEdgeAggregation_CIR(dataNodeMap["attn-l"], dataNodeMap["attn-r"], dataNodeMap["Graph"]);
+            if (mainTrainingLoop->getLoopNodeNum() == 0){
+                defaultInput = NULL;
+            }
+            else{
+                int lastCIR_idx = mainTrainingLoop->getLoopNodeNum()-1;
+                defaultInput = mainTrainingLoop->getNode(lastCIR_idx)->getOutput(0);
+            }
+            addLeakyReLU(defaultInput, dataNodeMap["Graph"]);
+        }
+        else if (string((yyvsp[-1].sval)) == "softmax"){
+            DataNode* defaultInput;
+            if (mainTrainingLoop->getLoopNodeNum() == 0){
+                defaultInput = NULL;
+            }
+            else{
+                int lastCIR_idx = mainTrainingLoop->getLoopNodeNum()-1;
+                defaultInput = mainTrainingLoop->getNode(lastCIR_idx)->getOutput(0);
+            }
+            addSoftmax_CIR(defaultInput, dataNodeMap["Graph"]);
+        }
         free((yyvsp[-3].sval));
         free((yyvsp[-1].sval));
     }
-#line 1635 "build/frontend.tab.c"
+#line 1874 "build/frontend.tab.c"
     break;
 
   case 10: /* statement: IDENTIFIER ASSIGN IDENTIFIER DOT GRAPH_ATTR SEMICOLON  */
-#line 346 "frontend.y"
+#line 566 "frontend.y"
     {
         (yyval.forwardNode) = NULL;
         free((yyvsp[-5].sval));
         free((yyvsp[-3].sval));
     }
-#line 1645 "build/frontend.tab.c"
+#line 1884 "build/frontend.tab.c"
     break;
 
   case 11: /* statement: IDENTIFIER ASSIGN IDENTIFIER DOT GRAPH_ATTR DOT DEGREE_ATTR LPAREN RPAREN SEMICOLON  */
-#line 352 "frontend.y"
+#line 572 "frontend.y"
     {
         // TODO: Replace dataNodeMap["Graph"] with TransformedGraph if exists for whatever is necessary in this section
         DataNode* defaultInput;
@@ -1667,32 +1906,32 @@ yyreduce:
         free((yyvsp[-9].sval));
         free((yyvsp[-7].sval));
     }
-#line 1671 "build/frontend.tab.c"
+#line 1910 "build/frontend.tab.c"
     break;
 
   case 12: /* statement: IDENTIFIER ASSIGN function_init SEMICOLON  */
-#line 374 "frontend.y"
+#line 594 "frontend.y"
     {
         (yyval.forwardNode) = NULL;
         free((yyvsp[-3].sval));
     }
-#line 1680 "build/frontend.tab.c"
+#line 1919 "build/frontend.tab.c"
     break;
 
   case 13: /* layers: layer_def  */
-#line 379 "frontend.y"
+#line 599 "frontend.y"
                    { (yyval.trainingLoopNode) = (yyvsp[0].trainingLoopNode); }
-#line 1686 "build/frontend.tab.c"
+#line 1925 "build/frontend.tab.c"
     break;
 
   case 14: /* layers: layers layer_def  */
-#line 381 "frontend.y"
+#line 601 "frontend.y"
     {}
-#line 1692 "build/frontend.tab.c"
+#line 1931 "build/frontend.tab.c"
     break;
 
   case 15: /* layer_def: IDENTIFIER ASSIGN LAYER LPAREN args RPAREN LBRACE statements RBRACE  */
-#line 384 "frontend.y"
+#line 604 "frontend.y"
     {
         iters = trainArgs.find("iters") != trainArgs.end() ? trainArgs["iters"] : 100;
         // if ($8 != NULL){
@@ -1703,17 +1942,17 @@ yyreduce:
         // }
         // free($1);
     }
-#line 1707 "build/frontend.tab.c"
+#line 1946 "build/frontend.tab.c"
     break;
 
   case 16: /* model: model_def model_init model_uses  */
-#line 396 "frontend.y"
+#line 616 "frontend.y"
                                         {}
-#line 1713 "build/frontend.tab.c"
+#line 1952 "build/frontend.tab.c"
     break;
 
   case 17: /* model_def: IDENTIFIER ASSIGN MODEL_W LPAREN args RPAREN LBRACE layer_inits RBRACE  */
-#line 398 "frontend.y"
+#line 618 "frontend.y"
                                                                                    {
     int n = mainTrainingLoop->getLoopNodeNum();
     for (int i = 1; i < numLayers; i++){
@@ -1722,12 +1961,9 @@ yyreduce:
         for (int j = 0; j < n; j++){
             ForwardNode* curNode = mainTrainingLoop->getNode(j);
             string type = curNode->getOutput(0)->getName();
-            if (type == "ones" || type == "degrees"){
+            if (type == "ones" || type == "degrees" || type == "norm"){
                 lastData = curNode->getOutput(0);
                 continue;
-            }
-            else if (type == "norm"){
-                addNormalization_CIR(lastData);
             }
             else if (type == "res-norm"){
                 addNormCalc_CIR(lastData, dataNodeMap["Feat1"]);
@@ -1741,148 +1977,236 @@ yyreduce:
             else if (type == "res-relu"){
                 addReLU_CIR(lastData);
             }
+            else if (type == "res-mulScalarEPS"){
+                mulScalarEPS_CIR(dataNodeMap["reluData"]); // TODO: change this so it works for more than 2 layers
+            }
+            else if (type == "res-addScalarEPS"){
+                addScalarEPS_CIR(lastData, dataNodeMap["Output-Aggregate"]); // TODO: change to return newest aggregate node
+            }
+            else if (type == "attenR"){
+                addAttentionWeight_R(dataNodeMap["Res1"]);
+            }
+            else if (type == "attenL"){
+                addAttentionWeight_L(dataNodeMap["Res1"]);
+            }
+            else if (type == "res-softmax"){
+                addSoftmax_CIR(lastData, dataNodeMap["Graph"]);
+            }
+            else if (type == "res-leakyReLU"){
+                addLeakyReLU(lastData, dataNodeMap["Graph"]);
+            }
             lastData = curNode->getOutput(0);
         }
     }
-    cout << mainTrainingLoop->getLoopNodeNum() << "\n";
 }
-#line 1750 "build/frontend.tab.c"
+#line 2003 "build/frontend.tab.c"
     break;
 
   case 18: /* layer_inits: %empty  */
-#line 431 "frontend.y"
+#line 665 "frontend.y"
               { (yyval.irNode) = NULL; }
-#line 1756 "build/frontend.tab.c"
+#line 2009 "build/frontend.tab.c"
     break;
 
   case 19: /* layer_inits: layer_inits layer_init  */
-#line 432 "frontend.y"
+#line 666 "frontend.y"
                              {}
-#line 1762 "build/frontend.tab.c"
+#line 2015 "build/frontend.tab.c"
     break;
 
   case 20: /* layer_init: IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON  */
-#line 434 "frontend.y"
+#line 668 "frontend.y"
                                                                        { numLayers++; free((yyvsp[-6].sval)); free((yyvsp[-4].sval)); }
-#line 1768 "build/frontend.tab.c"
+#line 2021 "build/frontend.tab.c"
     break;
 
   case 21: /* model_init: IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON  */
-#line 436 "frontend.y"
+#line 670 "frontend.y"
                                                                        { free((yyvsp[-6].sval)); free((yyvsp[-4].sval)); }
-#line 1774 "build/frontend.tab.c"
+#line 2027 "build/frontend.tab.c"
     break;
 
   case 22: /* model_uses: model_use model_use  */
-#line 438 "frontend.y"
+#line 672 "frontend.y"
                                  { (yyval.irNode) = NULL; }
-#line 1780 "build/frontend.tab.c"
+#line 2033 "build/frontend.tab.c"
     break;
 
   case 23: /* model_use: IDENTIFIER ASSIGN IDENTIFIER DOT EVAL LPAREN args RPAREN SEMICOLON  */
-#line 442 "frontend.y"
+#line 676 "frontend.y"
                                                                                { free((yyvsp[-8].sval)); free((yyvsp[-6].sval)); }
-#line 1786 "build/frontend.tab.c"
+#line 2039 "build/frontend.tab.c"
     break;
 
   case 24: /* model_use: IDENTIFIER DOT TRAIN LPAREN train_args RPAREN SEMICOLON  */
-#line 443 "frontend.y"
+#line 677 "frontend.y"
                                                               { free((yyvsp[-6].sval)); }
-#line 1792 "build/frontend.tab.c"
+#line 2045 "build/frontend.tab.c"
     break;
 
   case 25: /* gnn_op: data_var op data_var  */
-#line 445 "frontend.y"
-                              { (yyval.sval) = strdup("normalization"); free((yyvsp[-2].sval)); free((yyvsp[0].sval)); }
-#line 1798 "build/frontend.tab.c"
+#line 680 "frontend.y"
+    {
+         if ((yyvsp[-1].ival) == 3){
+            (yyval.sval) = strdup("normalization"); 
+         }
+         else if ((yyvsp[-1].ival) == 1){
+            (yyval.sval) = strdup("scalarEps-add");
+         }
+         free((yyvsp[-2].sval)); 
+         free((yyvsp[0].sval)); 
+    }
+#line 2060 "build/frontend.tab.c"
     break;
 
   case 26: /* gnn_op: function  */
-#line 447 "frontend.y"
+#line 691 "frontend.y"
     {
         (yyval.sval) = (yyvsp[0].sval);
     }
-#line 1806 "build/frontend.tab.c"
+#line 2068 "build/frontend.tab.c"
     break;
 
-  case 27: /* function: IDENTIFIER LPAREN data_var COMMA data_var RPAREN  */
-#line 452 "frontend.y"
+  case 27: /* gnn_op: function op data_var  */
+#line 695 "frontend.y"
+    {
+        if (string((yyvsp[-2].sval)) == "scalarEps-mul");{
+            (yyval.sval) = (yyvsp[-2].sval);
+        }
+        if (string((yyvsp[-2].sval)) == "init-weight"){
+            if (string((yyvsp[0].sval)) == "src_nodes"){
+                (yyval.sval) = strdup("init-l-weight");
+            }
+            else{
+                (yyval.sval) = strdup("init-r-weight");
+            }
+        }
+        free((yyvsp[0].sval));
+    }
+#line 2087 "build/frontend.tab.c"
+    break;
+
+  case 28: /* function: IDENTIFIER LPAREN data_var COMMA data_var RPAREN  */
+#line 711 "frontend.y"
     {
         (yyval.sval) = strdup("aggregate");
         free((yyvsp[-5].sval));
         free((yyvsp[-3].sval));
         free((yyvsp[-1].sval));
     }
-#line 1817 "build/frontend.tab.c"
+#line 2098 "build/frontend.tab.c"
     break;
 
-  case 28: /* function: DSL_DOT update_op  */
-#line 459 "frontend.y"
+  case 29: /* function: IDENTIFIER LPAREN data_var RPAREN  */
+#line 718 "frontend.y"
+    {
+        (yyval.sval) = strdup("relu");
+        free((yyvsp[-3].sval));
+        free((yyvsp[-1].sval));
+    }
+#line 2108 "build/frontend.tab.c"
+    break;
+
+  case 30: /* function: DSL_DOT update_op  */
+#line 724 "frontend.y"
     {
         (yyval.sval) = (yyvsp[0].sval);
     }
-#line 1825 "build/frontend.tab.c"
+#line 2116 "build/frontend.tab.c"
     break;
 
-  case 29: /* update_op: FFN LPAREN data_var COMMA FFN_OUT data_var RPAREN  */
-#line 464 "frontend.y"
+  case 31: /* update_op: FFN LPAREN data_var COMMA FFN_OUT data_var RPAREN  */
+#line 729 "frontend.y"
     {
         (yyval.sval) = strdup("ffn");
         free((yyvsp[-4].sval));
         free((yyvsp[-1].sval));
     }
-#line 1835 "build/frontend.tab.c"
+#line 2126 "build/frontend.tab.c"
     break;
 
-  case 30: /* update_op: RELU LPAREN data_var RPAREN  */
-#line 470 "frontend.y"
+  case 32: /* update_op: RELU LPAREN data_var RPAREN  */
+#line 735 "frontend.y"
     {
         (yyval.sval) = strdup("relu");
         free((yyvsp[-1].sval));
     }
-#line 1844 "build/frontend.tab.c"
+#line 2135 "build/frontend.tab.c"
     break;
 
-  case 31: /* update_op: POW LPAREN data_var COMMA FLOAT RPAREN  */
-#line 475 "frontend.y"
+  case 33: /* update_op: LEAKY_RELU LPAREN data_var op data_var RPAREN  */
+#line 740 "frontend.y"
+    {
+        (yyval.sval) = strdup("leaky-relu");
+        free((yyvsp[-3].sval));
+    }
+#line 2144 "build/frontend.tab.c"
+    break;
+
+  case 34: /* update_op: POW LPAREN data_var COMMA FLOAT RPAREN  */
+#line 745 "frontend.y"
     {
         // TODO: use the float in the calculation, now just hardcoded to -0.5
         (yyval.sval) = strdup("pow");
         free((yyvsp[-3].sval));
     }
-#line 1854 "build/frontend.tab.c"
+#line 2154 "build/frontend.tab.c"
     break;
 
-  case 32: /* schedules: schedule  */
-#line 481 "frontend.y"
+  case 35: /* update_op: SCALAR_INIT LPAREN INTEGER RPAREN  */
+#line 751 "frontend.y"
+    {
+        (yyval.sval) = strdup("scalarEps-mul");
+    }
+#line 2162 "build/frontend.tab.c"
+    break;
+
+  case 36: /* update_op: SOFTMAX LPAREN data_var RPAREN  */
+#line 755 "frontend.y"
+    {
+        (yyval.sval) = strdup("softmax");
+    }
+#line 2170 "build/frontend.tab.c"
+    break;
+
+  case 37: /* update_op: INIT_WEIGHT LPAREN RPAREN  */
+#line 759 "frontend.y"
+    {
+        (yyval.sval) = strdup("init-weight");
+    }
+#line 2178 "build/frontend.tab.c"
+    break;
+
+  case 38: /* schedules: schedule  */
+#line 763 "frontend.y"
                      {}
-#line 1860 "build/frontend.tab.c"
+#line 2184 "build/frontend.tab.c"
     break;
 
-  case 33: /* schedules: schedules schedule  */
-#line 483 "frontend.y"
+  case 39: /* schedules: schedules schedule  */
+#line 765 "frontend.y"
     {
 
     }
-#line 1868 "build/frontend.tab.c"
+#line 2192 "build/frontend.tab.c"
     break;
 
-  case 34: /* schedule: data_transform  */
-#line 488 "frontend.y"
+  case 40: /* schedule: data_transform  */
+#line 770 "frontend.y"
     {
     }
-#line 1875 "build/frontend.tab.c"
+#line 2199 "build/frontend.tab.c"
     break;
 
-  case 35: /* schedule: function_transform  */
-#line 491 "frontend.y"
+  case 41: /* schedule: function_transform  */
+#line 773 "frontend.y"
     {
     }
-#line 1882 "build/frontend.tab.c"
+#line 2206 "build/frontend.tab.c"
     break;
 
-  case 36: /* data_transform: data_var ASSIGN data_var DOT SET_UNDIRECTED LPAREN bool RPAREN SEMICOLON  */
-#line 495 "frontend.y"
+  case 42: /* data_transform: data_var ASSIGN data_var DOT SET_UNDIRECTED LPAREN bool RPAREN SEMICOLON  */
+#line 777 "frontend.y"
     {
         // if transformed graph already exists, then modify that as well
         // always modify the original graph
@@ -1893,11 +2217,11 @@ yyreduce:
         DataInfo* GraphInfo = dynamic_cast<DataInfo*>(dataNodeMap["Graph"]->getData()->next());
         GraphInfo->setDirected(!(yyvsp[-2].ival));
     }
-#line 1897 "build/frontend.tab.c"
+#line 2221 "build/frontend.tab.c"
     break;
 
-  case 37: /* data_transform: data_var ASSIGN data_var DOT SET_UNWEIGHTED LPAREN bool RPAREN SEMICOLON  */
-#line 506 "frontend.y"
+  case 43: /* data_transform: data_var ASSIGN data_var DOT SET_UNWEIGHTED LPAREN bool RPAREN SEMICOLON  */
+#line 788 "frontend.y"
     {
         if (dataNodeMap.find("TrGraph") != dataNodeMap.end()){
             DataInfo* TrInfo = dynamic_cast<DataInfo*>(dataNodeMap["TrGraph"]->getData()->next());
@@ -1906,11 +2230,11 @@ yyreduce:
         DataInfo* GraphInfo = dynamic_cast<DataInfo*>(dataNodeMap["Graph"]->getData()->next());
         GraphInfo->setWeighted(!(yyvsp[-2].ival));
     }
-#line 1910 "build/frontend.tab.c"
+#line 2234 "build/frontend.tab.c"
     break;
 
-  case 38: /* data_transform: FEAT_SIZE_ASSIGN LPAREN INTEGER RPAREN SEMICOLON  */
-#line 515 "frontend.y"
+  case 44: /* data_transform: FEAT_SIZE_ASSIGN LPAREN INTEGER RPAREN SEMICOLON  */
+#line 797 "frontend.y"
     {
         DataInfo* featInfo = dynamic_cast<DataInfo*>(dataNodeMap["Feat1"]->getData()->next());
         DataInfo* outAggrInfo = dynamic_cast<DataInfo*>(dataNodeMap["Output-Aggregate"]->getData()->next());
@@ -1919,11 +2243,11 @@ yyreduce:
         outAggrInfo->setDims(dimRow, atoi((yyvsp[-2].sval)));
         free((yyvsp[-2].sval));
     }
-#line 1923 "build/frontend.tab.c"
+#line 2247 "build/frontend.tab.c"
     break;
 
-  case 39: /* data_transform: LABEL_SIZE_ASSIGN LPAREN INTEGER RPAREN SEMICOLON  */
-#line 524 "frontend.y"
+  case 45: /* data_transform: LABEL_SIZE_ASSIGN LPAREN INTEGER RPAREN SEMICOLON  */
+#line 806 "frontend.y"
     {
         DataInfo* featInfo = dynamic_cast<DataInfo*>(dataNodeMap["Feat1"]->getData()->next());
         DataInfo* weightInfo = dynamic_cast<DataInfo*>(dataNodeMap["Weight1"]->getData()->next());
@@ -1934,11 +2258,11 @@ yyreduce:
         resInfo->setDims(featDimRow, atoi((yyvsp[-2].sval)));
         free((yyvsp[-2].sval));
     }
-#line 1938 "build/frontend.tab.c"
+#line 2262 "build/frontend.tab.c"
     break;
 
-  case 40: /* data_transform: data_var ASSIGN data_var DOT COLTILE LPAREN INTEGER RPAREN SEMICOLON  */
-#line 535 "frontend.y"
+  case 46: /* data_transform: data_var ASSIGN data_var DOT COLTILE LPAREN INTEGER RPAREN SEMICOLON  */
+#line 817 "frontend.y"
     {
         // actually creating new DIR
         DataLevel* originalRootGraphLevel = dataNodeMap["Graph"]->getData();
@@ -1967,11 +2291,11 @@ yyreduce:
         dependencies.push_back(inOutAggrRelationTrGraph);
         free((yyvsp[-6].sval));
     }
-#line 1971 "build/frontend.tab.c"
+#line 2295 "build/frontend.tab.c"
     break;
 
-  case 41: /* function_transform: data_var ASSIGN data_var DOT COARSEN LPAREN INTEGER RPAREN SEMICOLON  */
-#line 565 "frontend.y"
+  case 47: /* function_transform: data_var ASSIGN data_var DOT COARSEN LPAREN INTEGER RPAREN SEMICOLON  */
+#line 847 "frontend.y"
     {
         if (computeNodeMap.find("aggregate") != computeNodeMap.end()){
             for (ForwardNode* a : computeNodeMap["aggregate"]){
@@ -1983,18 +2307,18 @@ yyreduce:
         }
         free((yyvsp[-2].sval));
     }
-#line 1987 "build/frontend.tab.c"
+#line 2311 "build/frontend.tab.c"
     break;
 
-  case 42: /* data_var: IDENTIFIER  */
-#line 580 "frontend.y"
+  case 48: /* data_var: IDENTIFIER  */
+#line 862 "frontend.y"
     {
     }
-#line 1994 "build/frontend.tab.c"
+#line 2318 "build/frontend.tab.c"
     break;
 
-  case 43: /* data_var: data_var DOT NODE_ATTR  */
-#line 583 "frontend.y"
+  case 49: /* data_var: data_var DOT NODE_ATTR  */
+#line 865 "frontend.y"
     {
         if ((yyvsp[-2].sval) == "feats"){
             (yyval.sval) = (yyvsp[-2].sval);
@@ -2002,208 +2326,226 @@ yyreduce:
         (yyval.sval) = strdup("node");
         free((yyvsp[-2].sval));
     }
-#line 2006 "build/frontend.tab.c"
+#line 2330 "build/frontend.tab.c"
     break;
 
-  case 44: /* data_var: data_var DOT FEAT_ATTR  */
-#line 591 "frontend.y"
+  case 50: /* data_var: data_var DOT FEAT_ATTR  */
+#line 873 "frontend.y"
     {
         (yyval.sval) = strdup("feats");
         free((yyvsp[-2].sval));
     }
-#line 2015 "build/frontend.tab.c"
+#line 2339 "build/frontend.tab.c"
     break;
 
-  case 45: /* data_var: data_var DOT GRAPH_ATTR  */
-#line 596 "frontend.y"
+  case 51: /* data_var: data_var DOT GRAPH_ATTR  */
+#line 878 "frontend.y"
     {
         (yyval.sval) = strdup("graphs");
         free((yyvsp[-2].sval));
     }
-#line 2024 "build/frontend.tab.c"
+#line 2348 "build/frontend.tab.c"
     break;
 
-  case 46: /* data_var: data_var DOT LABEL_ATTR  */
-#line 601 "frontend.y"
+  case 52: /* data_var: data_var DOT LABEL_ATTR  */
+#line 883 "frontend.y"
     {
         (yyval.sval) = strdup("label");
         free((yyvsp[-2].sval));
     }
-#line 2033 "build/frontend.tab.c"
+#line 2357 "build/frontend.tab.c"
     break;
 
-  case 47: /* data_var: data_var DOT SIZE_FN LPAREN RPAREN  */
-#line 606 "frontend.y"
+  case 53: /* data_var: data_var DOT SIZE_FN LPAREN RPAREN  */
+#line 888 "frontend.y"
     {
         (yyval.sval) = strdup("size");
         free((yyvsp[-4].sval));
     }
-#line 2042 "build/frontend.tab.c"
+#line 2366 "build/frontend.tab.c"
     break;
 
-  case 48: /* data_var: data_var DOT DEGREE_ATTR LPAREN RPAREN  */
-#line 611 "frontend.y"
+  case 54: /* data_var: data_var DOT DEGREE_ATTR LPAREN RPAREN  */
+#line 893 "frontend.y"
     {
         (yyval.sval) = strdup("degrees");
         free((yyvsp[-4].sval));
     }
-#line 2051 "build/frontend.tab.c"
+#line 2375 "build/frontend.tab.c"
     break;
 
-  case 49: /* function_init: AGGR_INIT LPAREN FN_ARG ASSIGN DSL_DOT semiring_op RPAREN  */
-#line 617 "frontend.y"
+  case 55: /* data_var: data_var DOT SRC_ATTR  */
+#line 898 "frontend.y"
+    {
+        (yyval.sval) = strdup("src_nodes");
+        free((yyvsp[-2].sval));
+    }
+#line 2384 "build/frontend.tab.c"
+    break;
+
+  case 56: /* data_var: data_var DOT DST_ATTR  */
+#line 903 "frontend.y"
+    {
+        (yyval.sval) = strdup("dst_nodes");
+        free((yyvsp[-2].sval));
+    }
+#line 2393 "build/frontend.tab.c"
+    break;
+
+  case 57: /* function_init: AGGR_INIT LPAREN FN_ARG ASSIGN DSL_DOT semiring_op RPAREN  */
+#line 909 "frontend.y"
     {}
-#line 2057 "build/frontend.tab.c"
+#line 2399 "build/frontend.tab.c"
     break;
 
-  case 50: /* semiring_op: MUL_SUM  */
-#line 620 "frontend.y"
+  case 58: /* semiring_op: MUL_SUM  */
+#line 912 "frontend.y"
     {}
-#line 2063 "build/frontend.tab.c"
+#line 2405 "build/frontend.tab.c"
     break;
 
-  case 51: /* op: PLUS  */
-#line 622 "frontend.y"
-          {}
-#line 2069 "build/frontend.tab.c"
+  case 59: /* op: PLUS  */
+#line 914 "frontend.y"
+          { (yyval.ival) = 1; }
+#line 2411 "build/frontend.tab.c"
     break;
 
-  case 52: /* op: MINUS  */
-#line 622 "frontend.y"
-                     {}
-#line 2075 "build/frontend.tab.c"
+  case 60: /* op: MINUS  */
+#line 914 "frontend.y"
+                              { (yyval.ival) = 2; }
+#line 2417 "build/frontend.tab.c"
     break;
 
-  case 53: /* op: MULTIPLY  */
-#line 622 "frontend.y"
-                                   {}
-#line 2081 "build/frontend.tab.c"
+  case 61: /* op: MULTIPLY  */
+#line 914 "frontend.y"
+                                                     { (yyval.ival) = 3; }
+#line 2423 "build/frontend.tab.c"
     break;
 
-  case 54: /* op: DIVIDE  */
-#line 622 "frontend.y"
-                                               {}
-#line 2087 "build/frontend.tab.c"
+  case 62: /* op: DIVIDE  */
+#line 914 "frontend.y"
+                                                                          { (yyval.ival) = 4; }
+#line 2429 "build/frontend.tab.c"
     break;
 
-  case 55: /* train_args: %empty  */
-#line 624 "frontend.y"
+  case 63: /* train_args: %empty  */
+#line 916 "frontend.y"
              { (yyval.irNode) = NULL; }
-#line 2093 "build/frontend.tab.c"
+#line 2435 "build/frontend.tab.c"
     break;
 
-  case 56: /* train_args: train_args train_arg  */
-#line 626 "frontend.y"
+  case 64: /* train_args: train_args train_arg  */
+#line 918 "frontend.y"
     {}
-#line 2099 "build/frontend.tab.c"
+#line 2441 "build/frontend.tab.c"
     break;
 
-  case 57: /* train_arg: ITERS ASSIGN INTEGER  */
-#line 629 "frontend.y"
+  case 65: /* train_arg: ITERS ASSIGN INTEGER  */
+#line 921 "frontend.y"
     {
         trainArgs["iters"] = atoi((yyvsp[0].sval));
         free((yyvsp[0].sval));
     }
-#line 2108 "build/frontend.tab.c"
+#line 2450 "build/frontend.tab.c"
     break;
 
-  case 58: /* train_arg: ITERS ASSIGN INTEGER COMMA  */
-#line 634 "frontend.y"
+  case 66: /* train_arg: ITERS ASSIGN INTEGER COMMA  */
+#line 926 "frontend.y"
     { trainArgs["iters"] = atoi((yyvsp[-1].sval)); free((yyvsp[-1].sval)); }
-#line 2114 "build/frontend.tab.c"
+#line 2456 "build/frontend.tab.c"
     break;
 
-  case 59: /* train_arg: VAL_STEP ASSIGN INTEGER  */
-#line 636 "frontend.y"
+  case 67: /* train_arg: VAL_STEP ASSIGN INTEGER  */
+#line 928 "frontend.y"
     { trainArgs["val_step"] = atoi((yyvsp[0].sval)); free((yyvsp[0].sval)); }
-#line 2120 "build/frontend.tab.c"
+#line 2462 "build/frontend.tab.c"
     break;
 
-  case 60: /* train_arg: VAL_STEP ASSIGN INTEGER COMMA  */
-#line 638 "frontend.y"
+  case 68: /* train_arg: VAL_STEP ASSIGN INTEGER COMMA  */
+#line 930 "frontend.y"
     { trainArgs["val_step"] = atoi((yyvsp[-1].sval)); free((yyvsp[-1].sval)); }
-#line 2126 "build/frontend.tab.c"
+#line 2468 "build/frontend.tab.c"
     break;
 
-  case 61: /* args: %empty  */
-#line 640 "frontend.y"
+  case 69: /* args: %empty  */
+#line 932 "frontend.y"
        { (yyval.irNode) = NULL; }
-#line 2132 "build/frontend.tab.c"
+#line 2474 "build/frontend.tab.c"
     break;
 
-  case 62: /* args: args arg  */
-#line 642 "frontend.y"
+  case 70: /* args: args arg  */
+#line 934 "frontend.y"
     {
     }
-#line 2139 "build/frontend.tab.c"
+#line 2481 "build/frontend.tab.c"
     break;
 
-  case 63: /* arg: INTEGER COMMA  */
-#line 645 "frontend.y"
+  case 71: /* arg: INTEGER COMMA  */
+#line 937 "frontend.y"
                     { free((yyvsp[-1].sval)); }
-#line 2145 "build/frontend.tab.c"
+#line 2487 "build/frontend.tab.c"
     break;
 
-  case 64: /* arg: INTEGER  */
-#line 646 "frontend.y"
+  case 72: /* arg: INTEGER  */
+#line 938 "frontend.y"
     {
         free((yyvsp[0].sval));
     }
-#line 2153 "build/frontend.tab.c"
+#line 2495 "build/frontend.tab.c"
     break;
 
-  case 66: /* arg: NULL_KEY  */
-#line 650 "frontend.y"
+  case 74: /* arg: NULL_KEY  */
+#line 942 "frontend.y"
     {}
-#line 2159 "build/frontend.tab.c"
+#line 2501 "build/frontend.tab.c"
     break;
 
-  case 67: /* arg: data_var COMMA  */
-#line 651 "frontend.y"
+  case 75: /* arg: data_var COMMA  */
+#line 943 "frontend.y"
                      { free((yyvsp[-1].sval)); }
-#line 2165 "build/frontend.tab.c"
+#line 2507 "build/frontend.tab.c"
     break;
 
-  case 68: /* arg: data_var  */
-#line 652 "frontend.y"
+  case 76: /* arg: data_var  */
+#line 944 "frontend.y"
     {
         free((yyvsp[0].sval));
     }
-#line 2173 "build/frontend.tab.c"
+#line 2515 "build/frontend.tab.c"
     break;
 
-  case 70: /* arg: DSL_DOT RELU COMMA  */
-#line 656 "frontend.y"
+  case 78: /* arg: DSL_DOT RELU COMMA  */
+#line 948 "frontend.y"
     {
 
     }
-#line 2181 "build/frontend.tab.c"
+#line 2523 "build/frontend.tab.c"
     break;
 
-  case 71: /* bool: TR  */
-#line 660 "frontend.y"
+  case 79: /* bool: TR  */
+#line 952 "frontend.y"
           { (yyval.ival) = 1; }
-#line 2187 "build/frontend.tab.c"
+#line 2529 "build/frontend.tab.c"
     break;
 
-  case 72: /* bool: FA  */
-#line 660 "frontend.y"
+  case 80: /* bool: FA  */
+#line 952 "frontend.y"
                            { (yyval.ival) = 2; }
-#line 2193 "build/frontend.tab.c"
+#line 2535 "build/frontend.tab.c"
     break;
 
-  case 73: /* string: QUOTE IDENTIFIER QUOTE  */
-#line 662 "frontend.y"
+  case 81: /* string: QUOTE IDENTIFIER QUOTE  */
+#line 954 "frontend.y"
     {
         (yyval.sval) = (char*) malloc(strlen((yyvsp[-1].sval)) + 2);
         sprintf((yyval.sval), "%s", (yyvsp[-1].sval));
         free((yyvsp[-1].sval));
     }
-#line 2203 "build/frontend.tab.c"
+#line 2545 "build/frontend.tab.c"
     break;
 
 
-#line 2207 "build/frontend.tab.c"
+#line 2549 "build/frontend.tab.c"
 
       default: break;
     }
@@ -2396,7 +2738,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 669 "frontend.y"
+#line 961 "frontend.y"
 
 
 int main(int argc, char** argv){
@@ -2414,6 +2756,7 @@ int main(int argc, char** argv){
     yyin = myfile;
     yydebug = 0;
     mainTrainingLoop = new TrainingLoopNode(iters == -1 ? 100 : iters);
+    debug = 1;
     yyparse();
     cout << "PROGRAM (CIR Nodes): " << program.size() << '\n';
     cout << "DEPENDENCIES " << dependencies.size() << '\n';

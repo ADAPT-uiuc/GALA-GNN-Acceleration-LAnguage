@@ -3,12 +3,11 @@ G = load_dataset("Reddit");
 
 aggrFn = dsl.get_aggregate(fn = dsl.fn.mul_sum);
 L1 = layer(G, hs, nonln_fn, aggregate_fn) {
-    deg = G.graphs.degrees();
-    norm = dsl.fn.pow(deg, -0.5);
-    res = norm * G.node.feats;
-    res = aggregate_fn(G.graphs, res); // aggregate operation
-    res = dsl.nn.ffn(res, out=hs); // weight operation (out hs is the output size)
-    res = norm * res;
+    eps = // ? some scalar
+    res = aggregate_fn(G.graphs, G.node.feats);
+    scalarEps = (1 + eps) * G.node.feats;
+    res = res + scalarEps;
+    res = dsl.nn.ffn(res, out=hs);
     res = dsl.non_ln.ReLU(res);
 }
 

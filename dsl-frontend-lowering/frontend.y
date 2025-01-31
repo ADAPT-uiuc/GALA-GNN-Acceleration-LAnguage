@@ -17,6 +17,7 @@ void yyerror(const char *s);
 vector<CIRNode*> program;
 TrainingLoopNode* mainTrainingLoop;
 int iters = -1;
+int debug = 0;
 int numLayers = 0;
 vector<RelationEdge*> dependencies;
 vector<RelationEdge*> associations;
@@ -29,6 +30,7 @@ map<string, int> trainArgs;
 // the external input (defaultInput) is the last thing in the trainingNodeLoop
 // also the graph (transformed graph) is used as an input, but just for the aggregate node
 void addAggregate_CIR(DataNode* defaultInput, DataNode* graph){
+    if (debug) cout << "aggregate" << '\n';
     ForwardNode* aggregate = new ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
     DataInfo* outputInfo = new DataInfo(RM_DTYPE);
     outputInfo->setDims(-1, -2); // -1=N=232965, the number of nodes in the graph
@@ -53,6 +55,7 @@ void addAggregate_CIR(DataNode* defaultInput, DataNode* graph){
     dependencies.push_back(inOutAggrRelationGraph);
 }
 void addFFN_CIR(DataNode* defaultInput){
+    if (debug) cout << "ffn" << '\n';
     ForwardNode* ffn = new ForwardNode(UPDATE_NODE, FFN_OP);
     // weight as matrix in DIR
     DataInfo* weightInfo = new DataInfo(RM_DTYPE);
@@ -81,6 +84,7 @@ void addFFN_CIR(DataNode* defaultInput){
     associations.push_back(inOutWeightAssociation);
 }
 void addNormalization_CIR(DataNode* defaultInput){
+    if (debug) cout << "normalization setup\n";
     ForwardNode* powerOp = new ForwardNode(POINTWISE, POWER_OP);
 	powerOp->addParam("-0.5");
 	DataInfo* normInfo = new DataInfo(RM_DTYPE);
@@ -94,6 +98,7 @@ void addNormalization_CIR(DataNode* defaultInput){
 	dependencies.push_back(powerOpDegreesDependency);
 }
 void addNormCalc_CIR(DataNode* defaultInput, DataNode* featData){
+    if (debug) cout << "normalization-calculation\n";
 	// 1st normalization calculation
 	ForwardNode* normFeat1 = new ForwardNode(UPDATE_NODE, ROW_BROADCAST_OP);
 	DataInfo* normFeat1Info = new DataInfo(RM_DTYPE);
@@ -112,6 +117,7 @@ void addNormCalc_CIR(DataNode* defaultInput, DataNode* featData){
 	associations.push_back(normFeat1NormFeatAssociation);
 }
 void addReLU_CIR(DataNode* defaultInput){
+    if (debug) cout << "relu\n";
     // ReLU operation
 	ForwardNode* reluOp = new ForwardNode(POINTWISE, NON_LNR_OP_RELU);
 	DataInfo* reluInfo = new DataInfo(RM_DTYPE);
@@ -120,11 +126,13 @@ void addReLU_CIR(DataNode* defaultInput){
 	DataNode* reluData = new DataNode("res-relu", INT32, INT32, F32, rootReluLevel);
 	reluOp->addInputData(defaultInput);
 	reluOp->addOutputData(reluData);
+    dataNodeMap["reluData"] = reluData;
 	mainTrainingLoop->addLoopNode(reluOp);
 	RelationEdge* reluOpOnesDependency = new RelationEdge(defaultInput, ALL_RELATION, reluData, ALL_RELATION);
 	dependencies.push_back(reluOpOnesDependency);
 }
 void addDegrees_CIR(DataNode* defaultInput, DataNode* graph){
+    if (debug) cout << "degrees\n";
     /// Degree op
 	// Ones
 	// NOTE: In the front-end code there is no need for a user to get the degrees() by getting ones, and doing an
@@ -156,6 +164,143 @@ void addDegrees_CIR(DataNode* defaultInput, DataNode* graph){
 	RelationEdge* degreesOpGraphDependency = new RelationEdge(graph, ALL_RELATION, degreesData, ROWS_RELATION);
 	dependencies.push_back(degreesOpGraphDependency);
 }
+void mulScalarEPS_CIR(DataNode* featData){
+    if (debug) cout << "mul-scalar-eps\n";
+    // Scalar multiply res
+	ForwardNode* scalarEps = new ForwardNode(POINTWISE, SCALAR_ADD_EPS_MULTIPLY_OP);
+	scalarEps->addParam("1"); // TODO: change this to user input instead of hardcode
+	DataInfo* scalarInfo = new DataInfo(RM_DTYPE);
+	scalarInfo->setDims(-1, -2);
+	DataLevel* rootScalarEpsLevel = new DataLevel(scalarInfo, true);
+	DataNode* scalarEpsData = new DataNode("res-mulScalarEPS", INT32, INT32, F32, rootScalarEpsLevel);
+	scalarEps->addInputData(featData);
+	scalarEps->addOutputData(scalarEpsData);
+	mainTrainingLoop->addLoopNode(scalarEps);
+	RelationEdge* scalarEpsDependency = new RelationEdge(featData, ALL_RELATION, scalarEpsData, ALL_RELATION);
+	dependencies.push_back(scalarEpsDependency);
+
+}
+void addScalarEPS_CIR(DataNode* defaultInput, DataNode* aggrOutput){
+    if (debug) cout << "add-scalar-eps\n";
+    // Add epsilon mult and scalar mults
+	ForwardNode* normFeat = new ForwardNode(UPDATE_NODE, ADD_OP);
+	DataInfo* normFeatInfo = new DataInfo(RM_DTYPE);
+	normFeatInfo->setDims(-1, -2);
+	DataLevel* rootNormFeatLevel = new DataLevel(normFeatInfo, true);
+	DataNode* normFeatData = new DataNode("res-addScalarEPS", INT32, INT32, F32, rootNormFeatLevel);
+	normFeat->addInputData(defaultInput);
+	normFeat->addInputData(aggrOutput);
+	normFeat->addOutputData(normFeatData);
+	mainTrainingLoop->addLoopNode(normFeat);
+	RelationEdge* normFeatNormDependency = new RelationEdge(defaultInput, ALL_RELATION, normFeatData, ALL_RELATION);
+	dependencies.push_back(normFeatNormDependency);
+	RelationEdge* normFeatFeatDependency = new RelationEdge(aggrOutput, ALL_RELATION, normFeatData, ALL_RELATION);
+	dependencies.push_back(normFeatFeatDependency);
+	RelationEdge* normFeatNormFeatAssociation = new RelationEdge(defaultInput, ALL_RELATION, aggrOutput, ALL_RELATION);
+	associations.push_back(normFeatNormFeatAssociation);
+}
+void addAttentionWeight_L(DataNode* resData){
+    if (debug) cout << "add attention weight left\n";
+    // Add attention weight operation (L side)
+	// L side
+	ForwardNode* atten_l = new ForwardNode(UPDATE_NODE, FFN_OP);
+	// Weight as a matrix in the DIR
+	DataInfo* attenLWeightInfo = new DataInfo(CM_DTYPE);
+	attenLWeightInfo->setDims(-2, 1); // -2=input embedding dimension, -3=output classes
+	DataLevel* attenLWeightLevel = new DataLevel(attenLWeightInfo, true);
+	DataNode* attenLWeightData = new DataNode("attenLWeight1", INT32, INT32, F32, attenLWeightLevel);
+	// Res DIR
+	DataInfo* attenLInfo = new DataInfo(RM_DTYPE);
+	attenLInfo->setDims(-1, 1); // -1=N=232965, the number of nodes in the graph, -3=output classes
+	DataLevel* rootAttenLLevel = new DataLevel(attenLInfo, true);
+	DataNode* attenLData = new DataNode("attenL", INT32, INT32, F32, rootAttenLLevel);
+    dataNodeMap["attn-l"] = attenLWeightData;
+	// set dimenions from the new schedule information
+	atten_l->addInputData(resData);
+	atten_l->addInputData(attenLWeightData);
+	atten_l->addOutputData(attenLData);
+	mainTrainingLoop->addLoopNode(atten_l);
+	//* Dependencies
+	RelationEdge* inOutAttenLtDepRelationFeat = new RelationEdge(resData, ALL_RELATION, attenLData, ALL_RELATION);
+	RelationEdge* inOutAttenLDepRelationWeight = new RelationEdge(attenLWeightData, COLS_RELATION, attenLData, ROWS_RELATION);
+	dependencies.push_back(inOutAttenLtDepRelationFeat);
+	dependencies.push_back(inOutAttenLDepRelationWeight);
+	RelationEdge* inOutAttenLAssociation = new RelationEdge(resData, ROWS_RELATION, attenLWeightData, COLS_RELATION);
+	associations.push_back(inOutAttenLAssociation);
+}
+void addAttentionWeight_R(DataNode* resData){
+    if (debug) cout << "add attention weight right\n";
+// R side
+	ForwardNode* atten_r = new ForwardNode(UPDATE_NODE, FFN_OP);
+	// Weight as a matrix in the DIR
+	DataInfo* attenRWeightInfo = new DataInfo(CM_DTYPE);
+	attenRWeightInfo->setDims(-2, 1); // -2=input embedding dimension, -3=output classes
+	DataLevel* attenRWeightLevel = new DataLevel(attenRWeightInfo, true);
+	DataNode* attenRWeightData = new DataNode("attenRWeight1", INT32, INT32, F32, attenRWeightLevel);
+	// Res DIR
+	DataInfo* attenRInfo = new DataInfo(RM_DTYPE);
+	attenRInfo->setDims(-1, 1); // -1=N=232965, the number of nodes in the graph, -3=output classes
+	DataLevel* rootAttenRLevel = new DataLevel(attenRInfo, true);
+	DataNode* attenRData = new DataNode("attenR", INT32, INT32, F32, rootAttenRLevel);
+    dataNodeMap["attn-r"] = attenRWeightData;
+	// set dimenions from the new schedule information
+	atten_r->addInputData(resData);
+	atten_r->addInputData(attenRWeightData);
+	atten_r->addOutputData(attenRData);
+	mainTrainingLoop->addLoopNode(atten_r);
+	//* Dependencies
+	RelationEdge* inOutAttenRtDepRelationFeat = new RelationEdge(resData, ALL_RELATION, attenRData, ALL_RELATION);
+	RelationEdge* inOutAttenRDepRelationWeight = new RelationEdge(attenRWeightData, COLS_RELATION, attenRData, ROWS_RELATION);
+	dependencies.push_back(inOutAttenRtDepRelationFeat);
+	dependencies.push_back(inOutAttenRDepRelationWeight);
+	RelationEdge* inOutAttenRAssociation = new RelationEdge(resData, ROWS_RELATION, attenRWeightData, COLS_RELATION);
+	associations.push_back(inOutAttenRAssociation);
+}
+void addEdgeAggregation_CIR(DataNode* attn_l, DataNode* attn_r, DataNode* graph){
+    cout << "edge aggregation\n";
+    ForwardNode* aggregateEdge = new ForwardNode(AGGREGATE_EDGE, AGGREGATE_MUL_SUM_OP);
+    DataInfo* originalGraphInfo = dynamic_cast<DataInfo*>(graph->getData()->next());
+	DataInfo* aggrEdgeInfo = new DataInfo(CSR_STYPE, originalGraphInfo->getDirected(), true);
+	// aggrEdgeInfo.setDims(-4, 1); //-4=E=114M (E = Edges)
+	DataLevel* rootAggrEdgeLevel = new DataLevel(aggrEdgeInfo, true);
+	DataNode* aggrEdgeData = new DataNode("res-edgeAggr", INT32, INT32, F32, rootAggrEdgeLevel);
+	aggregateEdge->addInputData(attn_l);
+	aggregateEdge->addInputData(attn_r);
+	aggregateEdge->addInputData(graph);
+	aggregateEdge->addOutputData(aggrEdgeData);
+	// TODO add optimizations
+	mainTrainingLoop->addLoopNode(aggregateEdge);
+}
+void addLeakyReLU(DataNode* defaultInput, DataNode* graph){
+    cout << "leakyRelu\n"; 
+	// Leaky ReLU operation
+	ForwardNode* leakyReluOp = new ForwardNode(UPDATE_EDGE, NON_LNR_OP_LEAKY_RELU);
+	leakyReluOp->addParam("0.2"); // TODO: avoid hardcoding
+    DataInfo* originalGraphInfo = dynamic_cast<DataInfo*>(graph->getData()->next());
+	DataInfo* leakyReluInfo = new DataInfo(CSR_STYPE, originalGraphInfo->getDirected(), true);
+	// leakyReluInfo.setDims(-4, 1);
+	DataLevel* rootLeakyReluLevel = new DataLevel(leakyReluInfo, true);
+	DataNode* leakyReluData = new DataNode("res-leakyReLU", INT32, INT32, F32, rootLeakyReluLevel);
+	leakyReluOp->addInputData(defaultInput);
+	leakyReluOp->addOutputData(leakyReluData);
+	mainTrainingLoop->addLoopNode(leakyReluOp);
+	RelationEdge* leakyReluOpOnesDependency = new RelationEdge(defaultInput, ALL_RELATION, leakyReluData, ALL_RELATION);
+	dependencies.push_back(leakyReluOpOnesDependency);
+}
+void addSoftmax_CIR(DataNode* defaultInput, DataNode* graph){
+    cout << "softmax\n";
+    ForwardNode* softmaxOp = new ForwardNode(UPDATE_EDGE, NON_LNR_OP_SOFTMAX);
+    DataInfo* originalGraphInfo = dynamic_cast<DataInfo*>(graph->getData()->next());
+	DataInfo* softmaxInfo = new DataInfo(CSR_STYPE, originalGraphInfo->getDirected(), true);
+	// leakyReluInfo.setDims(-4, 1);
+	DataLevel* rootSoftmaxLevel = new DataLevel(softmaxInfo, true);
+	DataNode* softmaxData = new DataNode("ses-softmax", INT32, INT32, F32, rootSoftmaxLevel);
+	softmaxOp->addInputData(defaultInput);
+	softmaxOp->addOutputData(softmaxData);
+	mainTrainingLoop->addLoopNode(softmaxOp);
+	RelationEdge* softmaxOpOnesDependency = new RelationEdge(defaultInput, ALL_RELATION, softmaxData, ALL_RELATION);
+	dependencies.push_back(softmaxOpOnesDependency);
+}
 %}
 %union {
     int ival;
@@ -171,10 +316,10 @@ void addDegrees_CIR(DataNode* defaultInput, DataNode* graph){
 %token<sval> LPAREN RPAREN SEMICOLON QUOTE COMMENT SET_UNWEIGHTED SET_UNDIRECTED
 %token<sval> MODEL_W EVAL TRAIN LAYER LOSS OPTIMIZER ITERS VAL_STEP RMSE_LOSS ADAM_T
 %token<sval> AGGR_INIT FN_ARG MUL_SUM DSL_FN DSL_DOT FFN_OUT SIZE_FN 
-%token<sval> RELAXNLN QUANT GRAPH_ATTR FEAT_ATTR RELU LABEL_ATTR DEGREE_ATTR NODE_ATTR
-%token<sval> RABBIT_REORDER_OP SAMPLE_RANDOM_OP POW
-%token<sval> COLTILE AGGR FEAT_SIZE_ASSIGN LABEL_SIZE_ASSIGN COARSEN
-%token<sval> INTEGER FLOAT
+%token<sval> RELAXNLN QUANT GRAPH_ATTR FEAT_ATTR RELU LABEL_ATTR DEGREE_ATTR NODE_ATTR LEAKY_RELU
+%token<sval> RABBIT_REORDER_OP SAMPLE_RANDOM_OP POW SCALAR_INIT
+%token<sval> COLTILE AGGR FEAT_SIZE_ASSIGN LABEL_SIZE_ASSIGN COARSEN SRC_ATTR DST_ATTR;
+%token<sval> INTEGER FLOAT SOFTMAX INIT_WEIGHT;
 %token<sval> LBRACE RBRACE LSQBRA RSQBRA DOT COMMA;
 %token<sval> IF ELSE DO WHILE;
 %token<sval> TR FA;
@@ -192,7 +337,7 @@ void addDegrees_CIR(DataNode* defaultInput, DataNode* graph){
 %token<sval> NOT AND OR NOTEQ EQ GREATER LESS GREATEREQ LESSEQ 
 %token<sval> PLUS MINUS MULTIPLY DIVIDE; */
 
-%type <ival> bool
+%type <ival> bool op
 %type <sval> arg train_arg string data_var function update_op gnn_op 
 %type <forwardNode> load_dataset function_init statement
 %type <trainingLoopNode> algorithm layers layer_def statements
@@ -226,6 +371,7 @@ program : load_dataset algorithm schedules
 ;
 load_dataset : IDENTIFIER ASSIGN LOAD LPAREN string RPAREN SEMICOLON 
     {
+        if (debug == 1) cout << "load graph+feats\n";
         $$ = new ForwardNode(POINTWISE, LOAD_OP);
         $$->addParam($5); 
         // Graph
@@ -339,6 +485,80 @@ statement : IDENTIFIER ASSIGN gnn_op SEMICOLON
             }
             addReLU_CIR(defaultInput);
         }
+        else if (string($3) == "scalarEps-mul"){
+            DataNode* defaultInput;
+            if (mainTrainingLoop->getLoopNodeNum() == 0){
+                defaultInput = NULL;
+            }
+            else{
+                int lastCIR_idx = mainTrainingLoop->getLoopNodeNum()-1;
+                defaultInput = mainTrainingLoop->getNode(lastCIR_idx)->getOutput(0);
+            }
+            mulScalarEPS_CIR(dataNodeMap["Feat1"]);
+        }
+        else if (string($3) == "scalarEps-add"){
+            DataNode* defaultInput;
+            if (mainTrainingLoop->getLoopNodeNum() == 0){
+                defaultInput = NULL;
+            }
+            else{
+                int lastCIR_idx = mainTrainingLoop->getLoopNodeNum()-1;
+                defaultInput = mainTrainingLoop->getNode(lastCIR_idx)->getOutput(0);
+            }
+            addScalarEPS_CIR(defaultInput, dataNodeMap["Output-Aggregate"]);
+        }
+        else if (string($3) == "init-l-weight"){
+            DataNode* defaultInput;
+            if (mainTrainingLoop->getLoopNodeNum() == 0){
+                defaultInput = NULL;
+            }
+            else{
+                int lastCIR_idx = mainTrainingLoop->getLoopNodeNum()-1;
+                defaultInput = mainTrainingLoop->getNode(lastCIR_idx)->getOutput(0);
+            }
+            addAttentionWeight_L(dataNodeMap["Res1"]);
+        }
+        else if (string($3) == "init-r-weight"){
+            DataNode* defaultInput;
+            if (mainTrainingLoop->getLoopNodeNum() == 0){
+                defaultInput = NULL;
+            }
+            else{
+                int lastCIR_idx = mainTrainingLoop->getLoopNodeNum()-1;
+                defaultInput = mainTrainingLoop->getNode(lastCIR_idx)->getOutput(0);
+            }
+            addAttentionWeight_R(dataNodeMap["Res1"]);
+        }
+        else if (string($3) == "leaky-relu"){
+            DataNode* defaultInput; // TODO: change edge aggregation to be its own thing, not inside leakyRelu
+            if (mainTrainingLoop->getLoopNodeNum() == 0){
+                defaultInput = NULL;
+            }
+            else{
+                int lastCIR_idx = mainTrainingLoop->getLoopNodeNum()-1;
+                defaultInput = mainTrainingLoop->getNode(lastCIR_idx)->getOutput(0);
+            }
+            addEdgeAggregation_CIR(dataNodeMap["attn-l"], dataNodeMap["attn-r"], dataNodeMap["Graph"]);
+            if (mainTrainingLoop->getLoopNodeNum() == 0){
+                defaultInput = NULL;
+            }
+            else{
+                int lastCIR_idx = mainTrainingLoop->getLoopNodeNum()-1;
+                defaultInput = mainTrainingLoop->getNode(lastCIR_idx)->getOutput(0);
+            }
+            addLeakyReLU(defaultInput, dataNodeMap["Graph"]);
+        }
+        else if (string($3) == "softmax"){
+            DataNode* defaultInput;
+            if (mainTrainingLoop->getLoopNodeNum() == 0){
+                defaultInput = NULL;
+            }
+            else{
+                int lastCIR_idx = mainTrainingLoop->getLoopNodeNum()-1;
+                defaultInput = mainTrainingLoop->getNode(lastCIR_idx)->getOutput(0);
+            }
+            addSoftmax_CIR(defaultInput, dataNodeMap["Graph"]);
+        }
         free($1);
         free($3);
     }
@@ -403,12 +623,9 @@ model_def : IDENTIFIER ASSIGN MODEL_W LPAREN args RPAREN LBRACE layer_inits RBRA
         for (int j = 0; j < n; j++){
             ForwardNode* curNode = mainTrainingLoop->getNode(j);
             string type = curNode->getOutput(0)->getName();
-            if (type == "ones" || type == "degrees"){
+            if (type == "ones" || type == "degrees" || type == "norm"){
                 lastData = curNode->getOutput(0);
                 continue;
-            }
-            else if (type == "norm"){
-                addNormalization_CIR(lastData);
             }
             else if (type == "res-norm"){
                 addNormCalc_CIR(lastData, dataNodeMap["Feat1"]);
@@ -421,6 +638,24 @@ model_def : IDENTIFIER ASSIGN MODEL_W LPAREN args RPAREN LBRACE layer_inits RBRA
             }
             else if (type == "res-relu"){
                 addReLU_CIR(lastData);
+            }
+            else if (type == "res-mulScalarEPS"){
+                mulScalarEPS_CIR(dataNodeMap["reluData"]); // TODO: change this so it works for more than 2 layers
+            }
+            else if (type == "res-addScalarEPS"){
+                addScalarEPS_CIR(lastData, dataNodeMap["Output-Aggregate"]); // TODO: change to return newest aggregate node
+            }
+            else if (type == "attenR"){
+                addAttentionWeight_R(dataNodeMap["Res1"]);
+            }
+            else if (type == "attenL"){
+                addAttentionWeight_L(dataNodeMap["Res1"]);
+            }
+            else if (type == "res-softmax"){
+                addSoftmax_CIR(lastData, dataNodeMap["Graph"]);
+            }
+            else if (type == "res-leakyReLU"){
+                addLeakyReLU(lastData, dataNodeMap["Graph"]);
             }
             lastData = curNode->getOutput(0);
         }
@@ -441,10 +676,35 @@ model_uses : model_use model_use { $$ = NULL; }
 model_use : IDENTIFIER ASSIGN IDENTIFIER DOT EVAL LPAREN args RPAREN SEMICOLON { free($1); free($3); }
     | IDENTIFIER DOT TRAIN LPAREN train_args RPAREN SEMICOLON { free($1); }
 ;
-gnn_op : data_var op data_var { $$ = strdup("normalization"); free($1); free($3); }
+gnn_op : data_var op data_var
+    {
+         if ($2 == 3){
+            $$ = strdup("normalization"); 
+         }
+         else if ($2 == 1){
+            $$ = strdup("scalarEps-add");
+         }
+         free($1); 
+         free($3); 
+    }
     | function 
     {
         $$ = $1;
+    }
+    | function op data_var
+    {
+        if (string($1) == "scalarEps-mul");{
+            $$ = $1;
+        }
+        if (string($1) == "init-weight"){
+            if (string($3) == "src_nodes"){
+                $$ = strdup("init-l-weight");
+            }
+            else{
+                $$ = strdup("init-r-weight");
+            }
+        }
+        free($3);
     }
 ;
 function : IDENTIFIER LPAREN data_var COMMA data_var RPAREN
@@ -453,6 +713,12 @@ function : IDENTIFIER LPAREN data_var COMMA data_var RPAREN
         free($1);
         free($3);
         free($5);
+    }
+    | IDENTIFIER LPAREN data_var RPAREN
+    {
+        $$ = strdup("relu");
+        free($1);
+        free($3);
     }
     | DSL_DOT update_op 
     {
@@ -470,11 +736,28 @@ update_op : FFN LPAREN data_var COMMA FFN_OUT data_var RPAREN
         $$ = strdup("relu");
         free($3);
     }
+    | LEAKY_RELU LPAREN data_var op data_var RPAREN
+    {
+        $$ = strdup("leaky-relu");
+        free($3);
+    }
     | POW LPAREN data_var COMMA FLOAT RPAREN
     {
         // TODO: use the float in the calculation, now just hardcoded to -0.5
         $$ = strdup("pow");
         free($3);
+    }
+    | SCALAR_INIT LPAREN INTEGER RPAREN
+    {
+        $$ = strdup("scalarEps-mul");
+    }
+    | SOFTMAX LPAREN data_var RPAREN
+    {
+        $$ = strdup("softmax");
+    }
+    | INIT_WEIGHT LPAREN RPAREN
+    {
+        $$ = strdup("init-weight");
     }
 ;
 schedules : schedule {}
@@ -611,6 +894,16 @@ data_var : IDENTIFIER
         $$ = strdup("degrees");
         free($1);
     }
+    | data_var DOT SRC_ATTR
+    {
+        $$ = strdup("src_nodes");
+        free($1);
+    }
+    | data_var DOT DST_ATTR
+    {
+        $$ = strdup("dst_nodes");
+        free($1);
+    }
 ;
 function_init : AGGR_INIT LPAREN FN_ARG ASSIGN DSL_DOT semiring_op RPAREN
     {}
@@ -618,7 +911,7 @@ function_init : AGGR_INIT LPAREN FN_ARG ASSIGN DSL_DOT semiring_op RPAREN
 semiring_op : MUL_SUM
     {}
 ;
-op : PLUS {} | MINUS {} | MULTIPLY {} | DIVIDE {}
+op : PLUS { $$ = 1; } | MINUS { $$ = 2; } | MULTIPLY { $$ = 3; } | DIVIDE { $$ = 4; }
 ;
 train_args : { $$ = NULL; }
     | train_args train_arg
@@ -682,6 +975,7 @@ int main(int argc, char** argv){
     yyin = myfile;
     yydebug = 0;
     mainTrainingLoop = new TrainingLoopNode(iters == -1 ? 100 : iters);
+    debug = 1;
     yyparse();
     cout << "PROGRAM (CIR Nodes): " << program.size() << '\n';
     cout << "DEPENDENCIES " << dependencies.size() << '\n';

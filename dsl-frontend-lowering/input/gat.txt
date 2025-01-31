@@ -2,13 +2,13 @@
 G = load_dataset("Reddit");
 
 aggrFn = dsl.get_aggregate(fn = dsl.fn.mul_sum);
-L1 = layer(G, hs, nonln_fn, aggregate_fn) {
-    deg = G.graphs.degrees();
-    norm = dsl.fn.pow(deg, -0.5);
-    res = norm * G.node.feats;
-    res = aggregate_fn(G.graphs, res); // aggregate operation
-    res = dsl.nn.ffn(res, out=hs); // weight operation (out hs is the output size)
-    res = norm * res;
+L1 = layer(G, hs, leakyRelu_fn, nonln_fn, aggregate_fn) {
+    res = dsl.nn.ffn(G.node.feats, out=hs);
+    l_side = dsl.nn.init_weight() * res.src; // TODO: change this to be dictionary map style instead?
+    r_side = dsl.nn.init_weight() * res.dst; // prob not correct?
+    res = dsl.non_ln.LeakyReLU(l_side+r_side); // prob should change to function parameter not dsl.xx.xxx
+    res = dsl.fn.softmax(res);
+    res = aggregate_fn(G.graphs, res);
     res = nonln_fn(res);
 }
 
@@ -20,7 +20,6 @@ M1 = model(G, non_ln) {
 m1 = M1(G, dsl.non_ln.ReLU);
 m1.train(iters=100, validation_step=5);
 res = m1.eval();
-
 
 # schedule
 G=G.set_undirected(true); // false by default
