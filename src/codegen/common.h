@@ -526,6 +526,7 @@ public:
             preCode.addCode(transformationCode);
         } else if (cNode->getOp() == AGGREGATE_EDGE_MUL_SUM_OP)
         {
+            hasFFNEdgeUpdate = true;
             bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);
 
             if (encounteredAutograds.find(getKernelName(cNode)) == encounteredAutograds.end())
