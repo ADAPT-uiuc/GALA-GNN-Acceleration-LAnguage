@@ -332,9 +332,12 @@ public:
         } else if (cNode->getOp() == NON_LNR_OP_SOFTMAX)
         {
             kernelName += "non_lnr_op_softmax";
-        } else if (cNode->getOp() == AGGREGATE_EDGE_MUL_SUM_OP)
+        } else if (cNode->getOp() == AGGREGATE_EDGE_MUL_OP)
         {
-            kernelName += "aggregate_edge";
+            kernelName += "aggregate_edge_mul";
+        } else if (cNode->getOp() == AGGREGATE_EDGE_SUM_OP)
+        {
+            kernelName += "aggregate_edge_sum";
         } else
         {
             kernelName += "unsupported";
@@ -718,7 +721,7 @@ public:\n\
                     // TODO later make this better
                     auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
                     std::string tempForwardAggrCall =  "t_iden = " + getKernelName(cNode)
-                    + "_AutoGrad::apply(t_iden, " + std::to_string(inGraphIndx) + ");";
+                    + "_AutoGrad::apply(t_iden, 0);"; // TODO: Alyways do 0 (for now, since it'll be used for all scenarios)
                     model.getInv()->addCode(tempForwardAggrCall);
                 } else
                 {
@@ -734,6 +737,7 @@ public:\n\
                 {
                     encounteredAutograds.insert(getKernelName(cNode));
                     std::string autoGradFunction = ""
+  
     "class " + getKernelName(cNode) + "_AutoGrad : public torch::autograd::Function<" + getKernelName(cNode) + "_AutoGrad> {\n\
     public:\n\
         static torch::Tensor forward(torch::autograd::AutogradContext *ctx,\n\
@@ -763,8 +767,8 @@ public:\n\
             torch::Tensor columns_graph = global_columns_graph[2 * li + 1];\n\
             torch::Tensor value_graph = global_value_graph[2 * li + 1];\n";
                 if (isColTile){
-                    autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
-            int segments = global_segments[2 * li];\n\
+                    autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li + 1];\n\
+            int segments = global_segments[2 * li + 1];\n\
             return {" + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph, value_graph, bounds, segments), torch::Tensor()};";
                 } else
                 {
@@ -804,6 +808,7 @@ public:\n\
   torch::Tensor value_graph_ones = global_value_graph[2 * " + std::to_string(inGraphIndx) + "];\n";
 
                 if (isColTile){
+  
                     directAggrCall += "  torch::Tensor bounds_ones = global_bounds[2 * " + std::to_string(inGraphIndx) + "];\n\
   int segments_ones = global_segments[2 * " + std::to_string(inGraphIndx) + "];\n"
                     + generateOutputString(cNode) + " = " + getKernelName(cNode) + "_call(" + cNode->getInput(0)->getName() + ", offset_graph_ones, columns_graph_ones,\n\
@@ -923,6 +928,7 @@ public:\n\
                 // TODO add the inputs to the forward call based on the actual inputs
                 std::string forwardCall = generateOutputString(cNode) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
                 model.getForward()->addCode(forwardCall);
+  
             }
             fcCount++;
         } else if (cNode->getOp() == SCALAR_ADD_EPS_MULTIPLY_OP)
@@ -1015,7 +1021,7 @@ public:\n\
                 std::string tempFowradCallPre = "std::vector<torch::Tensor>\n\
 forward(torch::Tensor t_iden";
                 model.getForwardCallPre()->addCode(tempFowradCallPre);
-                std::string tempFowradCallPost = "){\n";
+                std::string tempFowradCallPost = ", int ep, int mod_v){\n";
                 model.getForwardCallPost()->addCode(tempFowradCallPost);
 
                 // std::string resInit = "torch::Tensor res = input_dense;";
@@ -1075,32 +1081,100 @@ forward(torch::Tensor t_iden";
                     std::cout << "Optimizer not supported." << std::endl;
                 }
 
+                int testStep =  loopNode->getTestStep();
+                if (testStep > 1){
+                    std::string initTrinStepsStr = " int mod_v = " + std::to_string(testStep) + ";\n";
+                    model.getPreCall()->addCode(initTrinStepsStr);
+                } else {
+                    std::string initTrinStepsStr = " int mod_v = 1;\n";
+                    model.getPreCall()->addCode(initTrinStepsStr);
+                }
+
+                std::string skipEpochsStr = " int skip_cache_warmup = 5;\n";
+                model.getPreCall()->addCode(skipEpochsStr);
+
+                std::string timingInitStr = " double start, end;\n\
+  double start_train, end_train;\n\
+  std::vector<double> times_arr, times_arr_train;\n";
+                model.getPreCall()->addCode(timingInitStr);
+
+
+
                 // TODO generate this using the test loop
-                std::string tempTrainLoopPreCall = "for (size_t epoch = 1; epoch <= num_iters; ++epoch) {\n\
+    //             std::string tempTrainLoopPreCall = "for (size_t epoch = 1; epoch <= num_iters; ++epoch) {\n\
+    // // Reset gradients.\n\
+    // optimizer.zero_grad();\n\
+    // torch::Tensor prediction =\n\
+    //     net->forward(t_iden";
+
+                std::string tempTrainLoopPreCall = " for (size_t epoch = 1; epoch <= num_iters; ++epoch) {\n\
     // Reset gradients.\n\
     optimizer.zero_grad();\n\
+    // Execute the model on the input data.\n\
+    cudaDeviceSynchronize();\n\
+    start = get_time();\n\
     torch::Tensor prediction =\n\
         net->forward(t_iden";
+
                 std::string tempTrainLoopPostCall = ")[0];\n\
+    cudaDeviceSynchronize();\n\
+    end = get_time();\n\
+    cudaDeviceSynchronize();\n\
+    start_train = get_time();\n\
     torch::Tensor prediction_train = prediction.index({t_train_mask});\n\
     torch::Tensor labels_train = t_labs.index({t_train_mask});\n\
     auto criterion = torch::nn::CrossEntropyLoss();\n\
     torch::Tensor d_loss = criterion(prediction_train, labels_train);\n\
     d_loss.backward();\n\
     optimizer.step();\n\
-    torch::Tensor prediction_test = prediction.index({t_test_mask});\n\
-    torch::Tensor labels_test = t_labs.index({t_test_mask});\n\
-    auto [pred_val, pred_idx] = torch::max({prediction_test}, 1);\n\
-    auto correct = torch::sum(pred_idx == labels_test);\n\
-    std::cout << \"Epoch \" << epoch << \" Loss: \" << d_loss.item<val_t>()\n\
-              << \" Accuracy: \"\n\
-              << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])\n\
-              << std::endl;\n\
-}";
+    cudaDeviceSynchronize();\n\
+    end_train = get_time();\n\
+    if (epoch % mod_v == 0) {\n\
+      torch::Tensor prediction_test = prediction.index({t_test_mask});\n\
+      torch::Tensor labels_test = t_labs.index({t_test_mask});\n\
+      auto [pred_val, pred_idx] = torch::max({prediction_test}, 1);\n\
+      auto correct = torch::sum(pred_idx == labels_test);\n\
+      std::cout << \"Epoch \" << epoch << \" Loss: \" << d_loss.item<val_t>()\n\
+                << \" Accuracy: \"\n\
+                << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])\n\
+                << std::endl;\n\
+    } else {\n\
+      std::cout << \"Epoch \" << epoch << \" Loss: \" << d_loss.item<val_t>()\n\
+                << std::endl;\n\
+    }\n\
+    if (epoch >= skip_cache_warmup) {\n\
+      times_arr.push_back(end - start);\n\
+      times_arr_train.push_back(end_train - start_train);\n\
+    }\n\
+  }";
+                
+//                 std::string tempTrainLoopPostCall = ")[0];\n\
+//     torch::Tensor prediction_train = prediction.index({t_train_mask});\n\
+//     torch::Tensor labels_train = t_labs.index({t_train_mask});\n\
+//     auto criterion = torch::nn::CrossEntropyLoss();\n\
+//     torch::Tensor d_loss = criterion(prediction_train, labels_train);\n\
+//     d_loss.backward();\n\
+//     optimizer.step();\n\
+//     torch::Tensor prediction_test = prediction.index({t_test_mask});\n\
+//     torch::Tensor labels_test = t_labs.index({t_test_mask});\n\
+//     auto [pred_val, pred_idx] = torch::max({prediction_test}, 1);\n\
+//     auto correct = torch::sum(pred_idx == labels_test);\n\
+//     std::cout << \"Epoch \" << epoch << \" Loss: \" << d_loss.item<val_t>()\n\
+//               << \" Accuracy: \"\n\
+//               << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])\n\
+//               << std::endl;\n\
+// }";
                 model.getPreCall()->addCode(tempTrainLoopPreCall);
                 model.getPostCall()->addCode(tempTrainLoopPostCall);
             }
         }
+
+        std::string printTimes = "  std::cout << \"Inference: \" << calc_mean(times_arr) << \",\"\n\
+            << calc_std(times_arr) << std::endl;\n\
+  std::cout << \"Train: \" << calc_mean(times_arr_train) << \",\"\n\
+            << calc_std(times_arr_train) << std::endl;\n\
+  std::cout << \"Total: \" << calc_mean(times_arr) + calc_mean(times_arr_train) << std::endl;\n";
+        postCode.addCode(printTimes);
 
         std::string closeMain = "}";
         postCode.addCode(closeMain);

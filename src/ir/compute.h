@@ -177,7 +177,7 @@ private:
     //  temp solution - Remove everything and then add everything back
     std::vector<ForwardNode *> loop;
 public:
-    TrainingLoopNode(int numIter, LossFunction lossFunc = CROSS_ENTROPY, NNOptimizer optimizer = ADAM, int stepValid = 0, int stepTest = 0){
+    TrainingLoopNode(int numIter, LossFunction lossFunc = CROSS_ENTROPY, NNOptimizer optimizer = ADAM, int stepValid = 0, int stepTest = 1){
         this->numIter = numIter;
         this->lossFunc = lossFunc;
         this->optimizer = optimizer;
