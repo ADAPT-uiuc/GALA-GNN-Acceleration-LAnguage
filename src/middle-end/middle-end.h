@@ -221,6 +221,8 @@ public:
         std::vector<RelationEdge*>& associations,
         std::vector<TransformEdge*>& transforms)
     {
+        // Do complexity aware re-ordering to make the learning parts away from the other graph computations
+        complexityOperatorReordering(program, dependencies, associations, transforms, false);
         // Iterate through program to locate the training loop
         for (int i = 0; i < program.size(); i++)
         {
@@ -232,23 +234,121 @@ public:
                 // TODO Create the initial input graph.
                 //  i.e. add computations to the IR to create these results
 
-                for (int ix = lNode->getLoopNodeNum() - 1; ix >= 0; ix--)
+                for (int ix = 0; ix < lNode->getLoopNodeNum(); ix++)
                 {
                     // TODO Change this to a stringed set of aggregations not just aggregation
                     //  i.e. result of aggregation 1 is used by aggregation 2
                     //  if the aggregations are separate then they can still be independent
+                    if (ix + 2 < lNode->getLoopNodeNum())
+                    {
+                        auto cNodeRb1 = dynamic_cast<ComputeNode*>(lNode->getNode(ix));
+                        auto cNodeAggr = dynamic_cast<ComputeNode*>(lNode->getNode(ix + 1));
+                        auto cNodeRb2 = dynamic_cast<ComputeNode*>(lNode->getNode(ix + 2));
+
+                        if(cNodeAggr->getInput(1)->getDataInfo()->getSparse() &&
+                            cNodeRb1->getOp() == ROW_BROADCAST_OP &&
+                            cNodeRb2->getOp() == ROW_BROADCAST_OP &&
+                            cNodeAggr->getOp() == AGGREGATE_MUL_SUM_OP)
+                        {
+                            // TODO remove dependencies
+                            lNode->eraseFirstNLoopNodes(3, ix);
+
+                            auto inputGraph = cNodeAggr->getInput(1);
+                            // Edge aggregation
+                            auto aggregateEdge = ForwardNode(AGGREGATE_EDGE, AGGREGATE_EDGE_MUL_OP);
+                            auto aggrEdgeInfo = DataInfo(CSR_STYPE, inputGraph->getDataInfo()->getDirected(), true);
+                            auto rootAggrEdgeLevel = DataLevel(&aggrEdgeInfo, true);
+                            auto aggrEdgeData = DataNode("val", INT32, INT32, F32, &rootAggrEdgeLevel);
+                            aggregateEdge.addInputData(cNodeRb1->getInput(0));
+                            aggregateEdge.addInputData(cNodeRb2->getInput(0));
+                            aggregateEdge.addInputData(inputGraph);
+                            aggregateEdge.addOutputData(&aggrEdgeData);
+                            lNode->insertToLoopNodes(ix, &aggregateEdge);
+                            //* Dependencies
+                            // Dependency relation between the features and the aggregated output
+                            auto inOutEdgeAggrLRelationFeat = RelationEdge(cNodeRb1->getInput(0), ALL_RELATION, &aggrEdgeData, ROWS_RELATION);
+                            auto inOutEdgeAggrRRelationFeat = RelationEdge(cNodeRb2->getInput(0), ALL_RELATION, &aggrEdgeData, COLS_RELATION);
+                            auto inOutEdgeAggrRelationGraph = RelationEdge(inputGraph, ALL_RELATION, &aggrEdgeData, ALL_RELATION);
+                            dependencies.push_back(&inOutEdgeAggrLRelationFeat);
+                            dependencies.push_back(&inOutEdgeAggrRRelationFeat);
+                            dependencies.push_back(&inOutEdgeAggrRelationGraph);
+                            auto graphEdgeAggrLAssociation = RelationEdge(inputGraph, ROWS_RELATION, cNodeRb1->getInput(0), ALL_RELATION);
+                            auto graphEdgeAggrRAssociation = RelationEdge(inputGraph, COLS_RELATION, cNodeRb2->getInput(0), ALL_RELATION);
+                            associations.push_back(&graphEdgeAggrLAssociation);
+                            associations.push_back(&graphEdgeAggrRAssociation);
+
+                            // Add aggregate operation
+                            auto aggregate = ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
+                            auto outputInfo = DataInfo(RM_DTYPE);
+                            outputInfo.setDims(-1, 32); // -1=N=232965, the number of nodes in the graph
+                            auto rootOutputLevel = DataLevel(&outputInfo, true);
+                            auto outputData = DataNode("res", INT32, INT32, F32, &rootOutputLevel);
+                            aggregate.addInputData(cNodeRb1->getInput(1));
+                            aggregate.addInputData(&aggrEdgeData);
+                            aggregate.addOutputData(&outputData);
+                            aggregate.addOpt(COARSE_COPT, 2);
+                            lNode->insertToLoopNodes( ix + 1, &aggregate);
+                            //* Dependencies
+                            // Dependency relation between the features and the aggregated output
+                            auto inOutAggrRelationFeat = RelationEdge(cNodeRb1->getInput(1), ALL_RELATION, &outputData, ALL_RELATION);
+                            // Dependency relation between the graph and the aggregated output
+                            auto inOutAggrRelationGraph = RelationEdge(&aggrEdgeData, ALL_RELATION, &outputData, ROWS_RELATION);
+                            dependencies.push_back(&inOutAggrRelationFeat);
+                            dependencies.push_back(&inOutAggrRelationGraph);
+                        }
+                    }
+
                     auto cNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix));
-                    if (cNode->getOpType() == AGGREGATE_NODE)
+                    if(cNode->getOp() == FFN_OP)
                     {
-                       
-                    } else
-                    {
-                        // TODO Use the most recent input graph as a graph input if graph is used
-                        // Use previous
+                        // Get output and then get places the output is used.
+                        // If one of those places is a aggregate operation, if going from smaller to larger,
+                        // and is sparse, then do recompute
+                        // TODO add the computation that adds the dependency to the object?
+                        int outputUses = 0;
+                        auto output = cNode->getOutput(0);
+                        auto inputDataInfo = cNode->getInput(0)->getDataInfo();
+                        auto inputCols = inputDataInfo->getDimCol();
+                        auto outputCols = output->getDataInfo()->getDimCol();
+                        for (int iy = ix; iy < lNode->getLoopNodeNum(); iy++)
+                        {
+                            auto oNode = dynamic_cast<ComputeNode*>(lNode->getNode(iy));
+                            if (outputUses > 0 &&
+                                oNode->getOp() == AGGREGATE_MUL_SUM_OP &&
+                                inputCols < outputCols &&
+                                !oNode->getInput(1)->getDataInfo()->getSparse())
+                            {
+                                oNode->setInputDataNode(0, cNode->getInput(0));
+                                oNode->getOutput(0)->getDataInfo()->setDims(inputDataInfo->getDimRow(), inputCols);
+
+                                // Add weight operation
+                                auto ffn = ForwardNode(UPDATE_NODE, FFN_OP);
+                                // Res DIR
+                                auto resInfo = DataInfo(RM_DTYPE);
+                                resInfo.setDims(-1, outputCols); // -1=N=232965, the number of nodes in the graph, -3=output classes
+                                auto rootResLevel = DataLevel(&resInfo, true);
+                                auto resData = DataNode("res", INT32, INT32, F32, &rootResLevel);
+                                ffn.addInputData(oNode->getOutput(0));
+                                ffn.addInputData(cNode->getInput(1));
+                                ffn.addOutputData(&resData);
+                                lNode->insertToLoopNodes(iy + 1, &ffn);
+                                //* Dependencies
+                                auto inOutWeightDepRelationFeat = RelationEdge(oNode->getOutput(0), ALL_RELATION, &resData, ALL_RELATION);
+                                auto inOutWeightDepRelationWeight = RelationEdge(cNode->getInput(1), COLS_RELATION, &resData, ROWS_RELATION);
+                                dependencies.push_back(&inOutWeightDepRelationFeat);
+                                dependencies.push_back(&inOutWeightDepRelationWeight);
+                                auto inOutWeightAssociation = RelationEdge(oNode->getOutput(0), ROWS_RELATION, cNode->getInput(1), COLS_RELATION);
+                                associations.push_back(&inOutWeightAssociation);
+                            }
+                            if (oNode->getInput(0) == output)
+                            {
+                                outputUses++;
+                            }
+                        }
                     }
                 }
             } else {
-                auto cNode = dynamic_cast<ComputeNode*>(outNode);
+                // TODO Ignore this part for now. Assume all computations come from the main function
             }
         }
 
@@ -260,7 +360,7 @@ public:
         std::vector<RelationEdge*>& associations,
         std::vector<TransformEdge*>& transforms)
     {
-        // Do complexity aware re-ordering to make the learning parts as far oof in the computation as possible.
+        // Do complexity aware re-ordering to make the learning parts as far off in the computation as possible.
         complexityOperatorReordering(program, dependencies, associations, transforms, true);
 
         bool foundLeaning = false;

@@ -452,6 +452,10 @@ public:
                         }
                     }
                     resString += generateTransformation(dNode, transforms);
+                } else if (tr->getTransformation() == SAMPLE_DOPT)
+                {
+                    resString += "inplace_sample_graph(&" + srcNode->getName() + ", " +  tr->getParam(0) + ");";
+                    resString += generateTransformation(dNode, transforms);
                 }
             }
         }
@@ -524,7 +528,7 @@ public:
             auto outputGraph = cNode->getOutput(1);
             std::string transformationCode = generateTransformation(outputGraph, transforms);
             preCode.addCode(transformationCode);
-        } else if (cNode->getOp() == AGGREGATE_EDGE_MUL_SUM_OP)
+        } else if (cNode->getOp() == AGGREGATE_EDGE_SUM_OP)
         {
             hasFFNEdgeUpdate = true;
             bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);

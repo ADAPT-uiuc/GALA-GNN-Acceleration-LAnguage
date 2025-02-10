@@ -512,7 +512,7 @@ torch::Tensor inplace_softmax_sddvv_mult(torch::Tensor row_val,\n\
     return value_graph;\n\
 }";
             kernelCallCode.addCode(kernelCallCodeStr);
-        } else if (cNode->getOp() == AGGREGATE_EDGE_MUL_SUM_OP) {
+        } else if (cNode->getOp() == AGGREGATE_EDGE_SUM_OP) {
             std::string kernelCodeStr = "extern \"C\" __global__ void __launch_bounds__(256)\n\
     default_function_kernel_spmm_backward_sddmm_32_eaggr(\n\
         float *__restrict__ C, // Output dense\n\

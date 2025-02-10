@@ -36,7 +36,8 @@ enum ComputeOp {
     POWER_OP,
     APPLY_EDGES_OP, // SDDMM
     AGGREGATE_MUL_SUM_OP, // SpMM
-    AGGREGATE_EDGE_MUL_SUM_OP,
+    AGGREGATE_EDGE_SUM_OP,
+    AGGREGATE_EDGE_MUL_OP,
     AGGREGATE_MUL_SUM_DIRECT, // No autograd
     FFN_OP, // Can also be UPDATE
     BIAS_OP,
@@ -196,12 +197,16 @@ public:
 
     std::vector<ForwardNode *> *getLoopNodes() { return &loop; }
     ForwardNode *getNode(int i) { return this->loop.at(i); }
-    void eraseFirstNLoopNodes(int n)
+    void eraseFirstNLoopNodes(int n, int start = 0)
     {
-        for (int i_n = 0; i_n < n; i_n++)
+        for (int i_n = start; i_n < n; i_n++)
         {
             this->loop.erase(this->loop.begin());
         }
+    }
+    void insertToLoopNodes(int i, ForwardNode *newNode)
+    {
+        this->loop.insert(this->loop.begin() + i, newNode);
     }
     void swapNodes(int i, int j) { std::swap(this->loop[i], this->loop[j]); }
 };
