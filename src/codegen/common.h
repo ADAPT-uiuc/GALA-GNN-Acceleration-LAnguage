@@ -726,8 +726,16 @@ public:\n\
                 } else
                 {
                     auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
-                    std::string tempForwardAggrCall = generateOutputString(cNode) + " = " + getKernelName(cNode)
-                    + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");";
+
+                    // std::string tempForwardAggrCall = generateOutputString(cNode) + " = " + getKernelName(cNode)
+                    // + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");";
+                    std::string tempForwardAggrCall = "    if (ep % mod_v == 0) {\n\
+      " + generateOutputString(cNode) + " = " + getKernelName(cNode)
+                    + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", 0);\n\
+    } else {\n\
+      " + generateOutputString(cNode) + " = " + getKernelName(cNode)
+                    + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");\n\
+    }";
                     model.getForward()->addCode(tempForwardAggrCall);
                 }
             } else
@@ -1116,7 +1124,7 @@ forward(torch::Tensor t_iden";
     torch::Tensor prediction =\n\
         net->forward(t_iden";
 
-                std::string tempTrainLoopPostCall = ")[0];\n\
+                std::string tempTrainLoopPostCall = ", epoch, mod_v)[0];\n\
     cudaDeviceSynchronize();\n\
     end = get_time();\n\
     cudaDeviceSynchronize();\n\
