@@ -326,9 +326,9 @@ public:
     std::string getKernelName(ComputeNode* cNode)
     {
         std::string kernelName = "";
-        if (cNode->getOpType() == AGGREGATE_NODE)
+        if (cNode->getOp() == AGGREGATE_MUL_SUM_OP)
         {
-            kernelName += "aggregate_node";
+            kernelName += "aggregate_node_mul_sum";
         } else if (cNode->getOp() == NON_LNR_OP_SOFTMAX)
         {
             kernelName += "non_lnr_op_softmax";
@@ -791,16 +791,19 @@ public:\n\
                 }
                 if (outOfLoop)
                 {
-                    // TODO later make this better
-                    auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
                     std::string tempForwardAggrCall =  "t_iden = " + getKernelName(cNode)
-                    + "_AutoGrad::apply(t_iden, " + std::to_string(inGraphIndx) + ");";
+                    + "_AutoGrad::apply(t_iden, 0);";
                     model.getInv()->addCode(tempForwardAggrCall);
                 } else
                 {
                     auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
-                    std::string tempForwardAggrCall = generateOutputString(cNode) + " = " + getKernelName(cNode)
-                    + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");";
+                    std::string tempForwardAggrCall = "    if (ep % mod_v == 0) {\n\
+      " + generateOutputString(cNode) + " = " + getKernelName(cNode)
+                    + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", 0);\n\
+    } else {\n\
+      " + generateOutputString(cNode) + " = " + getKernelName(cNode)
+                    + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");\n\
+    }";
                     model.getForward()->addCode(tempForwardAggrCall);
                 }
             }
