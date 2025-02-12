@@ -952,7 +952,7 @@ public:\n\
             model.getInit()->addCode(epInit);
 
             // TODO add the inputs to the forward call based on the actual inputs
-            std::string forwardCall = generateOutputString(cNode) + " = (1 + " + std::to_string(epCount) + ") * " + cNode->getInput(0)->getName() + ";";
+            std::string forwardCall = generateOutputString(cNode) + " = (1 + eps" + std::to_string(epCount) + ") * " + cNode->getInput(0)->getName() + ";";
             model.getForward()->addCode(forwardCall);
             epCount++;
         } else if (cNode->getOp() == ADD_OP)
