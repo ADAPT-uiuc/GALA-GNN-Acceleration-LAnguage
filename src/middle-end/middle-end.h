@@ -490,7 +490,7 @@ public:
                                     auto nextOutput = nextNode->getOutput(0);
 
                                     // What you write to is going to change
-
+                                    // TODO -- should the inputs ansl change??
                                     output->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
 
                                     // New next node
@@ -500,8 +500,47 @@ public:
                                     // New prev node
                                     nextNode->setInputDataNode(1, input);  // These have different indices
                                     nextNode->setOutputDataNode(0, output);
-                                }
+                                } else if (nextNode->getOp() == ADD_OP)
+                                {
+                                    changed = true;
 
+                                    // Swap the nodes in the CIR
+                                    lNode->swapNodes(ix, ix + 1);
+
+                                    // Change the data for the DIR
+                                    // The res input to the current FFN should be the res input to the next op
+                                    auto nextInput0 = nextNode->getInput(0); // These have different indices
+                                    auto nextInput1 = nextNode->getInput(1); // These have different indices
+                                    auto nextOutput = nextNode->getOutput(0);
+
+                                    // What you write to is going to change
+                                    // The new prev node
+                                    nextInput0->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+                                    nextInput1->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+                                    nextOutput->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+                                }   else if (nextNode->getOp() == SCALAR_ADD_EPS_MULTIPLY_OP)
+                                {
+                                    changed = true;
+
+                                    // Swap the nodes in the CIR
+                                    lNode->swapNodes(ix, ix + 1);
+
+                                    // Change the data for the DIR
+                                    // The res input to the current FFN should be the res input to the next op
+                                    auto nextInput = nextNode->getInput(0); // These have different indices
+                                    auto nextOutput = nextNode->getOutput(0);
+
+                                    // What you write to is going to change
+                                    output->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+
+                                    // New next node
+                                    cNode->setInputDataNode(0, output);
+                                    cNode->setOutputDataNode(0, nextOutput);
+
+                                    // New prev node
+                                    nextNode->setInputDataNode(0, input);  // These have different indices
+                                    nextNode->setOutputDataNode(0, output);
+                                }
                             }
                         }
                     } while (changed);
@@ -577,6 +616,46 @@ public:
                                         // New prev node
                                         nextNode->setInputDataNode(1, input);
                                         nextNode->setOutputDataNode(0, output);
+                                    }  else if (nextNode->getOp() == ADD_OP)
+                                    {
+                                        changed = true;
+
+                                        // Swap the nodes in the CIR
+                                        lNode->swapNodes(ix, ix + 1);
+
+                                        // Change the data for the DIR
+                                        // The res input to the current FFN should be the res input to the next op
+                                        auto nextInput0 = nextNode->getInput(0); // These have different indices
+                                        auto nextInput1 = nextNode->getInput(1); // These have different indices
+                                        auto nextOutput = nextNode->getOutput(0);
+
+                                        // What you write to is going to change
+                                        // The new prev node
+                                        nextInput0->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+                                        nextInput1->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+                                        nextOutput->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+                                    }   else if (nextNode->getOp() == SCALAR_ADD_EPS_MULTIPLY_OP)
+                                    {
+                                        changed = true;
+
+                                        // Swap the nodes in the CIR
+                                        lNode->swapNodes(ix, ix + 1);
+
+                                        // Change the data for the DIR
+                                        // The res input to the current FFN should be the res input to the next op
+                                        auto nextInput = nextNode->getInput(0); // These have different indices
+                                        auto nextOutput = nextNode->getOutput(0);
+
+                                        // What you write to is going to change
+                                        output->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+
+                                        // New next node
+                                        cNode->setInputDataNode(0, output);
+                                        cNode->setOutputDataNode(0, nextOutput);
+
+                                        // New prev node
+                                        nextNode->setInputDataNode(0, input);  // These have different indices
+                                        nextNode->setOutputDataNode(0, output);
                                     }
                                 } else if (outCols < inCols)
                                 {
@@ -629,6 +708,45 @@ public:
 
                                         // New next node
                                         prevNode->setInputDataNode(1, input);
+                                        prevNode->setOutputDataNode(0, output);
+                                    }   else if (prevNode->getOp() == ADD_OP)
+                                    {
+                                        changed = true;
+
+                                        // Swap the nodes in the CIR
+                                        lNode->swapNodes(ix, ix - 1);
+
+                                        // Change the data for the DIR
+                                        // The res input to the current FFN should be the res input to the next op
+                                        auto prevInput0 = prevNode->getInput(0);
+                                        auto prevInput1 = prevNode->getInput(1);
+                                        auto prevOutput = prevNode->getOutput(0);
+
+                                        // What you write to is going to change
+                                        // The new prev node
+                                        prevInput0->getDataInfo()->setDims(-1, output->getDataInfo()->getDimCol());
+                                        prevInput1->getDataInfo()->setDims(-1, output->getDataInfo()->getDimCol());
+                                        prevOutput->getDataInfo()->setDims(-1, output->getDataInfo()->getDimCol());
+                                    }   else if (prevNode->getOp() == SCALAR_ADD_EPS_MULTIPLY_OP)
+                                    {
+                                        changed = true;
+
+                                        // Swap the nodes in the CIR
+                                        lNode->swapNodes(ix, ix - 1);
+
+                                        // Change the data for the DIR
+                                        // The res input to the current FFN should be the res input to the next op
+                                        auto prevInput = prevNode->getInput(0);
+                                        auto prevOutput = prevNode->getOutput(0);
+
+                                        prevInput->getDataInfo()->setDims(-1, output->getDataInfo()->getDimCol());
+
+                                        // New prev node
+                                        cNode->setInputDataNode(0, prevInput);
+                                        cNode->setOutputDataNode(0, input);
+
+                                        // New next node
+                                        prevNode->setInputDataNode(0, input);
                                         prevNode->setOutputDataNode(0, output);
                                     }
                                 }
