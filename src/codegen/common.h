@@ -953,7 +953,7 @@ public:\n\
             model.getDef()->addCode(epDef);
 
             std::string epInit = "eps" + std::to_string(epCount) + " = register_parameter(\"eps"
-            + std::to_string(epCount) + "\", torch::tensor({" + cNode->getParam(0) + "}));";
+            + std::to_string(epCount) + "\", torch::tensor({(float)" + cNode->getParam(0) + "}));";
             model.getInit()->addCode(epInit);
 
             // TODO add the inputs to the forward call based on the actual inputs
