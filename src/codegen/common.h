@@ -353,7 +353,7 @@ public:
         return kernelName;
     }
 
-    std::string generateOutputString(ComputeNode* cNode)
+    std::string generateOutputString(ComputeNode* cNode, bool outOfLoop)
     {
         for (int ix = 0; ix < cNode->getNumInputs(); ix++)
         {
@@ -362,7 +362,14 @@ public:
                 return cNode->getInput(ix)->getName();
             }
         }
-        return "torch::Tensor " + cNode->getOutput(0)->getName();
+         if (outOfLoop)
+         {
+             return "torch::Tensor " + cNode->getOutput(0)->getName();
+         } else
+         {
+             return cNode->getOutput(0)->getName();
+         }
+
     }
 
     std::string generateTransformation(DataNode* srcNode, std::vector<TransformEdge*>& transforms)
@@ -581,7 +588,7 @@ public:\n\
                 kernelCallCode.addCode(autoGradFunction);
             }
             auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
-            std::string tempForwardAggrCall = generateOutputString(cNode) + " = " + getKernelName(cNode)
+            std::string tempForwardAggrCall = generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
             + "_AutoGrad::apply(attn_l, attn_r, value_graph, " + std::to_string(inGraphIndx) + ");";
             model.getForward()->addCode(tempForwardAggrCall);
         } else if (cNode->getOp() == NON_LNR_OP_SOFTMAX)
@@ -653,7 +660,7 @@ public:\n\
                 kernelCallCode.addCode(autoGradFunction);
             }
             auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
-            std::string tempForwardAggrCall = generateOutputString(cNode) + " = " + getKernelName(cNode)
+            std::string tempForwardAggrCall = generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
             + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");";
             model.getForward()->addCode(tempForwardAggrCall);
         } else if (cNode->getOp() == AGGREGATE_MUL_SUM_OP)
@@ -727,13 +734,11 @@ public:\n\
                 {
                     auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
 
-                    // std::string tempForwardAggrCall = generateOutputString(cNode) + " = " + getKernelName(cNode)
-                    // + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");";
                     std::string tempForwardAggrCall = "    if (ep % mod_v == 0) {\n\
-      " + generateOutputString(cNode) + " = " + getKernelName(cNode)
+      " + generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
                     + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", 0);\n\
     } else {\n\
-      " + generateOutputString(cNode) + " = " + getKernelName(cNode)
+      " + generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
                     + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");\n\
     }";
                     model.getForward()->addCode(tempForwardAggrCall);
@@ -798,10 +803,10 @@ public:\n\
                 {
                     auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
                     std::string tempForwardAggrCall = "    if (ep % mod_v == 0) {\n\
-      " + generateOutputString(cNode) + " = " + getKernelName(cNode)
+      " + generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
                     + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", 0);\n\
     } else {\n\
-      " + generateOutputString(cNode) + " = " + getKernelName(cNode)
+      " + generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
                     + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");\n\
     }";
                     model.getForward()->addCode(tempForwardAggrCall);
@@ -822,11 +827,11 @@ public:\n\
   
                     directAggrCall += "  torch::Tensor bounds_ones = global_bounds[2 * " + std::to_string(inGraphIndx) + "];\n\
   int segments_ones = global_segments[2 * " + std::to_string(inGraphIndx) + "];\n"
-                    + generateOutputString(cNode) + " = " + getKernelName(cNode) + "_call(" + cNode->getInput(0)->getName() + ", offset_graph_ones, columns_graph_ones,\n\
+                    + generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode) + "_call(" + cNode->getInput(0)->getName() + ", offset_graph_ones, columns_graph_ones,\n\
     value_graph_ones, bounds_ones, segments_ones);\n";
                 } else
                 {
-                    directAggrCall += "  " + generateOutputString(cNode) +" = " + getKernelName(cNode) + "_call(" + cNode->getInput(0)->getName() + ", offset_graph_ones, columns_graph_ones,\n\
+                    directAggrCall += "  " + generateOutputString(cNode, outOfLoop) +" = " + getKernelName(cNode) + "_call(" + cNode->getInput(0)->getName() + ", offset_graph_ones, columns_graph_ones,\n\
     value_graph_ones);\n";
                 }
                 model.getInv()->addCode(directAggrCall);
@@ -841,11 +846,11 @@ public:\n\
                 if (isColTile){
                     directAggrCall += "        torch::Tensor bounds_ones = global_bounds[2 * " + std::to_string(inGraphIndx) + "];\n\
         int segments_ones = global_segments[2 * " + std::to_string(inGraphIndx) + "];\n        "
-                    + generateOutputString(cNode) + " = " + getKernelName(cNode) + "_call(" + cNode->getInput(0)->getName() + ", offset_graph_ones, columns_graph_ones,\n\
+                    + generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode) + "_call(" + cNode->getInput(0)->getName() + ", offset_graph_ones, columns_graph_ones,\n\
                             value_graph_ones, bounds_ones, segments_ones);\n";
                 } else
                 {
-                    directAggrCall += "        " + generateOutputString(cNode) +" = " + getKernelName(cNode) + "_call(" + cNode->getInput(0)->getName() + ", offset_graph_ones, columns_graph_ones,\n\
+                    directAggrCall += "        " + generateOutputString(cNode, outOfLoop) +" = " + getKernelName(cNode) + "_call(" + cNode->getInput(0)->getName() + ", offset_graph_ones, columns_graph_ones,\n\
                                   value_graph_ones);\n";
                 }
                 model.getForward()->addCode(directAggrCall);
@@ -854,7 +859,7 @@ public:\n\
         {
             if (outOfLoop)
             {
-                std::string powerCall = "   " + generateOutputString(cNode) + " = torch::pow(" + cNode->getInput(0)->getName() + ", " + cNode->getParam(0) + ").detach();";
+                std::string powerCall = "   " + generateOutputString(cNode, outOfLoop) + " = torch::pow(" + cNode->getInput(0)->getName() + ", " + cNode->getParam(0) + ").detach();";
                 model.getInv()->addCode(powerCall);
                 // TODO: Temporary method to add kernel call
                 std::string tempPassDegree = "," + cNode->getOutput(0)->getName();
@@ -864,7 +869,7 @@ public:\n\
                 model.getForwardCallInternal()->addCode(tempPassDegreeForward);
             } else
             {
-                std::string powerCall = "        " + generateOutputString(cNode) + " = torch::pow(" + cNode->getInput(0)->getName() + ", " + cNode->getParam(0) + ");";
+                std::string powerCall = "        " + generateOutputString(cNode, outOfLoop) + " = torch::pow(" + cNode->getInput(0)->getName() + ", " + cNode->getParam(0) + ");";
                 model.getForward()->addCode(powerCall);
             }
 
@@ -876,14 +881,14 @@ public:\n\
                 model.getInv()->addCode(rbCall);
             } else
             {
-                std::string rbCall = "        " + generateOutputString(cNode) + " = " + cNode->getInput(0)->getName()
+                std::string rbCall = "        " + generateOutputString(cNode, outOfLoop) + " = " + cNode->getInput(0)->getName()
             + " * " + cNode->getInput(1)->getName() + ";";
                 model.getForward()->addCode(rbCall);
             }
 
         } else if (cNode->getOp() == NON_LNR_OP_RELU)
         {
-            std::string reluCall = "        " + generateOutputString(cNode) + " = torch::relu(" + cNode->getInput(0)->getName() + ");";
+            std::string reluCall = "        " + generateOutputString(cNode, outOfLoop) + " = torch::relu(" + cNode->getInput(0)->getName() + ");";
             model.getForward()->addCode(reluCall);
         } else if (cNode->getOp() == NON_LNR_OP_LEAKY_RELU)
         {
@@ -893,7 +898,7 @@ public:\n\
                 std::string leakyReluInit = "     torch::nn::LeakyReLU leaky_relu(torch::nn::LeakyReLUOptions().negative_slope(0.2))";
                 model.getForward()->addCode(leakyReluInit);
             }
-            std::string leakyReluCall = "     " + generateOutputString(cNode) + " = leaky_relu->forward(" + cNode->getInput(0)->getName() + ");";
+            std::string leakyReluCall = "     " + generateOutputString(cNode, outOfLoop) + " = leaky_relu->forward(" + cNode->getInput(0)->getName() + ");";
             model.getForward()->addCode(leakyReluCall);
         } else if (cNode->getOp() == FFN_OP)
         {
@@ -919,7 +924,7 @@ public:\n\
                 inputSizes.push_back(cNode->getInput(1)->getDataInfo()->getDimCol());
 
                 // TODO add the inputs to the forward call based on the actual inputs
-                std::string forwardCall = generateOutputString(cNode) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
+                std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
                 model.getForward()->addCode(forwardCall);
             } else
             {
@@ -937,7 +942,7 @@ public:\n\
                 inputSizes.push_back(cNode->getInput(1)->getDataInfo()->getDimCol());
 
                 // TODO add the inputs to the forward call based on the actual inputs
-                std::string forwardCall = generateOutputString(cNode) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
+                std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
                 model.getForward()->addCode(forwardCall);
   
             }
@@ -947,17 +952,17 @@ public:\n\
             std::string epDef = "torch::Tensor eps" + std::to_string(epCount) + "{nullptr};";
             model.getDef()->addCode(epDef);
 
-            std::string epInit = "ep" + std::to_string(epCount) + " = register_parameter(\"eps"
+            std::string epInit = "eps" + std::to_string(epCount) + " = register_parameter(\"eps"
             + std::to_string(epCount) + "\", torch::Tensor({" + cNode->getParam(0) + "}));";
             model.getInit()->addCode(epInit);
 
             // TODO add the inputs to the forward call based on the actual inputs
-            std::string forwardCall = generateOutputString(cNode) + " = (1 + eps" + std::to_string(epCount) + ") * " + cNode->getInput(0)->getName() + ";";
+            std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = (1 + eps" + std::to_string(epCount) + ") * " + cNode->getInput(0)->getName() + ";";
             model.getForward()->addCode(forwardCall);
             epCount++;
         } else if (cNode->getOp() == ADD_OP)
         {
-            std::string forwardCall = generateOutputString(cNode) + " = " + cNode->getInput(0)->getName() + " + " + cNode->getInput(1)->getName() + ";";
+            std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = " + cNode->getInput(0)->getName() + " + " + cNode->getInput(1)->getName() + ";";
             model.getForward()->addCode(forwardCall);
         } else if (cNode->getOp() == ONES_OP)
         {
@@ -976,7 +981,7 @@ public:\n\
                 model.getInv()->addCode(tempOptionsOnes);
 
                 // TODO add the inputs to the forward call based on the actual inputs
-                std::string onesCall =  generateOutputString(cNode) + " = torch::ones({" + rowDims
+                std::string onesCall =  generateOutputString(cNode, outOfLoop) + " = torch::ones({" + rowDims
                 + ", " + colDims + "}, options_" + cNode->getOutput(0)->getName() + ");";
                 model.getInv()->addCode(onesCall);
             } else
@@ -989,7 +994,7 @@ public:\n\
                 model.getForward()->addCode(tempOptionsOnes);
 
                 // TODO add the inputs to the forward call based on the actual inputs
-                std::string onesCall =  generateOutputString(cNode) + " = torch::ones({" + rowDims
+                std::string onesCall =  generateOutputString(cNode, outOfLoop) + " = torch::ones({" + rowDims
                 + ", " + colDims + "}, options_" + cNode->getOutput(0)->getName() + ");";
                 model.getForward()->addCode(onesCall);
             }
@@ -1035,6 +1040,7 @@ forward(torch::Tensor t_iden";
                 std::string tempFowradCallPost = ", int ep, int mod_v){\n";
                 model.getForwardCallPost()->addCode(tempFowradCallPost);
 
+                std::unordered_set<std::string> encounteredTensors;
                 // std::string resInit = "torch::Tensor res = input_dense;";
                 // model.getForward()->addCode(resInit);
 
@@ -1047,6 +1053,13 @@ forward(torch::Tensor t_iden";
                 {
                     CIRNode* inNode = loopNode->getNode(ix);
                     auto cNode = dynamic_cast<ComputeNode*>(inNode);
+                    if (encounteredTensors.find(generateOutputString(cNode, false)) == encounteredTensors.end())
+                    {
+                        encounteredTensors.insert(generateOutputString(cNode, false));
+                        std::string initTensor = "     torch::Tensor " + generateOutputString(cNode, false) + ";";
+                        model.getForwardCallPost()->addCode(initTensor);
+                    }
+
                     generateOpCode(cNode, fcCount, epCount, false, hasFFNEdgeUpdate, encounteredAutograds, inputSizes, transforms);
                 }
                 CIRNode* inNode = loopNode->getNode(loopNode->getLoopNodeNum()-1);

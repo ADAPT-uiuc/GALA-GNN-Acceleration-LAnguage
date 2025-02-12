@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
     auto featInfo = DataInfo(RM_DTYPE);
     featInfo.setDims(-1, -2);
     auto rootFeatLevel = DataLevel(&featInfo, true);
-    auto featData = DataNode("feat", INT32, INT32, F32, &rootFeatLevel);
+    auto featData = DataNode("t_iden", INT32, INT32, F32, &rootFeatLevel);
 
 	// Association between graph and features
 	auto graphFeatAssociation = RelationEdge(&graphData, ALL_RELATION, &featData, ROWS_RELATION);
