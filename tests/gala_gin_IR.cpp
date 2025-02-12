@@ -90,14 +90,14 @@ int main(int argc, char **argv) {
 	graphTrgraph.addTransformation(&tileTransformation);
 	transforms.push_back(&graphTrgraph);
 
-	featInfo.setDims(-1, 605);
+	featInfo.setDims(-1, 602);
 
 	auto trainingLoop = TrainingLoopNode(100);
 
     // Add aggregate operation
     auto aggregate = ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
     auto outputInfo = DataInfo(RM_DTYPE);
-    outputInfo.setDims(-1, 605); // -1=N=232965, the number of nodes in the graph
+    outputInfo.setDims(-1, 602); // -1=N=232965, the number of nodes in the graph
     auto rootOutputLevel = DataLevel(&outputInfo, true);
     auto outputData = DataNode("res_n", INT32, INT32, F32, &rootOutputLevel);
 	aggregate.addInputData(&featData);
@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
 	auto scalarEps = ForwardNode(POINTWISE, SCALAR_ADD_EPS_MULTIPLY_OP);
 	scalarEps.addParam("1");
 	auto scalarInfo = DataInfo(RM_DTYPE);
-	scalarInfo.setDims(-1, 605);
+	scalarInfo.setDims(-1, 602);
 	auto rootScalarEpsLevel = DataLevel(&scalarInfo, true);
 	auto scalarEpsData = DataNode("res_e", INT32, INT32, F32, &rootScalarEpsLevel);
 	scalarEps.addInputData(&featData);
@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
     // Add epsilon mult and scalar mults
 	auto normFeat = ForwardNode(UPDATE_NODE, ADD_OP);
 	auto normFeatInfo = DataInfo(RM_DTYPE);
-	normFeatInfo.setDims(-1, 605);
+	normFeatInfo.setDims(-1, 602);
 	auto rootNormFeatLevel = DataLevel(&normFeatInfo, true);
 	auto normFeatData = DataNode("res", INT32, INT32, F32, &rootNormFeatLevel);
 	normFeat.addInputData(&scalarEpsData);
@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
 	auto rootResLevel = DataLevel(&resInfo, true);
 	auto resData = DataNode("res", INT32, INT32, F32, &rootResLevel);
 	// set dimenions from the new schedule information
-	weightInfo.setDims(605, 32); //
+	weightInfo.setDims(602, 32); //
 	resInfo.setDims(-1, 32); // -1=N=232965, the number of nodes in the graph
     ffn.addInputData(&normFeatData);
     ffn.addInputData(&weightData);
