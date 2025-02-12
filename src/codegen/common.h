@@ -958,12 +958,24 @@ public:\n\
 
             // TODO add the inputs to the forward call based on the actual inputs
             std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = (1 + eps" + std::to_string(epCount) + ") * " + cNode->getInput(0)->getName() + ";";
-            model.getForward()->addCode(forwardCall);
+            if (outOfLoop)
+            {
+                model.getInv()->addCode(forwardCall);
+            } else
+            {
+                model.getForward()->addCode(forwardCall);
+            }
             epCount++;
         } else if (cNode->getOp() == ADD_OP)
         {
             std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = " + cNode->getInput(0)->getName() + " + " + cNode->getInput(1)->getName() + ";";
-            model.getForward()->addCode(forwardCall);
+            if (outOfLoop)
+            {
+                model.getInv()->addCode(forwardCall);
+            } else
+            {
+                model.getForward()->addCode(forwardCall);
+            }
         } else if (cNode->getOp() == ONES_OP)
         {
             auto outputInfo = cNode->getOutput(0)->getDataInfo();
@@ -1056,7 +1068,7 @@ forward(torch::Tensor t_iden";
                     if (encounteredTensors.find(generateOutputString(cNode, false)) == encounteredTensors.end())
                     {
                         encounteredTensors.insert(generateOutputString(cNode, false));
-                        std::string initTensor = "     torch::Tensor " + generateOutputString(cNode, false) + ";";
+                        std::string initTensor = "    torch::Tensor " + generateOutputString(cNode, false) + ";";
                         model.getForwardCallPost()->addCode(initTensor);
                     }
 
