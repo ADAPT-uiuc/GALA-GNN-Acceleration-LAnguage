@@ -472,11 +472,20 @@ public:
 
                                     // New next node
                                     cNode->setInputDataNode(0, output);
-                                    cNode->setOutputDataNode(0, nextOutput);
-
                                     // New prev node
                                     nextNode->setInputDataNode(0, input);
-                                    nextNode->setOutputDataNode(0, output);
+
+                                    if (output->getName() == nextOutput->getName())
+                                    {
+                                        // New next node
+                                        cNode->setOutputDataNode(0, nextOutput);
+                                        // New prev node
+                                        nextNode->setOutputDataNode(0, output);
+                                    } else
+                                    {
+                                        // New next node
+                                        nextOutput->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+                                    }
                                 } else if (nextNode->getOp() == ROW_BROADCAST_OP)
                                 {
                                     changed = true;
@@ -532,14 +541,15 @@ public:
 
                                     // What you write to is going to change
                                     output->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+                                    nextOutput->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
 
                                     // New next node
                                     cNode->setInputDataNode(0, output);
-                                    cNode->setOutputDataNode(0, nextOutput);
+                                    // cNode->setOutputDataNode(0, nextOutput);
 
                                     // New prev node
                                     nextNode->setInputDataNode(0, input);  // These have different indices
-                                    nextNode->setOutputDataNode(0, output);
+                                    // nextNode->setOutputDataNode(0, output);
                                 }
                             }
                         }
@@ -590,11 +600,20 @@ public:
 
                                         // New next node
                                         cNode->setInputDataNode(0, output);
-                                        cNode->setOutputDataNode(0, nextOutput);
-
                                         // New prev node
                                         nextNode->setInputDataNode(0, input);
-                                        nextNode->setOutputDataNode(0, output);
+
+                                        if (output->getName() == nextOutput->getName())
+                                        {
+                                            // New next node
+                                            cNode->setOutputDataNode(0, nextOutput);
+                                            // New prev node
+                                            nextNode->setOutputDataNode(0, output);
+                                        } else
+                                        {
+                                            // New next node
+                                            nextOutput->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+                                        }
                                     } else if (nextNode->getOp() == ROW_BROADCAST_OP)
                                     {
                                         changed = true;
@@ -648,14 +667,15 @@ public:
 
                                         // What you write to is going to change
                                         output->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+                                        nextOutput->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
 
                                         // New next node
                                         cNode->setInputDataNode(0, output);
-                                        cNode->setOutputDataNode(0, nextOutput);
+                                        // cNode->setOutputDataNode(0, nextOutput);
 
                                         // New prev node
                                         nextNode->setInputDataNode(0, input);  // These have different indices
-                                        nextNode->setOutputDataNode(0, output);
+                                        // nextNode->setOutputDataNode(0, output);
                                     }
                                 } else if (outCols < inCols)
                                 {
@@ -683,11 +703,19 @@ public:
 
                                         // New prev node
                                         cNode->setInputDataNode(0, prevInput);
-                                        cNode->setOutputDataNode(0, input);
-
                                         // New next node
                                         prevNode->setInputDataNode(0, input);
-                                        prevNode->setOutputDataNode(0, output);
+                                        if (output->getName() == prevOutput->getName())
+                                        {
+                                            // New prev node
+                                            cNode->setOutputDataNode(0, input);
+                                            // New next node
+                                            prevNode->setOutputDataNode(0, output);
+                                        } else
+                                        {
+                                            // New next node
+                                            prevOutput->getDataInfo()->setDims(-1, output->getDataInfo()->getDimCol());
+                                        }
                                     } else if (prevNode->getOp() == ROW_BROADCAST_OP)
                                     {
                                         changed = true;
@@ -740,14 +768,15 @@ public:
                                         auto prevOutput = prevNode->getOutput(0);
 
                                         prevInput->getDataInfo()->setDims(-1, output->getDataInfo()->getDimCol());
+                                        prevOutput->getDataInfo()->setDims(-1, output->getDataInfo()->getDimCol());
 
                                         // New prev node
                                         cNode->setInputDataNode(0, prevInput);
-                                        cNode->setOutputDataNode(0, input);
+                                        // cNode->setOutputDataNode(0, input);
 
                                         // New next node
                                         prevNode->setInputDataNode(0, input);
-                                        prevNode->setOutputDataNode(0, output);
+                                        // prevNode->setOutputDataNode(0, output);
                                     }
                                 }
                             }
