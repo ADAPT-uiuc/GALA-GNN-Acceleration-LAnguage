@@ -713,6 +713,7 @@ public:
                                             prevNode->setOutputDataNode(0, output);
                                         } else
                                         {
+                                            prevNode->setInputDataNode(0, output);
                                             // New next node
                                             prevOutput->getDataInfo()->setDims(-1, output->getDataInfo()->getDimCol());
                                         }
