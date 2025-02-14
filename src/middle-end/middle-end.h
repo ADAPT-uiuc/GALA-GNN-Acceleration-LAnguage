@@ -396,14 +396,16 @@ public:
                                 // Change this later on
                                 if (outputName == "res_n")
                                 {
-                                    int ixx = ix;
+                                    int ixx = ix + 1;
                                     while (ixx < lNode->getLoopNodeNum())
                                     {
                                         auto cNode = dynamic_cast<ComputeNode*>(lNode->getNode(ixx));
                                         if (cNode->getOp() == ADD_OP)
                                         {
                                             cNode->getInput(1)->setName("t_iden_n");
+                                            break;
                                         }
+                                        ixx ++;
                                     }
                                 }
                             } else if (cNode->getOp() == ROW_BROADCAST_OP)
