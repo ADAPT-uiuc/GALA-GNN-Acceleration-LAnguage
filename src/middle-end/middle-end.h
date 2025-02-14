@@ -378,7 +378,7 @@ public:
                 while (ix < lNode->getLoopNodeNum())
                 {
                     auto cNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix));
-                    if (cNode->getOp() == FFN_OP)
+                    if (cNode->getOp() == FFN_OP || cNode->getOp() == SCALAR_ADD_EPS_MULTIPLY_OP)
                     {
                         cNode->getInput(0)->setName(inputName);
                         foundLeaning = true;
@@ -392,6 +392,20 @@ public:
                             if (cNode->getOp() == AGGREGATE_MUL_SUM_OP)
                             {
                                 inputName = cNode->getInput(0)->getName();
+                                std::string outputName = cNode->getOutput(0)->getName();
+                                // Change this later on
+                                if (outputName == "res_n")
+                                {
+                                    int ixx = ix;
+                                    while (ixx < lNode->getLoopNodeNum())
+                                    {
+                                        auto cNode = dynamic_cast<ComputeNode*>(lNode->getNode(ixx));
+                                        if (cNode->getOp() == ADD_OP)
+                                        {
+                                            cNode->getInput(1)->setName("t_iden_n");
+                                        }
+                                    }
+                                }
                             } else if (cNode->getOp() == ROW_BROADCAST_OP)
                             {
                                 inputName = cNode->getInput(1)->getName();
