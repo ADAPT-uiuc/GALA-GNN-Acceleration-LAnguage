@@ -598,21 +598,21 @@ public:
 
                                         output->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
 
-                                        // New next node
-                                        cNode->setInputDataNode(0, output);
-                                        // New prev node
-                                        nextNode->setInputDataNode(0, input);
-
                                         if (output->getName() == nextOutput->getName())
                                         {
+                                            // New next node
+                                            cNode->setInputDataNode(0, output);
+                                            // New prev node
+                                            nextNode->setInputDataNode(0, input);
+
                                             // New next node
                                             cNode->setOutputDataNode(0, nextOutput);
                                             // New prev node
                                             nextNode->setOutputDataNode(0, output);
                                         } else
                                         {
-                                            // New next node
-                                            nextOutput->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+                                            // New prev node
+                                            nextNode->setInputDataNode(0, output);
                                         }
                                     } else if (nextNode->getOp() == ROW_BROADCAST_OP)
                                     {
@@ -701,12 +701,13 @@ public:
 
                                         prevInput->getDataInfo()->setDims(-1, output->getDataInfo()->getDimCol());
 
-                                        // New prev node
-                                        cNode->setInputDataNode(0, prevInput);
-                                        // New next node
-                                        prevNode->setInputDataNode(0, input);
                                         if (output->getName() == prevOutput->getName())
                                         {
+                                            // New prev node
+                                            cNode->setInputDataNode(0, prevInput);
+                                            // New next node
+                                            prevNode->setInputDataNode(0, input);
+
                                             // New prev node
                                             cNode->setOutputDataNode(0, input);
                                             // New next node
@@ -714,8 +715,6 @@ public:
                                         } else
                                         {
                                             prevNode->setInputDataNode(0, output);
-                                            // New next node
-                                            prevOutput->getDataInfo()->setDims(-1, output->getDataInfo()->getDimCol());
                                         }
                                     } else if (prevNode->getOp() == ROW_BROADCAST_OP)
                                     {
