@@ -123,6 +123,7 @@ public:
         {
             // TODO Find a better way to clone
             auto graphInfo = new DataInfo(CSR_STYPE, true, initialGraphNode->getDataInfo()->getWeighted());
+            graphInfo->setIndex(ic);
             auto rootGraphLevel = new DataLevel(graphInfo, true);
             auto newGraph = new DataNode("adj"+std::to_string(ic), INT32, INT32, F32, rootGraphLevel);
 
@@ -148,6 +149,7 @@ public:
                 auto transformedGraphInfo = new DataInfo(CSR_STYPE, true,
                     transformedGraphNode->getDataInfo()->getWeighted());
                 transformedGraphInfo->addOpt(opt.first, opt.second);
+                transformedGraphInfo->setIndex(ic);
                 auto transformedTileGraphLevel = new DataLevel(transformedGraphInfo, false);
                 auto transformedRootGraphLevel = new DataLevel(transformedTileGraphLevel, true);
                 auto newTransformedGraph = new DataNode("graph_tile"+std::to_string(ic),
