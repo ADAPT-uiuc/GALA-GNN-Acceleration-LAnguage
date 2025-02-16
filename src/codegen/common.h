@@ -729,7 +729,6 @@ public:\n\
                     // TODO Check if the output name is res, if not then pass this along to the output
                     auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
                     std::string tempForwardAggrCall;
-                    std::cout << "Name: " << cNode->getOutput(0)->getName() << std::endl;
                     if (cNode->getOutput(0)->getName() == "res_n")
                     {
                         tempForwardAggrCall =  "tensor::Torch t_iden_n = " + getKernelName(cNode)
@@ -809,9 +808,23 @@ public:\n\
                 }
                 if (outOfLoop)
                 {
-                    std::string tempForwardAggrCall =  "t_iden = " + getKernelName(cNode)
-                    + "_AutoGrad::apply(t_iden, 0);";
+                    std::string tempForwardAggrCall;
+                    if (cNode->getOutput(0)->getName() == "res_n")
+                    {
+                        tempForwardAggrCall =  "tensor::Torch t_iden_n = " + getKernelName(cNode)
+                   + "_AutoGrad::apply(t_iden, 0);";
+                        std::string aggrResStr = ", t_iden_n";
+                        model.getCall()->addCode(aggrResStr);
+                    } else
+                    {
+                        tempForwardAggrCall =  "t_iden = " + getKernelName(cNode)
+                   + "_AutoGrad::apply(t_iden, 0);"; // TODO: Alyways do 0 (for now, since it'll be used for all scenarios)
+                    }
                     model.getInv()->addCode(tempForwardAggrCall);
+
+                    // std::string tempForwardAggrCall =  "t_iden = " + getKernelName(cNode)
+                    // + "_AutoGrad::apply(t_iden, 0);";
+                    // model.getInv()->addCode(tempForwardAggrCall);
                 } else
                 {
                     auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
