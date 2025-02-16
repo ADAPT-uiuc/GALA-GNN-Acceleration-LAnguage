@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
 	graphTrgraph.addTransformation(&tileTransformation);
 	transforms.push_back(&graphTrgraph);
 
-	featInfo.setDims(-1, 605);
+	featInfo.setDims(-1, 602);
 
 	auto trainingLoop = TrainingLoopNode(100);
 
@@ -107,7 +107,7 @@ int main(int argc, char **argv) {
 	auto rootResLevel = DataLevel(&resInfo, true);
 	auto resData = DataNode("res", INT32, INT32, F32, &rootResLevel);
 	// set dimenions from the new schedule information
-	weightInfo.setDims(605, 32); //
+	weightInfo.setDims(602, 32); //
 	resInfo.setDims(-1, 32); // -1=N=232965, the number of nodes in the graph
 	ffn.addInputData(&featData);
 	ffn.addInputData(&weightData);

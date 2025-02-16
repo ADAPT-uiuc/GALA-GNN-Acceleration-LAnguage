@@ -593,7 +593,7 @@ public:\n\
             model.getForward()->addCode(tempForwardAggrCall);
         } else if (cNode->getOp() == NON_LNR_OP_SOFTMAX)
         {
-            bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);
+            bool isColTile = hasDOpt(cNode->getInput(0), COL_TILE_DOPT);
 
             if (encounteredAutograds.find(getKernelName(cNode)) == encounteredAutograds.end())
             {
@@ -659,7 +659,7 @@ public:\n\
 };\n";
                 kernelCallCode.addCode(autoGradFunction);
             }
-            auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
+            auto inGraphIndx = cNode->getInput(0)->getDataInfo()->getIndex();
             std::string tempForwardAggrCall = generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
             + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");";
             model.getForward()->addCode(tempForwardAggrCall);
