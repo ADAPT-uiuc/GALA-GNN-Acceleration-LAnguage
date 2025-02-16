@@ -363,67 +363,67 @@ public:
         // Do complexity aware re-ordering to make the learning parts as far off in the computation as possible.
         complexityOperatorReordering(program, dependencies, associations, transforms, true);
 
-        // bool foundLeaning = false;
-        // int nodesMoved = 0;
-        // std::string inputName = "";
-        // // Iterate through the list of operations in the training loop till you hit a learned operation
-        // for (int i = 0; i < program.size(); i++)
-        // {
-        //     CIRNode* outNode = program[i];
-        //     auto lNode = dynamic_cast<TrainingLoopNode*>(outNode);
-        //     // Do this transformation only if you have
-        //     if (lNode)
-        //     {
-        //         int ix = 0;
-        //         while (ix < lNode->getLoopNodeNum())
-        //         {
-        //             auto cNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix));
-        //             if (cNode->getOp() == FFN_OP || cNode->getOp() == SCALAR_ADD_EPS_MULTIPLY_OP)
-        //             {
-        //                 cNode->getInput(0)->setName(inputName);
-        //                 foundLeaning = true;
-        //                 break;
-        //             } else
-        //             {
-        //                 // Add and remove
-        //                 program.insert(program.begin() + i + nodesMoved, cNode);
-        //                 if (inputName == "")
-        //                 {
-        //                     if (cNode->getOp() == AGGREGATE_MUL_SUM_OP)
-        //                     {
-        //                         inputName = cNode->getInput(0)->getName();
-        //                         std::string outputName = cNode->getOutput(0)->getName();
-        //                         // Change this later on
-        //                         if (outputName == "res_n")
-        //                         {
-        //                             int ixx = ix + 1;
-        //                             while (ixx < lNode->getLoopNodeNum())
-        //                             {
-        //                                 auto cNode = dynamic_cast<ComputeNode*>(lNode->getNode(ixx));
-        //                                 if (cNode->getOp() == ADD_OP)
-        //                                 {
-        //                                     cNode->getInput(1)->setName("t_iden_n");
-        //                                     break;
-        //                                 }
-        //                                 ixx ++;
-        //                             }
-        //                         }
-        //                     } else if (cNode->getOp() == ROW_BROADCAST_OP)
-        //                     {
-        //                         inputName = cNode->getInput(1)->getName();
-        //                     }
-        //                 }
-        //                 nodesMoved++;
-        //             }
-        //             ix++;
-        //         }
-        //         lNode->eraseFirstNLoopNodes(nodesMoved);
-        //     }
-        //     if (foundLeaning)
-        //     {
-        //         break;
-        //     }
-        // }
+        bool foundLeaning = false;
+        int nodesMoved = 0;
+        std::string inputName = "";
+        // Iterate through the list of operations in the training loop till you hit a learned operation
+        for (int i = 0; i < program.size(); i++)
+        {
+            CIRNode* outNode = program[i];
+            auto lNode = dynamic_cast<TrainingLoopNode*>(outNode);
+            // Do this transformation only if you have
+            if (lNode)
+            {
+                int ix = 0;
+                while (ix < lNode->getLoopNodeNum())
+                {
+                    auto cNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix));
+                    if (cNode->getOp() == FFN_OP || cNode->getOp() == SCALAR_ADD_EPS_MULTIPLY_OP)
+                    {
+                        cNode->getInput(0)->setName(inputName);
+                        foundLeaning = true;
+                        break;
+                    } else
+                    {
+                        // Add and remove
+                        program.insert(program.begin() + i + nodesMoved, cNode);
+                        if (inputName == "")
+                        {
+                            if (cNode->getOp() == AGGREGATE_MUL_SUM_OP)
+                            {
+                                inputName = cNode->getInput(0)->getName();
+                                std::string outputName = cNode->getOutput(0)->getName();
+                                // Change this later on
+                                if (outputName == "res_n")
+                                {
+                                    int ixx = ix + 1;
+                                    while (ixx < lNode->getLoopNodeNum())
+                                    {
+                                        auto cNode = dynamic_cast<ComputeNode*>(lNode->getNode(ixx));
+                                        if (cNode->getOp() == ADD_OP)
+                                        {
+                                            cNode->getInput(1)->setName("t_iden_n");
+                                            break;
+                                        }
+                                        ixx ++;
+                                    }
+                                }
+                            } else if (cNode->getOp() == ROW_BROADCAST_OP)
+                            {
+                                inputName = cNode->getInput(1)->getName();
+                            }
+                        }
+                        nodesMoved++;
+                    }
+                    ix++;
+                }
+                lNode->eraseFirstNLoopNodes(nodesMoved);
+            }
+            if (foundLeaning)
+            {
+                break;
+            }
+        }
     }
 
     // Complexity aware operator reordering
