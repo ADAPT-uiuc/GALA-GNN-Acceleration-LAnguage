@@ -809,6 +809,7 @@ public:\n\
                 if (outOfLoop)
                 {
                     std::string tempForwardAggrCall;
+                    std::cout << "Name: " << cNode->getOutput(0)->getName() << std::endl;
                     if (cNode->getOutput(0)->getName() == "res_n")
                     {
                         tempForwardAggrCall =  "tensor::Torch t_iden_n = " + getKernelName(cNode)
