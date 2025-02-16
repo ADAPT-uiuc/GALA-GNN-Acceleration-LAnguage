@@ -729,6 +729,7 @@ public:\n\
                     // TODO Check if the output name is res, if not then pass this along to the output
                     auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
                     std::string tempForwardAggrCall;
+                    std::cout << "Name: " << cNode->getOutput(0)->getName() << std::endl;
                     if (cNode->getOutput(0)->getName() == "res_n")
                     {
                         tempForwardAggrCall =  "tensor::Torch t_iden_n = " + getKernelName(cNode)
