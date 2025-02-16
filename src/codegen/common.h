@@ -731,10 +731,12 @@ public:\n\
                     std::string tempForwardAggrCall;
                     if (cNode->getOutput(0)->getName() == "res_n" || cNode->getOutput(0)->getName() == "t_iden_n")
                     {
-                        tempForwardAggrCall =  "tensor::Torch t_iden_n = " + getKernelName(cNode)
+                        tempForwardAggrCall =  "torch::Tensor t_iden_n = " + getKernelName(cNode)
                    + "_AutoGrad::apply(t_iden, 0);";
                         std::string aggrResStr = ", t_iden_n";
                         model.getCall()->addCode(aggrResStr);
+                        std::string aggrResForward = ", torch::Tensor t_iden_n";
+                        model.getForwardCallInternal()->addCode(aggrResForward);
                     } else
                     {
                         tempForwardAggrCall =  "t_iden = " + getKernelName(cNode)
@@ -812,10 +814,12 @@ public:\n\
                     // std::cout << "Name: " << cNode->getOutput(0)->getName() << std::endl;
                     if (cNode->getOutput(0)->getName() == "res_n" || cNode->getOutput(0)->getName() == "t_iden_n")
                     {
-                        tempForwardAggrCall =  "tensor::Torch t_iden_n = " + getKernelName(cNode)
+                        tempForwardAggrCall =  "torch::Tensor t_iden_n = " + getKernelName(cNode)
                    + "_AutoGrad::apply(t_iden, 0);";
                         std::string aggrResStr = ", t_iden_n";
                         model.getCall()->addCode(aggrResStr);
+                        std::string aggrResForward = ", torch::Tensor t_iden_n";
+                        model.getForwardCallInternal()->addCode(aggrResForward);
                     } else
                     {
                         tempForwardAggrCall =  "t_iden = " + getKernelName(cNode)
