@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
 
 	featInfo.setDims(-1, 602);
 
-	auto trainingLoop = TrainingLoopNode(100);
+	auto trainingLoop = TrainingLoopNode(100, CROSS_ENTROPY, ADAM, 0, 5);
 
     // Add aggregate operation
     auto aggregate = ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
