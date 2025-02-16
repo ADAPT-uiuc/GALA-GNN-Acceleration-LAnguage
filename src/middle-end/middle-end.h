@@ -187,18 +187,21 @@ public:
                     auto inNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix));
                     if (inNode->getOp() == AGGREGATE_MUL_SUM_OP)
                     {
-                        if (outName == "")
-                        {
-                            inNode->setInputDataNode(1, finalGraphs.at(countAggregations));
-                            countAggregations++;
-                        } else
-                        {
-                            if (outName == inNode->getInput(0)->getName())
-                            {
-                                inNode->setInputDataNode(1, finalGraphs.at(countAggregations));
-                                countAggregations++;
-                            }
-                        }
+                        // TODO make all aggregations increment
+                        inNode->setInputDataNode(1, finalGraphs.at(countAggregations));
+                        countAggregations++;
+                        // if (outName == "")
+                        // {
+                        //     inNode->setInputDataNode(1, finalGraphs.at(countAggregations));
+                        //     countAggregations++;
+                        // } else
+                        // {
+                        //     if (outName == inNode->getInput(0)->getName())
+                        //     {
+                        //         inNode->setInputDataNode(1, finalGraphs.at(countAggregations));
+                        //         countAggregations++;
+                        //     }
+                        // }
                     }
                 }
             } else
