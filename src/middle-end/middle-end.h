@@ -503,7 +503,7 @@ public:
                                         // nextOutput->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
 
                                         // New prev node
-                                        nextNode->setInputDataNode(0, output);
+                                        nextNode->setInputDataNode(0, input);
                                     }
                                 } else if (nextNode->getOp() == ROW_BROADCAST_OP)
                                 {
@@ -631,7 +631,7 @@ public:
                                         } else
                                         {
                                             // New prev node
-                                            nextNode->setInputDataNode(0, output);
+                                            nextNode->setInputDataNode(0, input);
                                         }
                                     } else if (nextNode->getOp() == ROW_BROADCAST_OP)
                                     {
