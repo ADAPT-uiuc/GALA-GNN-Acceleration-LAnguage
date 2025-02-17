@@ -541,7 +541,7 @@ public:
         } else if (cNode->getOp() == AGGREGATE_EDGE_SUM_OP)
         {
             hasFFNEdgeUpdate = true;
-            bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);
+            bool isColTile = hasDOpt(cNode->getInput(2), COL_TILE_DOPT);
 
             if (encounteredAutograds.find(getKernelName(cNode)) == encounteredAutograds.end())
             {
