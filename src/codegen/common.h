@@ -700,23 +700,25 @@ public:\n\
             auto saved = ctx->get_saved_variables();\n\
             torch::Tensor value_graph = saved[0];\n\
             torch::Tensor X = saved[1];\n\
-            return {gather_forward_gcn(dZ, offset_graph, columns_graph, value_graph,\n\
-                                       bounds, global_nrows, global_segments,\n\
-                                       global_is_directed),\n\
-                    edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
-                               global_nrows, segments),\n\
-                torch::Tensor()};\n\
-        }\n\
-    };\n";
+            int li = ctx->saved_data[\"li\"].toInt();\n\
+            torch::Tensor offset_graph = global_offset_graph[2 * li + 1];\n\
+            torch::Tensor columns_graph = global_columns_graph[2 * li + 1];";
                 if (isColTile){
                     autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
             int segments = global_segments[2 * li];\n\
-            return {" + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph, value_graph, bounds, segments), torch::Tensor()};";
+            return {" + getKernelName(cNode) + "_call(dZ, offset_graph, columns_graph, value_graph,\n\
+ bounds, segments),\n\
+ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
+           global_nrows, segments),\n\
+ torch::Tensor()};";
                 } else
                 {
+                    // TODO add codegen for non-col tile
                     autoGradFunction += "\
-            return {" + getKernelName(cNode) + "_call(input_dense, offset_graph, columns_graph,\n\
-                                       value_graph), torch::Tensor()};\n";
+            return {" + getKernelName(cNode) + "_call(dZ, offset_graph, columns_graph,\n\
+                                       value_graph),\n\
+edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
+           global_nrows, 1), torch::Tensor()};\n";
                 }
         autoGradFunction += "\
         }\n\
