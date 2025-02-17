@@ -582,7 +582,7 @@ public:\n\
                     d_value_graph, bounds, global_nrows, segments);\n\
         return {back_res,\n\
                 back_res,\n\
-                torch::Tensor(),\n\
+                torch::Tensor()}\n\
     }\n\
 };\n";
                 kernelCallCode.addCode(autoGradFunction);
