@@ -551,11 +551,11 @@ public:\n\
   static torch::Tensor forward(torch::autograd::AutogradContext *ctx,\n\
                                torch::Tensor input_dense1,\n\
                                torch::Tensor input_dense2,\n\
-                               torch::Tensor value_graph,\n\
                                int li) {\n";
                 autoGradFunction += "        ctx->saved_data[\"li\"] = li;\n\
         torch::Tensor offset_graph = global_offset_graph[2 * li];\n\
-        torch::Tensor columns_graph = global_columns_graph[2 * li];\n";
+        torch::Tensor columns_graph = global_columns_graph[2 * li];\n\
+        torch::Tensor value_graph = global_value_graph[2 * li];\n";
 
                 if (isColTile){
                     autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
@@ -587,9 +587,10 @@ public:\n\
 };\n";
                 kernelCallCode.addCode(autoGradFunction);
             }
+            // TODO change the names from the input
             auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
             std::string tempForwardAggrCall = generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
-            + "_AutoGrad::apply(attn_l, attn_r, value_graph, " + std::to_string(inGraphIndx) + ");";
+            + "_AutoGrad::apply(attnL, attnR, " + std::to_string(inGraphIndx) + ");";
             model.getForward()->addCode(tempForwardAggrCall);
         } else if (cNode->getOp() == NON_LNR_OP_SOFTMAX)
         {
