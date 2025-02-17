@@ -177,22 +177,22 @@ int main(int argc, char **argv) {
 	// aggrEdgeInfo.setDims(-4, 1); //-4=E=114M (E = Edges)
 	auto rootAggrEdgeLevel = DataLevel(&aggrEdgeInfo, true);
 	auto aggrEdgeData = DataNode("attn", INT32, INT32, F32, &rootAggrEdgeLevel);
-	aggregateEdge.addInputData(&attenLWeightData);
-	aggregateEdge.addInputData(&attenRWeightData);
+	aggregateEdge.addInputData(&attenLData);
+	aggregateEdge.addInputData(&attenRData);
 	aggregateEdge.addInputData(&transformedGraph);
 	aggregateEdge.addOutputData(&aggrEdgeData);
 	// TODO add optimizations
 	trainingLoop.addLoopNode(&aggregateEdge);
 	//* Dependencies
 	// Dependency relation between the features and the aggregated output
-	auto inOutEdgeAggrLRelationFeat = RelationEdge(&attenLWeightData, ALL_RELATION, &aggrEdgeData, ROWS_RELATION);
-	auto inOutEdgeAggrRRelationFeat = RelationEdge(&attenRWeightData, ALL_RELATION, &aggrEdgeData, COLS_RELATION);
+	auto inOutEdgeAggrLRelationFeat = RelationEdge(&attenLData, ALL_RELATION, &aggrEdgeData, ROWS_RELATION);
+	auto inOutEdgeAggrRRelationFeat = RelationEdge(&attenRData, ALL_RELATION, &aggrEdgeData, COLS_RELATION);
 	auto inOutEdgeAggrRelationGraph = RelationEdge(&transformedGraph, ALL_RELATION, &aggrEdgeData, ALL_RELATION);
 	dependencies.push_back(&inOutEdgeAggrLRelationFeat);
 	dependencies.push_back(&inOutEdgeAggrRRelationFeat);
 	dependencies.push_back(&inOutEdgeAggrRelationGraph);
-	auto graphEdgeAggrLAssociation = RelationEdge(&transformedGraph, ROWS_RELATION, &attenLWeightData, ALL_RELATION);
-	auto graphEdgeAggrRAssociation = RelationEdge(&transformedGraph, COLS_RELATION, &attenRWeightData, ALL_RELATION);
+	auto graphEdgeAggrLAssociation = RelationEdge(&transformedGraph, ROWS_RELATION, &attenLData, ALL_RELATION);
+	auto graphEdgeAggrRAssociation = RelationEdge(&transformedGraph, COLS_RELATION, &attenRData, ALL_RELATION);
 	associations.push_back(&graphEdgeAggrLAssociation);
 	associations.push_back(&graphEdgeAggrRAssociation);
 
@@ -338,22 +338,22 @@ int main(int argc, char **argv) {
 	// aggrEdgeInfo.setDims(-4, 1); //-4=E=114M (E = Edges)
 	auto rootAggrEdgeLevel_2 = DataLevel(&aggrEdgeInfo_2, true);
 	auto aggrEdgeData_2 = DataNode("attn", INT32, INT32, F32, &rootAggrEdgeLevel_2);
-	aggregateEdge_2.addInputData(&attenLWeightData_2);
-	aggregateEdge_2.addInputData(&attenRWeightData_2);
+	aggregateEdge_2.addInputData(&attenLData_2);
+	aggregateEdge_2.addInputData(&attenRData_2);
 	aggregateEdge_2.addInputData(&transformedGraph);
 	aggregateEdge_2.addOutputData(&aggrEdgeData_2);
 	// TODO add optimizations
 	trainingLoop.addLoopNode(&aggregateEdge_2);
 	//* Dependencies
 	// Dependency relation between the features and the aggregated output
-	auto inOutEdgeAggrLRelationFeat_2 = RelationEdge(&attenLWeightData_2, ALL_RELATION, &aggrEdgeData_2, ROWS_RELATION);
-	auto inOutEdgeAggrRRelationFeat_2 = RelationEdge(&attenRWeightData_2, ALL_RELATION, &aggrEdgeData_2, COLS_RELATION);
+	auto inOutEdgeAggrLRelationFeat_2 = RelationEdge(&attenLData_2, ALL_RELATION, &aggrEdgeData_2, ROWS_RELATION);
+	auto inOutEdgeAggrRRelationFeat_2 = RelationEdge(&attenRData_2, ALL_RELATION, &aggrEdgeData_2, COLS_RELATION);
 	auto inOutEdgeAggrRelationGraph_2 = RelationEdge(&transformedGraph, ALL_RELATION, &aggrEdgeData_2, ALL_RELATION);
 	dependencies.push_back(&inOutEdgeAggrLRelationFeat_2);
 	dependencies.push_back(&inOutEdgeAggrRRelationFeat_2);
 	dependencies.push_back(&inOutEdgeAggrRelationGraph_2);
-	auto graphEdgeAggrLAssociation_2 = RelationEdge(&transformedGraph, ROWS_RELATION, &attenLWeightData_2, ALL_RELATION);
-	auto graphEdgeAggrRAssociation_2 = RelationEdge(&transformedGraph, COLS_RELATION, &attenRWeightData_2, ALL_RELATION);
+	auto graphEdgeAggrLAssociation_2 = RelationEdge(&transformedGraph, ROWS_RELATION, &attenLData_2, ALL_RELATION);
+	auto graphEdgeAggrRAssociation_2 = RelationEdge(&transformedGraph, COLS_RELATION, &attenRData_2, ALL_RELATION);
 	associations.push_back(&graphEdgeAggrLAssociation_2);
 	associations.push_back(&graphEdgeAggrRAssociation_2);
 
