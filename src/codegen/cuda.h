@@ -801,6 +801,9 @@ torch::Tensor bounds, int nrows, int segments) {\n\
                     if (inputInfo->getIndex() != -1)
                     {
                         indexData = inputInfo->getIndex();
+                    } else
+                    {
+                        indexData = 0;
                     }
                     encounteredStrings.insert(inputData->getName());
 
