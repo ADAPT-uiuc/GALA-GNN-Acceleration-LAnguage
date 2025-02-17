@@ -174,6 +174,8 @@ int main(int argc, char **argv) {
 	// Edge aggregation
 	auto aggregateEdge = ForwardNode(AGGREGATE_EDGE, AGGREGATE_EDGE_SUM_OP);
 	auto aggrEdgeInfo = DataInfo(CSR_STYPE, transformedGraphInfo.getDirected(), true);
+	aggrEdgeInfo.addOpt(COL_TILE_DOPT, "65000");
+	aggrEdgeInfo.setIndex(0);
 	// aggrEdgeInfo.setDims(-4, 1); //-4=E=114M (E = Edges)
 	auto rootAggrEdgeLevel = DataLevel(&aggrEdgeInfo, true);
 	auto aggrEdgeData = DataNode("attn", INT32, INT32, F32, &rootAggrEdgeLevel);
@@ -201,6 +203,7 @@ int main(int argc, char **argv) {
 	leakyReluOp.addParam("0.2");
 	auto leakyReluInfo = DataInfo(CSR_STYPE, transformedGraphInfo.getDirected(), true);
 	leakyReluInfo.addOpt(COL_TILE_DOPT, "65000");
+	leakyReluInfo.setIndex(0);
 	// leakyReluInfo.setDims(-4, 1);
 	auto rootLeakyReluLevel = DataLevel(&leakyReluInfo, true);
 	auto leakyReluData = DataNode("attn", INT32, INT32, F32, &rootLeakyReluLevel);
@@ -214,6 +217,7 @@ int main(int argc, char **argv) {
 	auto softmaxOp = ForwardNode(UPDATE_EDGE, NON_LNR_OP_SOFTMAX);
 	auto softmaxInfo = DataInfo(CSR_STYPE, transformedGraphInfo.getDirected(), true);
 	softmaxInfo.addOpt(COL_TILE_DOPT, "65000");
+	softmaxInfo.setIndex(0);
 	// leakyReluInfo.setDims(-4, 1);
 	auto rootSoftmaxLevel = DataLevel(&softmaxInfo, true);
 	auto softmaxData = DataNode("attn", INT32, INT32, F32, &rootSoftmaxLevel);
@@ -335,6 +339,8 @@ int main(int argc, char **argv) {
 	// Edge aggregation
 	auto aggregateEdge_2 = ForwardNode(AGGREGATE_EDGE, AGGREGATE_EDGE_SUM_OP);
 	auto aggrEdgeInfo_2 = DataInfo(CSR_STYPE, transformedGraphInfo.getDirected(), true);
+	aggrEdgeInfo_2.addOpt(COL_TILE_DOPT, "65000");
+	aggrEdgeInfo_2.setIndex(0);
 	// aggrEdgeInfo.setDims(-4, 1); //-4=E=114M (E = Edges)
 	auto rootAggrEdgeLevel_2 = DataLevel(&aggrEdgeInfo_2, true);
 	auto aggrEdgeData_2 = DataNode("attn", INT32, INT32, F32, &rootAggrEdgeLevel_2);
@@ -361,6 +367,8 @@ int main(int argc, char **argv) {
 	auto leakyReluOp_2 = ForwardNode(UPDATE_EDGE, NON_LNR_OP_LEAKY_RELU);
 	leakyReluOp_2.addParam("0.2");
 	auto leakyReluInfo_2 = DataInfo(CSR_STYPE, transformedGraphInfo.getDirected(), true);
+	leakyReluInfo_2.addOpt(COL_TILE_DOPT, "65000");
+	leakyReluInfo_2.setIndex(0);
 	// leakyReluInfo.setDims(-4, 1);
 	auto rootLeakyReluLevel_2 = DataLevel(&leakyReluInfo_2, true);
 	auto leakyReluData_2 = DataNode("attn", INT32, INT32, F32, &rootLeakyReluLevel_2);
@@ -373,6 +381,8 @@ int main(int argc, char **argv) {
 	// Leaky ReLU operation
 	auto softmaxOp_2 = ForwardNode(UPDATE_EDGE, NON_LNR_OP_SOFTMAX);
 	auto softmaxInfo_2 = DataInfo(CSR_STYPE, transformedGraphInfo.getDirected(), true);
+	softmaxInfo_2.addOpt(COL_TILE_DOPT, "65000");
+	softmaxInfo_2.setIndex(0);
 	// leakyReluInfo.setDims(-4, 1);
 	auto rootSoftmaxLevel_2 = DataLevel(&softmaxInfo_2, true);
 	auto softmaxData_2 = DataNode("attn", INT32, INT32, F32, &rootSoftmaxLevel_2);
