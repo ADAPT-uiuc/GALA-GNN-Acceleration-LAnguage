@@ -546,7 +546,7 @@ public:
             if (encounteredAutograds.find(getKernelName(cNode)) == encounteredAutograds.end())
             {
                 encounteredAutograds.insert(getKernelName(cNode));
-                std::string autoGradFunction = "class " + getKernelName(cNode) + "_AutoGrad : public torch::autograd::Function<" + getKernelName(cNode) + "_Autograd> {\n\
+                std::string autoGradFunction = "class " + getKernelName(cNode) + "_AutoGrad : public torch::autograd::Function<" + getKernelName(cNode) + "_AutoGrad> {\n\
 public:\n\
   static torch::Tensor forward(torch::autograd::AutogradContext *ctx,\n\
                                torch::Tensor input_dense1,\n\
@@ -599,7 +599,7 @@ public:\n\
             if (encounteredAutograds.find(getKernelName(cNode)) == encounteredAutograds.end())
             {
                 encounteredAutograds.insert(getKernelName(cNode));
-                std::string autoGradFunction = "class " + getKernelName(cNode) + "_AutoGrad : public torch::autograd::Function<" + getKernelName(cNode) + "_Autograd> {\n\
+                std::string autoGradFunction = "class " + getKernelName(cNode) + "_AutoGrad : public torch::autograd::Function<" + getKernelName(cNode) + "_AutoGrad> {\n\
 public:\n\
   static torch::Tensor forward(torch::autograd::AutogradContext *ctx,\n\
                                torch::Tensor value_graph,\n\
