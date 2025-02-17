@@ -588,9 +588,9 @@ public:\n\
                 kernelCallCode.addCode(autoGradFunction);
             }
             // TODO change the names from the input
-            auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
+            auto inGraphIndx = cNode->getInput(2)->getDataInfo()->getIndex();
             std::string tempForwardAggrCall = generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
-            + "_AutoGrad::apply(attneL, attneR, " + std::to_string(inGraphIndx) + ");";
+            + "_AutoGrad::apply(" + cNode->getInput(0)->getName() + ", " + cNode->getInput(1)->getName() + ", " + std::to_string(inGraphIndx) + ");";
             model.getForward()->addCode(tempForwardAggrCall);
         } else if (cNode->getOp() == NON_LNR_OP_SOFTMAX)
         {
