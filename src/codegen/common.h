@@ -561,7 +561,7 @@ public:\n\
                     autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
         int segments = global_segments[2 * li];\n\
         return edge_sddvv(input_dense1, input_dense2, offset_graph, columns_graph,\n\
-                            value_graph, bounds, global_nrows, segments)";
+                            value_graph, bounds, global_nrows, segments);";
                 } else
                 {
                     autoGradFunction += "unsupported\n";
