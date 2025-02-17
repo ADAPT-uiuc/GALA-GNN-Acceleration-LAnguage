@@ -652,23 +652,20 @@ torch::Tensor bounds, int nrows, int segments) {\n\
         int i1 = i;\n\
         int start_vals = bounds_ptr[i1 * 2];\n\
         cudaStream_t stream1;\n\
-        if (is_directed) {\n\
-            cudaStreamCreate(&stream1);\n\
-            dim3 gridDim(((int)(nrows - 1) / 8) + 1);\n\
-            dim3 blockDim(32, 8);\n\
-            default_function_kernel_sddvv_plus_undir<<<gridDim, blockDim, 0,\n\
-                                                       stream1>>>(\n\
-                &oden_array[start_vals], &offset_ptr[i1 * (nrows + 1)], iden_ptr1,\n\
-                iden_ptr2, &col_ptr[start_vals], nrows);\n\
-        }\n\
+        cudaStreamCreate(&stream1);\n\
+        dim3 gridDim(((int)(nrows - 1) / 8) + 1);\n\
+        dim3 blockDim(32, 8);\n\
+        default_function_kernel_sddvv_plus_undir<<<gridDim, blockDim, 0,\n\
+                                                   stream1>>>(\n\
+            &oden_array[start_vals], &offset_ptr[i1 * (nrows + 1)], iden_ptr1,\n\
+            iden_ptr2, &col_ptr[start_vals], nrows);\n\
     }\n\
     return output_sparse;\n\
 }\n\
 torch::Tensor edge_sddmm(torch::Tensor input_dense1, torch::Tensor input_dense2,\n\
 torch::Tensor offset_graph,\n\
 torch::Tensor columns_graph, torch::Tensor value_graph,\n\
-torch::Tensor bounds, int nrows, int segments,\n\
-bool is_directed) {\n\
+torch::Tensor bounds, int nrows, int segments) {\n\
     auto nvals = columns_graph.numel();\n\
     auto full_iden = input_dense1.numel();\n\
     auto dcols = full_iden / nrows;\n\
@@ -692,16 +689,14 @@ bool is_directed) {\n\
         int i1 = i;\n\
         int start_vals = bounds_ptr[i1 * 2];\n\
         cudaStream_t stream1;\n\
-        if (is_directed) {\n\
-            cudaStreamCreate(&stream1);\n\
-            dim3 gridDim(((int)(nrows - 1) / 8) + 1);\n\
-            dim3 blockDim(32, 8);\n\
-            int shared_memory_size = dcols * sizeof(float);\n\
-            default_function_kernel_sddmm_mult_undir_shared<<<\n\
-                gridDim, blockDim, shared_memory_size, stream1>>>(\n\
-                &oden_array[start_vals], &offset_ptr[i1 * (nrows + 1)], iden_ptr1,\n\
-                iden_ptr2, &col_ptr[start_vals], nrows, dcols);\n\
-        }\n\
+        cudaStreamCreate(&stream1);\n\
+        dim3 gridDim(((int)(nrows - 1) / 8) + 1);\n\
+        dim3 blockDim(32, 8);\n\
+        int shared_memory_size = dcols * sizeof(float);\n\
+        default_function_kernel_sddmm_mult_undir_shared<<<\n\
+            gridDim, blockDim, shared_memory_size, stream1>>>(\n\
+            &oden_array[start_vals], &offset_ptr[i1 * (nrows + 1)], iden_ptr1,\n\
+            iden_ptr2, &col_ptr[start_vals], nrows, dcols);\n\
     }\n\
     return output_sparse;\n\
 }\n";
