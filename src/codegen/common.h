@@ -577,7 +577,7 @@ public:\n\
         torch::Tensor columns_graph = global_columns_graph[2 * li + 1];\n\
         torch::Tensor bounds = global_bounds[2 * li + 1];\n\
         int segments = global_segments[2 * li + 1];\n\
-        torch::Tensor back_res = node_spmv_backward_of_sddmm_nln(\n\
+        torch::Tensor back_res = node_spmv_backward_of_sddmm_eaggr(\n\
                     offset_graph, columns_graph, // This should be the reverse graph\n\
                     d_value_graph, bounds, global_nrows, segments);\n\
         return {back_res,\n\
@@ -617,7 +617,7 @@ public:\n\
 
                 autoGradFunction += "    torch::Tensor val_exp = torch::exp(value_graph);\n\
     val_exp = torch::clamp(val_exp, 0.0, 1e12);\n\
-    torch::Tensor row_sum = node_spmv_backward_of_sddmm(\n\
+    torch::Tensor row_sum = node_spmv_backward_of_sddmm_nln(\n\
         offset_graph, columns_graph, val_exp, bounds, global_nrows,\n\
         segments);\n\
     auto options = torch::TensorOptions()\n\
@@ -626,7 +626,7 @@ public:\n\
                        .device(torch::kCUDA, 0);\n\
     row_sum = torch::reciprocal(row_sum);\n\
     val_exp = inplace_softmax_sddvv(row_sum, offset_graph, columns_graph, \n\
-                                    val_exp, bounds, global_nrows, segments);n\n\
+                                    val_exp, bounds, global_nrows, segments);\n\
     ctx->save_for_backward({val_exp});\n\
     return val_exp;\n\
   }\n\
@@ -648,7 +648,7 @@ public:\n\
                 }
                 autoGradFunction += "    torch::Tensor value_graph = saved[0]; // n x 1\n\
     torch::Tensor sds = value_graph * d_value_graph; // e x 1\n\
-    torch::Tensor accum = node_spmv_backward_of_sddmm(\n\
+    torch::Tensor accum = node_spmv_backward_of_sddmm_nln(\n\
         offset_graph, columns_graph, sds, bounds, global_nrows, segments); // n x 1\n\
     torch::Tensor res = inplace_softmax_sddvv_mult(\n\
         accum, offset_graph, columns_graph, value_graph, bounds, global_nrows,\n\
