@@ -546,7 +546,7 @@ public:
             if (encounteredAutograds.find(getKernelName(cNode)) == encounteredAutograds.end())
             {
                 encounteredAutograds.insert(getKernelName(cNode));
-                std::string autoGradFunction = "class " + getKernelName(cNode) + "_Autograd : public torch::autograd::Function<" + getKernelName(cNode) + "_Autograd> {\n\
+                std::string autoGradFunction = "class " + getKernelName(cNode) + "_AutoGrad : public torch::autograd::Function<" + getKernelName(cNode) + "_Autograd> {\n\
 public:\n\
   static torch::Tensor forward(torch::autograd::AutogradContext *ctx,\n\
                                torch::Tensor input_dense1,\n\
@@ -590,7 +590,7 @@ public:\n\
             // TODO change the names from the input
             auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
             std::string tempForwardAggrCall = generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
-            + "_AutoGrad::apply(attnL, attnR, " + std::to_string(inGraphIndx) + ");";
+            + "_AutoGrad::apply(attneL, attneR, " + std::to_string(inGraphIndx) + ");";
             model.getForward()->addCode(tempForwardAggrCall);
         } else if (cNode->getOp() == NON_LNR_OP_SOFTMAX)
         {
@@ -599,7 +599,7 @@ public:\n\
             if (encounteredAutograds.find(getKernelName(cNode)) == encounteredAutograds.end())
             {
                 encounteredAutograds.insert(getKernelName(cNode));
-                std::string autoGradFunction = "class " + getKernelName(cNode) + "_Autograd : public torch::autograd::Function<" + getKernelName(cNode) + "_Autograd> {\n\
+                std::string autoGradFunction = "class " + getKernelName(cNode) + "_AutoGrad : public torch::autograd::Function<" + getKernelName(cNode) + "_Autograd> {\n\
 public:\n\
   static torch::Tensor forward(torch::autograd::AutogradContext *ctx,\n\
                                torch::Tensor value_graph,\n\
@@ -753,10 +753,10 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
 
                     std::string tempForwardAggrCall = "    if (ep % mod_v == 0) {\n\
       " + generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
-                    + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", 0);\n\
+                    + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", attn, 0);\n\
     } else {\n\
       " + generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
-                    + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");\n\
+                    + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", attn, " + std::to_string(inGraphIndx) + ");\n\
     }";
                     model.getForward()->addCode(tempForwardAggrCall);
                 }
@@ -929,7 +929,7 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
             if (encounteredAutograds.find(getKernelName(cNode)) == encounteredAutograds.end())
             {
                 encounteredAutograds.insert(getKernelName(cNode));
-                std::string leakyReluInit = "     torch::nn::LeakyReLU leaky_relu(torch::nn::LeakyReLUOptions().negative_slope(0.2))";
+                std::string leakyReluInit = "     torch::nn::LeakyReLU leaky_relu(torch::nn::LeakyReLUOptions().negative_slope(0.2));";
                 model.getForward()->addCode(leakyReluInit);
             }
             std::string leakyReluCall = "     " + generateOutputString(cNode, outOfLoop) + " = leaky_relu->forward(" + cNode->getInput(0)->getName() + ");";
