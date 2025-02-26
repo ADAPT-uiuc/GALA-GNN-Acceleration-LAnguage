@@ -329,6 +329,9 @@ public:
         if (cNode->getOp() == AGGREGATE_MUL_SUM_OP)
         {
             kernelName += "aggregate_node_mul_sum";
+        } if (cNode->getOp() == AGGREGATE_MUL_SUM_DIRECT)
+        {
+            kernelName += "aggregate_node_mul_sum_direct";
         } else if (cNode->getOp() == NON_LNR_OP_SOFTMAX)
         {
             kernelName += "non_lnr_op_softmax";
@@ -338,6 +341,12 @@ public:
         } else if (cNode->getOp() == AGGREGATE_EDGE_SUM_OP)
         {
             kernelName += "aggregate_edge_sum";
+        } else if (cNode->getOp() == LOAD_OP)
+        {
+            kernelName += "load_op";
+        } else if (cNode->getOp() == ONES_OP)
+        {
+            kernelName += "ones_op";
         } else
         {
             kernelName += "unsupported";
