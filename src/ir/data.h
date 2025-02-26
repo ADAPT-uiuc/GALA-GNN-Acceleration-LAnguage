@@ -101,6 +101,9 @@ private:
   int dimCol;
     // To be used by the global meta-data array
     int globalIndex;
+    // To be used by the global meta-data array
+    int defaultIndex = 0;
+    std::string defaultName;
 public:
   // Set the data informaiton
   DataInfo(DataFormat format,
@@ -179,6 +182,24 @@ public:
   {
       return this->globalIndex;
   }
+    void setDefaultIndex(int index)
+  {
+      this->defaultIndex = index;
+  }
+    int getDefaultIndex()
+  {
+      return this->defaultIndex;
+  }
+    void setDefaultName(std::string name)
+  {
+      this->defaultName = name;
+  }
+    std::string getDefaultName()
+  {
+      return this->defaultName;
+  }
+
+
 
 
 };
