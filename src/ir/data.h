@@ -103,7 +103,7 @@ private:
     int globalIndex;
     // To be used by the global meta-data array
     int defaultIndex = 0;
-    std::string defaultName;
+    std::string defaultName = "";
 public:
   // Set the data informaiton
   DataInfo(DataFormat format,

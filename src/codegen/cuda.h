@@ -794,13 +794,12 @@ torch::Tensor bounds, int nrows, int segments) {\n\
 
             if (!defaultLoaded)
             {
-                defaultLoaded = true;
                 auto inputInfo =  inputData->getDataInfo();
                 if (encounteredStrings.find(inputInfo->getDefaultName()) == encounteredStrings.end())
                 {
                     if (inputInfo->getFormat() == CSR_STYPE)
                     {
-
+                        defaultLoaded = true;
                         int indexData = inputInfo->getDefaultIndex();
                         encounteredStrings.insert(inputInfo->getDefaultName());
 
