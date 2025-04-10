@@ -14,16 +14,33 @@
     should I add quote terminals, or have that as part of the identifier terminal (e.g. "REDDIT" is all one terminal, but so is REDDIT)
 */
 %%
-dsl.load { cout << "LOAD "; }
+load_dataset { cout << "LOAD "; }
+dsl.get_aggregate { cout << "AGGR_INIT "; }
+fn { cout << "FN_ARG "; }
+dsl.fn. { cout << "DSL_FN "; }
+mul_sum { cout << "MUL_SUM "; }
+dsl. {cout << "DSL_DOT "; }
+set_undirected { cout << "SET_UNDIRECTED "; }
+set_unweighted { cout << "SET_UNWEIGHTED "; }
+feature_size { cout << "FEAT_SIZE_ASSIGN "; }
+label_size { cout << "LABEL_SIZE_ASSIGN "; }
+coarsen { cout << "COARSEN "; }
 dsl.reorder.rabbit { cout << "RABBIT_REORDER_OP "; }
 dsl.sample.random  { cout << "SAMPLE_RANDOM_OP "; }
-dsl.nn.ffn { cout << "FFN "; }
+nn.ffn { cout << "FFN "; }
+out= { cout << "FFN_OUT "; }
+size { cout << "SIZE_FN "; }
+nln.ReLU { cout << "RELU "; }
+dsl.nn.loss.RMSE { cout << "RMSE_LOSS "; }
+dsl.nn.optmz.ADAM { cout << "ADAM_T "; }
 DSL_Dataset { cout << "DATASET "; }
 NonLn { cout << "NONLN "; }
-model { cout << "MODEL "; }
+aggregate { cout << "AGGR "; }
+model { cout << "MODEL_W "; }
 layer { cout << "LAYER "; }
-graph { cout << "GRAPH_ATTR "; }
-feat { cout << "FEAT_ATTR "; }
+graphs { cout << "GRAPH_ATTR "; }
+feats { cout << "FEAT_ATTR "; }
+labels { cout << "LABEL_ATTR "; }
 eval { cout << "EVAL "; }
 train { cout << "TRAIN "; }
 loss { cout << "LOSS "; }
@@ -34,6 +51,7 @@ relax_nln { cout << "RELAXNLN "; }
 quant { cout << "QUANT "; }
 sensei_op { cout << "SENSEI_OP "; }
 col_tile { cout << "COLTILE "; }
+null { cout << "NULL_KEY "; }
 
 \( { cout << "LPAREN "; }
 \) { cout << "RPAREN "; }
@@ -67,6 +85,8 @@ new { cout << "NEW "; }
 \" { cout << "QUOTE "; }
 [ \t\r\n] {}
 \/\/.* { 
+    cout << "COMMENT "; }
+#.* { 
     cout << "COMMENT "; }
 [0-9]+\.[0-9]+ {
     cout << "FLOAT ";

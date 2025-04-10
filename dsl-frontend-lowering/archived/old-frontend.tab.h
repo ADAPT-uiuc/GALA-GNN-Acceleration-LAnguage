@@ -35,8 +35,8 @@
    especially those whose name start with YY_ or yy_.  They are
    private implementation details that can be changed or removed.  */
 
-#ifndef YY_YY_FRONTEND_TAB_H_INCLUDED
-# define YY_YY_FRONTEND_TAB_H_INCLUDED
+#ifndef YY_YY_OLD_FRONTEND_TAB_H_INCLUDED
+# define YY_YY_OLD_FRONTEND_TAB_H_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -123,14 +123,14 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 16 "frontend.y"
+#line 16 "old-frontend.y"
 
     int ival;
     float fval;
     char *sval;
     FrontendIRNode *irNode;
 
-#line 134 "frontend.tab.h"
+#line 134 "old-frontend.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -145,4 +145,4 @@ extern YYSTYPE yylval;
 int yyparse (void);
 
 
-#endif /* !YY_YY_FRONTEND_TAB_H_INCLUDED  */
+#endif /* !YY_YY_OLD_FRONTEND_TAB_H_INCLUDED  */

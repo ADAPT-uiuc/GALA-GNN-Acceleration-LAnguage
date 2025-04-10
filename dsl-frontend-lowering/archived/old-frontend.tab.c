@@ -67,7 +67,7 @@
 
 
 /* First part of user prologue.  */
-#line 2 "frontend.y"
+#line 2 "old-frontend.y"
 
 #include <iostream>
 #include <string.h>
@@ -81,7 +81,7 @@ extern FILE *yyin;
 void yyerror(const char *s);
 FrontendIRNode *root;
 
-#line 85 "frontend.tab.c"
+#line 85 "old-frontend.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -104,7 +104,7 @@ FrontendIRNode *root;
 #  endif
 # endif
 
-#include "frontend.tab.h"
+#include "old-frontend.tab.h"
 /* Symbol kind.  */
 enum yysymbol_kind_t
 {
@@ -1250,23 +1250,23 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* dsl_prog: %empty  */
-#line 50 "frontend.y"
+#line 50 "old-frontend.y"
            { (yyval.irNode) = NULL; }
-#line 1256 "frontend.tab.c"
+#line 1256 "old-frontend.tab.c"
     break;
 
   case 3: /* dsl_prog: dsl_stmnts  */
-#line 52 "frontend.y"
+#line 52 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("dsl_prog");
         (yyval.irNode)->addChild((yyvsp[0].irNode));
         root = (yyval.irNode);
     }
-#line 1266 "frontend.tab.c"
+#line 1266 "old-frontend.tab.c"
     break;
 
   case 4: /* dsl_prog: dsl_stmnts layer_defs model_defs model_stmnts model_uses dsl_stmnts  */
-#line 58 "frontend.y"
+#line 58 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("dsl_prog");
         (yyval.irNode)->addChild((yyvsp[-5].irNode));
@@ -1277,17 +1277,17 @@ yyreduce:
         if ((yyvsp[0].irNode)) (yyval.irNode)->addChild((yyvsp[0].irNode));
         root = (yyval.irNode);
     }
-#line 1281 "frontend.tab.c"
+#line 1281 "old-frontend.tab.c"
     break;
 
   case 5: /* dsl_stmnts: %empty  */
-#line 69 "frontend.y"
+#line 69 "old-frontend.y"
              { (yyval.irNode) = NULL; }
-#line 1287 "frontend.tab.c"
+#line 1287 "old-frontend.tab.c"
     break;
 
   case 6: /* dsl_stmnts: dsl_stmnts dsl_stmnt  */
-#line 71 "frontend.y"
+#line 71 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("dsl_stmnts");
         if ((yyvsp[-1].irNode)){
@@ -1298,93 +1298,93 @@ yyreduce:
         }
         (yyval.irNode)->addChild((yyvsp[0].irNode));
     }
-#line 1302 "frontend.tab.c"
+#line 1302 "old-frontend.tab.c"
     break;
 
   case 7: /* dsl_stmnt: IDENTIFIER ASSIGN data_stmnt  */
-#line 83 "frontend.y"
+#line 83 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("data_stmnt");
         (yyval.irNode)->addParam((yyvsp[-2].sval));
         (yyval.irNode)->addChild((yyvsp[0].irNode));
         free((yyvsp[-2].sval)); // using free instead of delete b/c don't want to delete children nodes
     }
-#line 1313 "frontend.tab.c"
+#line 1313 "old-frontend.tab.c"
     break;
 
   case 8: /* dsl_stmnt: COMMENT  */
-#line 90 "frontend.y"
+#line 90 "old-frontend.y"
     { 
         (yyval.irNode) = new FrontendIRNode("comment"); 
         (yyval.irNode)->addParam((yyvsp[0].sval)); 
         free((yyvsp[0].sval)); 
     }
-#line 1323 "frontend.tab.c"
+#line 1323 "old-frontend.tab.c"
     break;
 
   case 9: /* dsl_stmnt: IDENTIFIER ASSIGN graph_ds.graph SEMICOLON  */
-#line 96 "frontend.y"
+#line 96 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("graph_access");
         (yyval.irNode)->addParam((yyvsp[-3].sval));
         (yyval.irNode)->addChild((yyvsp[-1].irNode));
         free((yyvsp[-3].sval));
     }
-#line 1334 "frontend.tab.c"
+#line 1334 "old-frontend.tab.c"
     break;
 
   case 10: /* dsl_stmnt: IDENTIFIER ASSIGN graph_ds.feat SEMICOLON  */
-#line 103 "frontend.y"
+#line 103 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("feat_access");
         (yyval.irNode)->addParam((yyvsp[-3].sval));
         (yyval.irNode)->addChild((yyvsp[-1].irNode));
         free((yyvsp[-3].sval));
     }
-#line 1345 "frontend.tab.c"
+#line 1345 "old-frontend.tab.c"
     break;
 
   case 11: /* data_stmnt: LOAD LPAREN QUOTE IDENTIFIER QUOTE RPAREN SEMICOLON  */
-#line 117 "frontend.y"
+#line 117 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("load");
         (yyval.irNode)->addParam((yyvsp[-3].sval));
         free((yyvsp[-3].sval));
     }
-#line 1355 "frontend.tab.c"
+#line 1355 "old-frontend.tab.c"
     break;
 
   case 12: /* graph_ds.graph: IDENTIFIER DOT GRAPH_ATTR  */
-#line 129 "frontend.y"
+#line 129 "old-frontend.y"
 {
     (yyval.irNode) = new FrontendIRNode("graph_attr");
     (yyval.irNode)->addParam((yyvsp[-2].sval));
     free((yyvsp[-2].sval));
 }
-#line 1365 "frontend.tab.c"
+#line 1365 "old-frontend.tab.c"
     break;
 
   case 13: /* graph_ds.feat: IDENTIFIER DOT FEAT_ATTR  */
-#line 136 "frontend.y"
+#line 136 "old-frontend.y"
 {
     (yyval.irNode) = new FrontendIRNode("feat_attr");
     (yyval.irNode)->addParam((yyvsp[-2].sval));
     free((yyvsp[-2].sval));
 }
-#line 1375 "frontend.tab.c"
+#line 1375 "old-frontend.tab.c"
     break;
 
   case 14: /* layer_defs: layer_def  */
-#line 142 "frontend.y"
+#line 142 "old-frontend.y"
     { 
         (yyval.irNode) = new FrontendIRNode("layer_defs");
         (yyval.irNode)->addChild((yyvsp[0].irNode));
     }
-#line 1384 "frontend.tab.c"
+#line 1384 "old-frontend.tab.c"
     break;
 
   case 15: /* layer_defs: layer_defs layer_def  */
-#line 147 "frontend.y"
+#line 147 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("layer_defs");
         if ((yyvsp[-1].irNode)){
@@ -1395,11 +1395,11 @@ yyreduce:
         }
         (yyval.irNode)->addChild((yyvsp[0].irNode));
     }
-#line 1399 "frontend.tab.c"
+#line 1399 "old-frontend.tab.c"
     break;
 
   case 16: /* layer_def: IDENTIFIER ASSIGN LAYER LPAREN params RPAREN LBRACE dsl_stmnts RBRACE  */
-#line 160 "frontend.y"
+#line 160 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("layer_def");
         (yyval.irNode)->addParam((yyvsp[-8].sval));
@@ -1407,20 +1407,20 @@ yyreduce:
         if ((yyvsp[-1].irNode)) (yyval.irNode)->addChild((yyvsp[-1].irNode)); // dsl_stmnts are optional for now, necessary later
         free((yyvsp[-8].sval));
     }
-#line 1411 "frontend.tab.c"
+#line 1411 "old-frontend.tab.c"
     break;
 
   case 17: /* layer_stmnts: layer_stmnt  */
-#line 169 "frontend.y"
+#line 169 "old-frontend.y"
     { 
         (yyval.irNode) = new FrontendIRNode("layer_stmnts");
         (yyval.irNode)->addChild((yyvsp[0].irNode));
     }
-#line 1420 "frontend.tab.c"
+#line 1420 "old-frontend.tab.c"
     break;
 
   case 18: /* layer_stmnts: layer_stmnt layer_stmnt  */
-#line 174 "frontend.y"
+#line 174 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("layer_stmnts");
         if ((yyvsp[-1].irNode)){
@@ -1431,11 +1431,11 @@ yyreduce:
         }
         (yyval.irNode)->addChild((yyvsp[0].irNode));
     }
-#line 1435 "frontend.tab.c"
+#line 1435 "old-frontend.tab.c"
     break;
 
   case 19: /* layer_stmnt: IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON  */
-#line 187 "frontend.y"
+#line 187 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("layer_stmnt");
         (yyval.irNode)->addParam((yyvsp[-6].sval));
@@ -1444,20 +1444,20 @@ yyreduce:
         
         free((yyvsp[-6].sval));
     }
-#line 1448 "frontend.tab.c"
+#line 1448 "old-frontend.tab.c"
     break;
 
   case 20: /* model_defs: model_def  */
-#line 197 "frontend.y"
+#line 197 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("model_defs");
         (yyval.irNode)->addChild((yyvsp[0].irNode));
     }
-#line 1457 "frontend.tab.c"
+#line 1457 "old-frontend.tab.c"
     break;
 
   case 21: /* model_defs: model_defs model_def  */
-#line 202 "frontend.y"
+#line 202 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("model_defs");
         if ((yyvsp[-1].irNode)){
@@ -1468,31 +1468,31 @@ yyreduce:
         }
         (yyval.irNode)->addChild((yyvsp[0].irNode));
     }
-#line 1472 "frontend.tab.c"
+#line 1472 "old-frontend.tab.c"
     break;
 
   case 22: /* model_def: IDENTIFIER ASSIGN MODEL LPAREN params RPAREN LBRACE layer_stmnts RBRACE  */
-#line 215 "frontend.y"
+#line 215 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("model_def");
         (yyval.irNode)->addParam((yyvsp[-8].sval));
         if ((yyvsp[-4].irNode)) (yyval.irNode)->addChild((yyvsp[-4].irNode)); 
         if ((yyvsp[-1].irNode)) (yyval.irNode)->addChild((yyvsp[-1].irNode)); 
     }
-#line 1483 "frontend.tab.c"
+#line 1483 "old-frontend.tab.c"
     break;
 
   case 23: /* model_stmnts: model_stmnt  */
-#line 223 "frontend.y"
+#line 223 "old-frontend.y"
     { 
         (yyval.irNode) = new FrontendIRNode("model_stmnts");
         (yyval.irNode)->addChild((yyvsp[0].irNode));
     }
-#line 1492 "frontend.tab.c"
+#line 1492 "old-frontend.tab.c"
     break;
 
   case 24: /* model_stmnts: model_stmnts model_stmnt  */
-#line 228 "frontend.y"
+#line 228 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("model_stmnts");
         if ((yyvsp[-1].irNode)){
@@ -1503,11 +1503,11 @@ yyreduce:
         }
         (yyval.irNode)->addChild((yyvsp[0].irNode));
     }
-#line 1507 "frontend.tab.c"
+#line 1507 "old-frontend.tab.c"
     break;
 
   case 25: /* model_stmnt: IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON  */
-#line 241 "frontend.y"
+#line 241 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("model_stmnt");
         (yyval.irNode)->addParam((yyvsp[-6].sval));
@@ -1516,20 +1516,20 @@ yyreduce:
         
         free((yyvsp[-6].sval));
     }
-#line 1520 "frontend.tab.c"
+#line 1520 "old-frontend.tab.c"
     break;
 
   case 26: /* model_uses: model_use  */
-#line 251 "frontend.y"
+#line 251 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("model_uses");
         (yyval.irNode)->addChild((yyvsp[0].irNode));
     }
-#line 1529 "frontend.tab.c"
+#line 1529 "old-frontend.tab.c"
     break;
 
   case 27: /* model_uses: model_uses model_use  */
-#line 256 "frontend.y"
+#line 256 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("model_uses");
         if ((yyvsp[-1].irNode)){
@@ -1540,50 +1540,50 @@ yyreduce:
         }
         (yyval.irNode)->addChild((yyvsp[0].irNode));
     }
-#line 1544 "frontend.tab.c"
+#line 1544 "old-frontend.tab.c"
     break;
 
   case 28: /* model_use: IDENTIFIER DOT TRAIN LPAREN model_train_args RPAREN SEMICOLON  */
-#line 271 "frontend.y"
+#line 271 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("model_use_train");
         (yyval.irNode)->addParam((yyvsp[-6].sval));
         if ((yyvsp[-2].irNode)) (yyval.irNode)->addChild((yyvsp[-2].irNode));
         free((yyvsp[-6].sval));
     }
-#line 1555 "frontend.tab.c"
+#line 1555 "old-frontend.tab.c"
     break;
 
   case 29: /* model_use: IDENTIFIER ASSIGN IDENTIFIER DOT EVAL LPAREN RPAREN SEMICOLON  */
-#line 281 "frontend.y"
+#line 281 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("model_use_eval");
         (yyval.irNode)->addParam((yyvsp[-7].sval));
         (yyval.irNode)->addParam((yyvsp[-5].sval));
     }
-#line 1565 "frontend.tab.c"
+#line 1565 "old-frontend.tab.c"
     break;
 
   case 30: /* model_use: IDENTIFIER DOT model_transform SEMICOLON  */
-#line 287 "frontend.y"
+#line 287 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("model_use_transform");
         (yyval.irNode)->addParam((yyvsp[-1].sval));
     }
-#line 1574 "frontend.tab.c"
+#line 1574 "old-frontend.tab.c"
     break;
 
   case 31: /* model_train_args: model_train_arg  */
-#line 298 "frontend.y"
+#line 298 "old-frontend.y"
     { 
         (yyval.irNode) = new FrontendIRNode("model_train_args");
         (yyval.irNode)->addChild((yyvsp[0].irNode));
     }
-#line 1583 "frontend.tab.c"
+#line 1583 "old-frontend.tab.c"
     break;
 
   case 32: /* model_train_args: model_train_args model_train_arg  */
-#line 303 "frontend.y"
+#line 303 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("model_train_args");
         if ((yyvsp[-1].irNode)){
@@ -1594,117 +1594,117 @@ yyreduce:
         }
         (yyval.irNode)->addChild((yyvsp[0].irNode));
     }
-#line 1598 "frontend.tab.c"
+#line 1598 "old-frontend.tab.c"
     break;
 
   case 33: /* model_train_arg: ITERS ASSIGN INTEGER  */
-#line 315 "frontend.y"
+#line 315 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("iters");
         (yyval.irNode)->addParam((yyvsp[0].sval));
     }
-#line 1607 "frontend.tab.c"
+#line 1607 "old-frontend.tab.c"
     break;
 
   case 34: /* model_train_arg: ITERS ASSIGN INTEGER COMMA  */
-#line 320 "frontend.y"
+#line 320 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("iters");
         (yyval.irNode)->addParam((yyvsp[-1].sval));
     }
-#line 1616 "frontend.tab.c"
+#line 1616 "old-frontend.tab.c"
     break;
 
   case 35: /* model_train_arg: LOSS ASSIGN RMSE_LOSS  */
-#line 325 "frontend.y"
+#line 325 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("loss");
         (yyval.irNode)->addParam("rmse");
     }
-#line 1625 "frontend.tab.c"
+#line 1625 "old-frontend.tab.c"
     break;
 
   case 36: /* model_train_arg: LOSS ASSIGN RMSE_LOSS COMMA  */
-#line 330 "frontend.y"
+#line 330 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("loss");
         (yyval.irNode)->addParam("rmse");
 
     }
-#line 1635 "frontend.tab.c"
+#line 1635 "old-frontend.tab.c"
     break;
 
   case 37: /* model_train_arg: OPTIMIZER ASSIGN ADAM  */
-#line 336 "frontend.y"
+#line 336 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("optimizer");
         (yyval.irNode)->addParam("adam");
     }
-#line 1644 "frontend.tab.c"
+#line 1644 "old-frontend.tab.c"
     break;
 
   case 38: /* model_train_arg: OPTIMIZER ASSIGN ADAM COMMA  */
-#line 341 "frontend.y"
+#line 341 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("optimizer");
         (yyval.irNode)->addParam("adam");
     }
-#line 1653 "frontend.tab.c"
+#line 1653 "old-frontend.tab.c"
     break;
 
   case 39: /* model_train_arg: VAL_STEP ASSIGN INTEGER  */
-#line 346 "frontend.y"
+#line 346 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("validation_step");
         (yyval.irNode)->addParam((yyvsp[0].sval));
     }
-#line 1662 "frontend.tab.c"
+#line 1662 "old-frontend.tab.c"
     break;
 
   case 40: /* model_train_arg: VAL_STEP ASSIGN INTEGER COMMA  */
-#line 351 "frontend.y"
+#line 351 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("validation_step");
         (yyval.irNode)->addParam((yyvsp[-1].sval));
     }
-#line 1671 "frontend.tab.c"
+#line 1671 "old-frontend.tab.c"
     break;
 
   case 41: /* model_transform: RELAXNLN LPAREN RPAREN  */
-#line 360 "frontend.y"
+#line 360 "old-frontend.y"
     {
         (yyval.sval) = (char*) malloc(strlen("relax_nln")+1);
         sprintf((yyval.sval), "relax_nln");
     }
-#line 1680 "frontend.tab.c"
+#line 1680 "old-frontend.tab.c"
     break;
 
   case 42: /* model_transform: QUANT LPAREN RPAREN  */
-#line 365 "frontend.y"
+#line 365 "old-frontend.y"
     {
         (yyval.sval) = (char*) malloc(strlen("quant")+1);
         sprintf((yyval.sval), "quant");
     }
-#line 1689 "frontend.tab.c"
+#line 1689 "old-frontend.tab.c"
     break;
 
   case 43: /* model_transform: SENSEI_OP LPAREN RPAREN  */
-#line 370 "frontend.y"
+#line 370 "old-frontend.y"
     {
         (yyval.sval) = (char*) malloc(strlen("sensei_op")+1);
         sprintf((yyval.sval), "sensei_op");
     }
-#line 1698 "frontend.tab.c"
+#line 1698 "old-frontend.tab.c"
     break;
 
   case 44: /* params: %empty  */
-#line 375 "frontend.y"
+#line 375 "old-frontend.y"
          { (yyval.irNode) = NULL; }
-#line 1704 "frontend.tab.c"
+#line 1704 "old-frontend.tab.c"
     break;
 
   case 45: /* params: params param  */
-#line 377 "frontend.y"
+#line 377 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("params");
         if ((yyvsp[-1].irNode)){
@@ -1716,39 +1716,39 @@ yyreduce:
         (yyval.irNode)->addParam((yyvsp[0].sval));
         free((yyvsp[0].sval));
     }
-#line 1720 "frontend.tab.c"
+#line 1720 "old-frontend.tab.c"
     break;
 
   case 46: /* param: type IDENTIFIER COMMA  */
-#line 390 "frontend.y"
+#line 390 "old-frontend.y"
     {
         (yyval.sval) = (char*) malloc(strlen((yyvsp[-2].sval)) + strlen((yyvsp[-1].sval)) + 2);
         sprintf((yyval.sval), "%s %s", (yyvsp[-2].sval), (yyvsp[-1].sval));
         free((yyvsp[-2].sval));
         free((yyvsp[-1].sval));
     }
-#line 1731 "frontend.tab.c"
+#line 1731 "old-frontend.tab.c"
     break;
 
   case 47: /* param: type IDENTIFIER  */
-#line 397 "frontend.y"
+#line 397 "old-frontend.y"
     {
         (yyval.sval) = (char*) malloc(strlen((yyvsp[-1].sval)) + strlen((yyvsp[0].sval)) + 2);
         sprintf((yyval.sval), "%s %s", (yyvsp[-1].sval), (yyvsp[0].sval));
         free((yyvsp[-1].sval));
         free((yyvsp[0].sval));
     }
-#line 1742 "frontend.tab.c"
+#line 1742 "old-frontend.tab.c"
     break;
 
   case 48: /* args: %empty  */
-#line 404 "frontend.y"
+#line 404 "old-frontend.y"
        { (yyval.irNode) = NULL; }
-#line 1748 "frontend.tab.c"
+#line 1748 "old-frontend.tab.c"
     break;
 
   case 49: /* args: args arg  */
-#line 406 "frontend.y"
+#line 406 "old-frontend.y"
     {
         (yyval.irNode) = new FrontendIRNode("args");
         if ((yyvsp[-1].irNode)){
@@ -1760,123 +1760,123 @@ yyreduce:
         (yyval.irNode)->addParam((yyvsp[0].sval));
         free((yyvsp[0].sval));
     }
-#line 1764 "frontend.tab.c"
+#line 1764 "old-frontend.tab.c"
     break;
 
   case 50: /* arg: IDENTIFIER COMMA  */
-#line 419 "frontend.y"
+#line 419 "old-frontend.y"
     {
         (yyval.sval) = (char*) malloc(strlen((yyvsp[-1].sval)) + 2);
         sprintf((yyval.sval), "%s", (yyvsp[-1].sval));
         free((yyvsp[-1].sval));
     }
-#line 1774 "frontend.tab.c"
+#line 1774 "old-frontend.tab.c"
     break;
 
   case 51: /* arg: IDENTIFIER  */
-#line 425 "frontend.y"
+#line 425 "old-frontend.y"
     {
         (yyval.sval) = (char*) malloc(strlen((yyvsp[0].sval)) + 2);
         sprintf((yyval.sval), "%s", (yyvsp[0].sval));
         free((yyvsp[0].sval));
     }
-#line 1784 "frontend.tab.c"
+#line 1784 "old-frontend.tab.c"
     break;
 
   case 52: /* arg: INTEGER COMMA  */
-#line 431 "frontend.y"
+#line 431 "old-frontend.y"
     {
         (yyval.sval) = (char*) malloc(strlen((yyvsp[-1].sval)) + 2);
         sprintf((yyval.sval), "%s", (yyvsp[-1].sval));
         free((yyvsp[-1].sval));
     }
-#line 1794 "frontend.tab.c"
+#line 1794 "old-frontend.tab.c"
     break;
 
   case 53: /* arg: INTEGER  */
-#line 437 "frontend.y"
+#line 437 "old-frontend.y"
     {
         (yyval.sval) = (char*) malloc(strlen((yyvsp[0].sval)) + 2);
         sprintf((yyval.sval), "%s", (yyvsp[0].sval));
         free((yyvsp[0].sval));
     }
-#line 1804 "frontend.tab.c"
+#line 1804 "old-frontend.tab.c"
     break;
 
   case 54: /* arg: FLOAT COMMA  */
-#line 443 "frontend.y"
+#line 443 "old-frontend.y"
     {
         (yyval.sval) = (char*) malloc(strlen((yyvsp[-1].sval)) + 2);
         sprintf((yyval.sval), "%s", (yyvsp[-1].sval));
         free((yyvsp[-1].sval));
     }
-#line 1814 "frontend.tab.c"
+#line 1814 "old-frontend.tab.c"
     break;
 
   case 55: /* arg: FLOAT  */
-#line 449 "frontend.y"
+#line 449 "old-frontend.y"
     {
         (yyval.sval) = (char*) malloc(strlen((yyvsp[0].sval)) + 2);
         sprintf((yyval.sval), "%s", (yyvsp[0].sval));
         free((yyvsp[0].sval));
     }
-#line 1824 "frontend.tab.c"
+#line 1824 "old-frontend.tab.c"
     break;
 
   case 56: /* arg: NULL_KEY COMMA  */
-#line 455 "frontend.y"
+#line 455 "old-frontend.y"
     {
         (yyval.sval) = (char*) malloc(strlen((yyvsp[-1].sval)) + 2);
         sprintf((yyval.sval), "%s", (yyvsp[-1].sval));
         free((yyvsp[-1].sval));
     }
-#line 1834 "frontend.tab.c"
+#line 1834 "old-frontend.tab.c"
     break;
 
   case 57: /* arg: NULL_KEY  */
-#line 461 "frontend.y"
+#line 461 "old-frontend.y"
     {
         (yyval.sval) = strdup("NULL");
     }
-#line 1842 "frontend.tab.c"
+#line 1842 "old-frontend.tab.c"
     break;
 
   case 58: /* arg: RELU COMMA  */
-#line 465 "frontend.y"
+#line 465 "old-frontend.y"
     {
         (yyval.sval) = strdup("dsl.nln.ReLU");
     }
-#line 1850 "frontend.tab.c"
+#line 1850 "old-frontend.tab.c"
     break;
 
   case 59: /* arg: RELU  */
-#line 469 "frontend.y"
+#line 469 "old-frontend.y"
     {
         (yyval.sval) = strdup("dsl.nln.ReLU");
     }
-#line 1858 "frontend.tab.c"
+#line 1858 "old-frontend.tab.c"
     break;
 
   case 60: /* type: DATASET  */
-#line 473 "frontend.y"
+#line 473 "old-frontend.y"
                { (yyval.sval) = strdup("DSL_Dataset"); }
-#line 1864 "frontend.tab.c"
+#line 1864 "old-frontend.tab.c"
     break;
 
   case 61: /* type: NONLN  */
-#line 474 "frontend.y"
+#line 474 "old-frontend.y"
             { (yyval.sval) = strdup("NonLn"); }
-#line 1870 "frontend.tab.c"
+#line 1870 "old-frontend.tab.c"
     break;
 
   case 62: /* type: INT  */
-#line 475 "frontend.y"
+#line 475 "old-frontend.y"
           { (yyval.sval) = strdup("int"); }
-#line 1876 "frontend.tab.c"
+#line 1876 "old-frontend.tab.c"
     break;
 
 
-#line 1880 "frontend.tab.c"
+#line 1880 "old-frontend.tab.c"
 
       default: break;
     }
@@ -2069,7 +2069,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 478 "frontend.y"
+#line 478 "old-frontend.y"
 
 
 /* C Code */
