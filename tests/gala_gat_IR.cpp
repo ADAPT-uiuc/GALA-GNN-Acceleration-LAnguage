@@ -32,6 +32,15 @@ typedef int val_int_t;
 #include "../src/formats/dense_matrix.h"
 #include "../src/formats/csrc_matrix.h"
 
+// Frontend
+#include "../src/frontend/context.h"
+
+extern FILE* yyin;
+extern int yyparse();
+std::vector<CIRNode*>* program = nullptr;
+std::vector<RelationEdge*>* dependencies = nullptr;
+std::vector<RelationEdge*>* associations = nullptr;
+std::vector<TransformEdge*>* transforms = nullptr;
 
 //Dense matrix with double values.
 typedef DenseMatrix<ind1_t, ind2_t, val_t> DMd_t;
@@ -49,11 +58,38 @@ typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM_t;
 /** RULES -- res input is always the 1st input for a computaiton op */
 
 int main(int argc, char **argv) {
-    // Init point counter
-    std::vector<CIRNode*> program;
-	std::vector<RelationEdge*> dependencies;
-	std::vector<RelationEdge*> associations;
-	std::vector<TransformEdge*> transforms;
+//    // Init point counter
+//    std::vector<CIRNode*> program;
+//	std::vector<RelationEdge*> dependencies;
+//	std::vector<RelationEdge*> associations;
+//	std::vector<TransformEdge*> transforms;
+
+	// const char* fileName= "../../dsl-frontend-lowering/input/gcn.txt";
+	const char* fileName= "/home/damitha/gala-lang/GNN-Acceleration-Language/dsl-frontend-lowering/input/gat.txt";
+
+	std::vector<CIRNode*> newProgram;
+	program = &newProgram;
+	std::vector<RelationEdge*> newDependencies;
+	dependencies = &newDependencies;
+	std::vector<RelationEdge*> newAssociations;
+	associations = &newAssociations;
+	std::vector<TransformEdge*> newTransforms;
+	transforms = &newTransforms;
+
+	// FILE *myfile = fopen(fileName, "r");
+	// if (!myfile) {
+	// 	std::cout << "Invalid File" << std::endl;
+	// 	return -1;
+	// }
+	// yyin = myfile;
+	// yyparse();
+	// fclose(myfile);
+	//
+	// std::cout << "PROGRAM (CIR Nodes): " << program->size() << '\n';
+	// std::cout << "DEPENDENCIES " << dependencies->size() << '\n';
+	// std::cout << "ASSOCIATIONS " << associations->size() << '\n';
+	// std::cout << "TRANSFORMS " << transforms->size() << '\n';
+	//
 
     auto loadDataset = ForwardNode(POINTWISE, LOAD_OP);
     loadDataset.addParam("/shared/damitha2/gala_npy/RedditDataset/");
@@ -70,7 +106,7 @@ int main(int argc, char **argv) {
 
 	// Association between graph and features
 	auto graphFeatAssociation = RelationEdge(&graphData, ALL_RELATION, &featData, ROWS_RELATION);
-	associations.push_back(&graphFeatAssociation);
+	associations->push_back(&graphFeatAssociation);
 	loadDataset.addOutputData(&featData);
 	loadDataset.addOutputData(&graphData);
 
@@ -83,12 +119,12 @@ int main(int argc, char **argv) {
 	auto transformedGraph = DataNode("graph_tile", graphData.getIType(), graphData.getNType(), graphData.getVType(), &transformedRootGraphLevel);
 	// Association between graph and features
 	auto trgrapgFeatAssociation = RelationEdge(&transformedGraph, ALL_RELATION, &featData, ROWS_RELATION);
-	associations.push_back(&graphFeatAssociation);
+	associations->push_back(&graphFeatAssociation);
 	auto tileTransformation = TransformData(COL_TILE_DOPT);
 	tileTransformation.addParam("65000");
 	auto graphTrgraph = TransformEdge(&graphData, &transformedGraph);
 	graphTrgraph.addTransformation(&tileTransformation);
-	transforms.push_back(&graphTrgraph);
+	transforms->push_back(&graphTrgraph);
 
 	featInfo.setDims(-1, 602);
 
@@ -116,10 +152,10 @@ int main(int argc, char **argv) {
 	//* Dependencies
 	auto inOutWeightDepRelationFeat = RelationEdge(&featData, ALL_RELATION, &resData, ALL_RELATION);
 	auto inOutWeightDepRelationWeight = RelationEdge(&weightData, COLS_RELATION, &resData, ROWS_RELATION);
-	dependencies.push_back(&inOutWeightDepRelationFeat);
-	dependencies.push_back(&inOutWeightDepRelationWeight);
+	dependencies->push_back(&inOutWeightDepRelationFeat);
+	dependencies->push_back(&inOutWeightDepRelationWeight);
 	auto inOutWeightAssociation = RelationEdge(&featData, ROWS_RELATION, &weightData, COLS_RELATION);
-	associations.push_back(&inOutWeightAssociation);
+	associations->push_back(&inOutWeightAssociation);
 
 	// Add attention weight operation (L side)
 	// L side
@@ -142,10 +178,10 @@ int main(int argc, char **argv) {
 	//* Dependencies
 	auto inOutAttenLtDepRelationFeat = RelationEdge(&resData, ALL_RELATION, &attenLData, ALL_RELATION);
 	auto inOutAttenLDepRelationWeight = RelationEdge(&attenLWeightData, COLS_RELATION, &attenLData, ROWS_RELATION);
-	dependencies.push_back(&inOutAttenLtDepRelationFeat);
-	dependencies.push_back(&inOutAttenLDepRelationWeight);
+	dependencies->push_back(&inOutAttenLtDepRelationFeat);
+	dependencies->push_back(&inOutAttenLDepRelationWeight);
 	auto inOutAttenLAssociation = RelationEdge(&resData, ROWS_RELATION, &attenLWeightData, COLS_RELATION);
-	associations.push_back(&inOutAttenLAssociation);
+	associations->push_back(&inOutAttenLAssociation);
 	// R side
 	auto atten_r = ForwardNode(UPDATE_NODE, FFN_OP);
 	// Weight as a matrix in the DIR
@@ -166,10 +202,10 @@ int main(int argc, char **argv) {
 	//* Dependencies
 	auto inOutAttenRtDepRelationFeat = RelationEdge(&resData, ALL_RELATION, &attenRData, ALL_RELATION);
 	auto inOutAttenRDepRelationWeight = RelationEdge(&attenRWeightData, COLS_RELATION, &attenRData, ROWS_RELATION);
-	dependencies.push_back(&inOutAttenRtDepRelationFeat);
-	dependencies.push_back(&inOutAttenRDepRelationWeight);
+	dependencies->push_back(&inOutAttenRtDepRelationFeat);
+	dependencies->push_back(&inOutAttenRDepRelationWeight);
 	auto inOutAttenRAssociation = RelationEdge(&resData, ROWS_RELATION, &attenRWeightData, COLS_RELATION);
-	associations.push_back(&inOutAttenRAssociation);
+	associations->push_back(&inOutAttenRAssociation);
 
 	// Edge aggregation
 	auto aggregateEdge = ForwardNode(AGGREGATE_EDGE, AGGREGATE_EDGE_SUM_OP);
@@ -190,13 +226,13 @@ int main(int argc, char **argv) {
 	auto inOutEdgeAggrLRelationFeat = RelationEdge(&attenLData, ALL_RELATION, &aggrEdgeData, ROWS_RELATION);
 	auto inOutEdgeAggrRRelationFeat = RelationEdge(&attenRData, ALL_RELATION, &aggrEdgeData, COLS_RELATION);
 	auto inOutEdgeAggrRelationGraph = RelationEdge(&transformedGraph, ALL_RELATION, &aggrEdgeData, ALL_RELATION);
-	dependencies.push_back(&inOutEdgeAggrLRelationFeat);
-	dependencies.push_back(&inOutEdgeAggrRRelationFeat);
-	dependencies.push_back(&inOutEdgeAggrRelationGraph);
+	dependencies->push_back(&inOutEdgeAggrLRelationFeat);
+	dependencies->push_back(&inOutEdgeAggrRRelationFeat);
+	dependencies->push_back(&inOutEdgeAggrRelationGraph);
 	auto graphEdgeAggrLAssociation = RelationEdge(&transformedGraph, ROWS_RELATION, &attenLData, ALL_RELATION);
 	auto graphEdgeAggrRAssociation = RelationEdge(&transformedGraph, COLS_RELATION, &attenRData, ALL_RELATION);
-	associations.push_back(&graphEdgeAggrLAssociation);
-	associations.push_back(&graphEdgeAggrRAssociation);
+	associations->push_back(&graphEdgeAggrLAssociation);
+	associations->push_back(&graphEdgeAggrRAssociation);
 
 	// Leaky ReLU operation
 	auto leakyReluOp = ForwardNode(UPDATE_EDGE, NON_LNR_OP_LEAKY_RELU);
@@ -211,7 +247,7 @@ int main(int argc, char **argv) {
 	leakyReluOp.addOutputData(&leakyReluData);
 	trainingLoop.addLoopNode(&leakyReluOp);
 	auto leakyReluOpOnesDependency = RelationEdge(&aggrEdgeData, ALL_RELATION, &leakyReluData, ALL_RELATION);
-	dependencies.push_back(&leakyReluOpOnesDependency);
+	dependencies->push_back(&leakyReluOpOnesDependency);
 
 	// Leaky ReLU operation
 	auto softmaxOp = ForwardNode(UPDATE_EDGE, NON_LNR_OP_SOFTMAX);
@@ -225,7 +261,7 @@ int main(int argc, char **argv) {
 	softmaxOp.addOutputData(&softmaxData);
 	trainingLoop.addLoopNode(&softmaxOp);
 	auto softmaxOpOnesDependency = RelationEdge(&leakyReluData, ALL_RELATION, &softmaxData, ALL_RELATION);
-	dependencies.push_back(&softmaxOpOnesDependency);
+	dependencies->push_back(&softmaxOpOnesDependency);
 
     // Add aggregate operation
     auto aggregate = ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
@@ -243,8 +279,8 @@ int main(int argc, char **argv) {
 	auto inOutAggrRelationFeat = RelationEdge(&resData, ALL_RELATION, &outputData, ALL_RELATION);
 	// Dependency relation between the graph and the aggregated output
 	auto inOutAggrRelationGraph = RelationEdge(&softmaxData, ALL_RELATION, &outputData, ROWS_RELATION);
-    dependencies.push_back(&inOutAggrRelationFeat);
-    dependencies.push_back(&inOutAggrRelationGraph);
+    dependencies->push_back(&inOutAggrRelationFeat);
+    dependencies->push_back(&inOutAggrRelationGraph);
 
 	// ReLU operation
 	auto reluOp = ForwardNode(POINTWISE, NON_LNR_OP_RELU);
@@ -256,7 +292,7 @@ int main(int argc, char **argv) {
 	reluOp.addOutputData(&reluData);
 	trainingLoop.addLoopNode(&reluOp);
 	auto reluOpOnesDependency = RelationEdge(&outputData, ALL_RELATION, &reluData, ALL_RELATION);
-	dependencies.push_back(&reluOpOnesDependency);
+	dependencies->push_back(&reluOpOnesDependency);
 
 	/// 2nd layer
 	// Add weight operation
@@ -281,10 +317,10 @@ int main(int argc, char **argv) {
 	//* Dependencies
 	auto inOutWeightDepRelationFeat_2 = RelationEdge(&reluData, ALL_RELATION, &resData_2, ALL_RELATION);
 	auto inOutWeightDepRelationWeight_2 = RelationEdge(&weightData_2, COLS_RELATION, &resData_2, ROWS_RELATION);
-	dependencies.push_back(&inOutWeightDepRelationFeat_2);
-	dependencies.push_back(&inOutWeightDepRelationWeight_2);
+	dependencies->push_back(&inOutWeightDepRelationFeat_2);
+	dependencies->push_back(&inOutWeightDepRelationWeight_2);
 	auto inOutWeightAssociation_2 = RelationEdge(&reluData, ROWS_RELATION, &weightData_2, COLS_RELATION);
-	associations.push_back(&inOutWeightAssociation_2);
+	associations->push_back(&inOutWeightAssociation_2);
 
 	// Add attention weight operation (L side)
 	// L side
@@ -307,10 +343,10 @@ int main(int argc, char **argv) {
 	//* Dependencies
 	auto inOutAttenLtDepRelationFeat_2 = RelationEdge(&resData_2, ALL_RELATION, &attenLData_2, ALL_RELATION);
 	auto inOutAttenLDepRelationWeight_2 = RelationEdge(&attenLWeightData_2, COLS_RELATION, &attenLData_2, ROWS_RELATION);
-	dependencies.push_back(&inOutAttenLtDepRelationFeat_2);
-	dependencies.push_back(&inOutAttenLDepRelationWeight_2);
+	dependencies->push_back(&inOutAttenLtDepRelationFeat_2);
+	dependencies->push_back(&inOutAttenLDepRelationWeight_2);
 	auto inOutAttenLAssociation_2 = RelationEdge(&resData_2, ROWS_RELATION, &attenLWeightData_2, COLS_RELATION);
-	associations.push_back(&inOutAttenLAssociation_2);
+	associations->push_back(&inOutAttenLAssociation_2);
 	// R side
 	auto atten_r_2 = ForwardNode(UPDATE_NODE, FFN_OP);
 	// Weight as a matrix in the DIR
@@ -331,10 +367,10 @@ int main(int argc, char **argv) {
 	//* Dependencies
 	auto inOutAttenRtDepRelationFeat_2 = RelationEdge(&resData_2, ALL_RELATION, &attenRData_2, ALL_RELATION);
 	auto inOutAttenRDepRelationWeight_2 = RelationEdge(&attenRWeightData_2, COLS_RELATION, &attenRData_2, ROWS_RELATION);
-	dependencies.push_back(&inOutAttenRtDepRelationFeat_2);
-	dependencies.push_back(&inOutAttenRDepRelationWeight_2);
+	dependencies->push_back(&inOutAttenRtDepRelationFeat_2);
+	dependencies->push_back(&inOutAttenRDepRelationWeight_2);
 	auto inOutAttenRAssociation_2 = RelationEdge(&resData_2, ROWS_RELATION, &attenRWeightData_2, COLS_RELATION);
-	associations.push_back(&inOutAttenRAssociation_2);
+	associations->push_back(&inOutAttenRAssociation_2);
 
 	// Edge aggregation
 	auto aggregateEdge_2 = ForwardNode(AGGREGATE_EDGE, AGGREGATE_EDGE_SUM_OP);
@@ -355,13 +391,13 @@ int main(int argc, char **argv) {
 	auto inOutEdgeAggrLRelationFeat_2 = RelationEdge(&attenLData_2, ALL_RELATION, &aggrEdgeData_2, ROWS_RELATION);
 	auto inOutEdgeAggrRRelationFeat_2 = RelationEdge(&attenRData_2, ALL_RELATION, &aggrEdgeData_2, COLS_RELATION);
 	auto inOutEdgeAggrRelationGraph_2 = RelationEdge(&transformedGraph, ALL_RELATION, &aggrEdgeData_2, ALL_RELATION);
-	dependencies.push_back(&inOutEdgeAggrLRelationFeat_2);
-	dependencies.push_back(&inOutEdgeAggrRRelationFeat_2);
-	dependencies.push_back(&inOutEdgeAggrRelationGraph_2);
+	dependencies->push_back(&inOutEdgeAggrLRelationFeat_2);
+	dependencies->push_back(&inOutEdgeAggrRRelationFeat_2);
+	dependencies->push_back(&inOutEdgeAggrRelationGraph_2);
 	auto graphEdgeAggrLAssociation_2 = RelationEdge(&transformedGraph, ROWS_RELATION, &attenLData_2, ALL_RELATION);
 	auto graphEdgeAggrRAssociation_2 = RelationEdge(&transformedGraph, COLS_RELATION, &attenRData_2, ALL_RELATION);
-	associations.push_back(&graphEdgeAggrLAssociation_2);
-	associations.push_back(&graphEdgeAggrRAssociation_2);
+	associations->push_back(&graphEdgeAggrLAssociation_2);
+	associations->push_back(&graphEdgeAggrRAssociation_2);
 
 	// Leaky ReLU operation
 	auto leakyReluOp_2 = ForwardNode(UPDATE_EDGE, NON_LNR_OP_LEAKY_RELU);
@@ -376,7 +412,7 @@ int main(int argc, char **argv) {
 	leakyReluOp_2.addOutputData(&leakyReluData_2);
 	trainingLoop.addLoopNode(&leakyReluOp_2);
 	auto leakyReluOpOnesDependency_2 = RelationEdge(&aggrEdgeData_2, ALL_RELATION, &leakyReluData_2, ALL_RELATION);
-	dependencies.push_back(&leakyReluOpOnesDependency_2);
+	dependencies->push_back(&leakyReluOpOnesDependency_2);
 
 	// Leaky ReLU operation
 	auto softmaxOp_2 = ForwardNode(UPDATE_EDGE, NON_LNR_OP_SOFTMAX);
@@ -390,7 +426,7 @@ int main(int argc, char **argv) {
 	softmaxOp_2.addOutputData(&softmaxData_2);
 	trainingLoop.addLoopNode(&softmaxOp_2);
 	auto softmaxOpOnesDependency_2 = RelationEdge(&leakyReluData_2, ALL_RELATION, &softmaxData_2, ALL_RELATION);
-	dependencies.push_back(&softmaxOpOnesDependency_2);
+	dependencies->push_back(&softmaxOpOnesDependency_2);
 
     // Add aggregate operation
     auto aggregate_2 = ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
@@ -408,8 +444,8 @@ int main(int argc, char **argv) {
 	auto inOutAggrRelationFeat_2 = RelationEdge(&resData_2, ALL_RELATION, &outputData_2, ALL_RELATION);
 	// Dependency relation between the graph and the aggregated output
 	auto inOutAggrRelationGraph_2 = RelationEdge(&softmaxData_2, ALL_RELATION, &outputData_2, ROWS_RELATION);
-    dependencies.push_back(&inOutAggrRelationFeat_2);
-    dependencies.push_back(&inOutAggrRelationGraph_2);
+    dependencies->push_back(&inOutAggrRelationFeat_2);
+    dependencies->push_back(&inOutAggrRelationGraph_2);
 
 	// ReLU operation
 	auto logSoftmaxOp = ForwardNode(POINTWISE, NON_LNR_OP_LOG_SOFTMAX);
@@ -421,18 +457,18 @@ int main(int argc, char **argv) {
 	logSoftmaxOp.addOutputData(&logSoftmaxData);
 	trainingLoop.addLoopNode(&logSoftmaxOp);
 	auto logSoftmaxOpOnesDependency = RelationEdge(&outputData_2, ALL_RELATION, &logSoftmaxData, ALL_RELATION);
-	dependencies.push_back(&logSoftmaxOpOnesDependency);
+	dependencies->push_back(&logSoftmaxOpOnesDependency);
 
     // The entire program
-    program.push_back(&loadDataset);
-	program.push_back(&trainingLoop);
+    program->push_back(&loadDataset);
+	program->push_back(&trainingLoop);
 
 	auto ctx = new GALAContext(GPU_DEVICE, SINGLE_NODE_SINGLE);
 	std::string outputPath = "../test-codegen/";
 	auto genCode = CUDAGenerator(ctx, outputPath);
-	GALATransformations::complexityOperatorReordering(program, dependencies, associations, transforms);
-	GALATransformations::trainingInvariantCodeMotion(program, dependencies, associations, transforms);
-	genCode.writeCode(program, dependencies, associations, transforms);
+	GALATransformations::complexityOperatorReordering(*program, *dependencies, *associations, *transforms);
+	GALATransformations::trainingInvariantCodeMotion(*program, *dependencies, *associations, *transforms);
+	genCode.writeCode(*program, *dependencies, *associations, *transforms);
 
     // Should be enough for now
 	std::cout << "Works!" << std::endl;

@@ -108,6 +108,9 @@ if (DSL)
 
     message("Build for code for sparse matrix ops and it's dependencies.")
     add_compile_definitions(GNN_Sparse)
+
+    find_package(BISON REQUIRED)
+    find_package(FLEX REQUIRED)
 endif ()
 ######################### Optimization configuration ###########################
 # Compress the sparse matrix representation

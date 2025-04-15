@@ -32,6 +32,16 @@ typedef int val_int_t;
 #include "../src/formats/dense_matrix.h"
 #include "../src/formats/csrc_matrix.h"
 
+// Frontend
+#include "../src/frontend/context.h"
+
+extern FILE* yyin;
+extern int yyparse();
+std::vector<CIRNode*>* program = nullptr;
+std::vector<RelationEdge*>* dependencies = nullptr;
+std::vector<RelationEdge*>* associations = nullptr;
+std::vector<TransformEdge*>* transforms = nullptr;
+
 
 //Dense matrix with double values.
 typedef DenseMatrix<ind1_t, ind2_t, val_t> DMd_t;
@@ -49,11 +59,37 @@ typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM_t;
 /** RULES -- res input is always the 1st input for a computaiton op */
 
 int main(int argc, char **argv) {
-    // Init point counter
-    std::vector<CIRNode*> program;
-	std::vector<RelationEdge*> dependencies;
-	std::vector<RelationEdge*> associations;
-	std::vector<TransformEdge*> transforms;
+//    // Init point counter
+//    std::vector<CIRNode*> program;
+//	std::vector<RelationEdge*> dependencies;
+//	std::vector<RelationEdge*> associations;
+//	std::vector<TransformEdge*> transforms;
+
+	const char* fileName= "/home/damitha/gala-lang/GNN-Acceleration-Language/dsl-frontend-lowering/input/gin.txt";
+
+	std::vector<CIRNode*> newProgram;
+	program = &newProgram;
+	std::vector<RelationEdge*> newDependencies;
+	dependencies = &newDependencies;
+	std::vector<RelationEdge*> newAssociations;
+	associations = &newAssociations;
+	std::vector<TransformEdge*> newTransforms;
+	transforms = &newTransforms;
+
+	// FILE *myfile = fopen(fileName, "r");
+	// if (!myfile) {
+	// 	std::cout << "Invalid File" << std::endl;
+	// 	return -1;
+	// }
+	// yyin = myfile;
+	// yyparse();
+	// fclose(myfile);
+	//
+	// std::cout << "PROGRAM (CIR Nodes): " << program->size() << '\n';
+	// std::cout << "DEPENDENCIES " << dependencies->size() << '\n';
+	// std::cout << "ASSOCIATIONS " << associations->size() << '\n';
+	// std::cout << "TRANSFORMS " << transforms->size() << '\n';
+	//
 
     auto loadDataset = ForwardNode(POINTWISE, LOAD_OP);
     loadDataset.addParam("/shared/damitha2/gala_npy/RedditDataset/");
@@ -70,7 +106,7 @@ int main(int argc, char **argv) {
 
 	// Association between graph and features
 	auto graphFeatAssociation = RelationEdge(&graphData, ALL_RELATION, &featData, ROWS_RELATION);
-	associations.push_back(&graphFeatAssociation);
+	associations->push_back(&graphFeatAssociation);
 	loadDataset.addOutputData(&featData);
 	loadDataset.addOutputData(&graphData);
 
@@ -83,12 +119,12 @@ int main(int argc, char **argv) {
 	auto transformedGraph = DataNode("graph_tile", graphData.getIType(), graphData.getNType(), graphData.getVType(), &transformedRootGraphLevel);
 	// Association between graph and features
 	auto trgrapgFeatAssociation = RelationEdge(&transformedGraph, ALL_RELATION, &featData, ROWS_RELATION);
-	associations.push_back(&graphFeatAssociation);
+	associations->push_back(&graphFeatAssociation);
 	auto tileTransformation = TransformData(COL_TILE_DOPT);
 	tileTransformation.addParam("65000");
 	auto graphTrgraph = TransformEdge(&graphData, &transformedGraph);
 	graphTrgraph.addTransformation(&tileTransformation);
-	transforms.push_back(&graphTrgraph);
+	transforms->push_back(&graphTrgraph);
 
 	featInfo.setDims(-1, 602);
 
@@ -110,8 +146,8 @@ int main(int argc, char **argv) {
 	auto inOutAggrRelationFeat = RelationEdge(&featData, ALL_RELATION, &outputData, ALL_RELATION);
 	// Dependency relation between the graph and the aggregated output
 	auto inOutAggrRelationGraph = RelationEdge(&transformedGraph, ALL_RELATION, &outputData, ROWS_RELATION);
-    dependencies.push_back(&inOutAggrRelationFeat);
-    dependencies.push_back(&inOutAggrRelationGraph);
+    dependencies->push_back(&inOutAggrRelationFeat);
+    dependencies->push_back(&inOutAggrRelationGraph);
 
     // Scalar multiply res
 	auto scalarEps = ForwardNode(POINTWISE, SCALAR_ADD_EPS_MULTIPLY_OP);
@@ -124,7 +160,7 @@ int main(int argc, char **argv) {
 	scalarEps.addOutputData(&scalarEpsData);
 	trainingLoop.addLoopNode(&scalarEps);
 	auto scalarEpsDependency = RelationEdge(&featData, ALL_RELATION, &scalarEpsData, ALL_RELATION);
-	dependencies.push_back(&scalarEpsDependency);
+	dependencies->push_back(&scalarEpsDependency);
 
     // Add epsilon mult and scalar mults
 	auto normFeat = ForwardNode(UPDATE_NODE, ADD_OP);
@@ -137,11 +173,11 @@ int main(int argc, char **argv) {
 	normFeat.addOutputData(&normFeatData);
 	trainingLoop.addLoopNode(&normFeat);
 	auto normFeatNormDependency = RelationEdge(&scalarEpsData, ALL_RELATION, &normFeatData, ALL_RELATION);
-	dependencies.push_back(&normFeatNormDependency);
+	dependencies->push_back(&normFeatNormDependency);
 	auto normFeatFeatDependency = RelationEdge(&outputData, ALL_RELATION, &normFeatData, ALL_RELATION);
-	dependencies.push_back(&normFeatFeatDependency);
+	dependencies->push_back(&normFeatFeatDependency);
 	auto normFeatNormFeatAssociation = RelationEdge(&scalarEpsData, ALL_RELATION, &outputData, ALL_RELATION);
-	associations.push_back(&normFeatNormFeatAssociation);
+	associations->push_back(&normFeatNormFeatAssociation);
 
     // Add weight operation
     auto ffn = ForwardNode(UPDATE_NODE, FFN_OP);
@@ -165,10 +201,10 @@ int main(int argc, char **argv) {
 	//* Dependencies
     auto inOutWeightDepRelationFeat = RelationEdge(&normFeatData, ALL_RELATION, &resData, ALL_RELATION);
     auto inOutWeightDepRelationWeight = RelationEdge(&weightData, COLS_RELATION, &resData, ROWS_RELATION);
-    dependencies.push_back(&inOutWeightDepRelationFeat);
-    dependencies.push_back(&inOutWeightDepRelationWeight);
+    dependencies->push_back(&inOutWeightDepRelationFeat);
+    dependencies->push_back(&inOutWeightDepRelationWeight);
     auto inOutWeightAssociation = RelationEdge(&normFeatData, ROWS_RELATION, &weightData, COLS_RELATION);
-    associations.push_back(&inOutWeightAssociation);
+    associations->push_back(&inOutWeightAssociation);
 
 	// ReLU operation
 	auto reluOp = ForwardNode(POINTWISE, NON_LNR_OP_RELU);
@@ -180,7 +216,7 @@ int main(int argc, char **argv) {
 	reluOp.addOutputData(&reluData);
 	trainingLoop.addLoopNode(&reluOp);
 	auto reluOpOnesDependency = RelationEdge(&resData, ALL_RELATION, &reluData, ALL_RELATION);
-	dependencies.push_back(&reluOpOnesDependency);
+	dependencies->push_back(&reluOpOnesDependency);
 
 	/// 2nd layer
 	// Add aggregate operation
@@ -199,8 +235,8 @@ int main(int argc, char **argv) {
 	auto inOutAggrRelationFeat_2 = RelationEdge(&reluData, ALL_RELATION, &outputData_2, ALL_RELATION);
 	// Dependency relation between the graph and the aggregated output
 	auto inOutAggrRelationGraph_2 = RelationEdge(&transformedGraph, ALL_RELATION, &outputData_2, ROWS_RELATION);
-    dependencies.push_back(&inOutAggrRelationFeat_2);
-    dependencies.push_back(&inOutAggrRelationGraph_2);
+    dependencies->push_back(&inOutAggrRelationFeat_2);
+    dependencies->push_back(&inOutAggrRelationGraph_2);
 
 	// Scalar multiply res
 	auto scalarEps_2 = ForwardNode(POINTWISE, SCALAR_ADD_EPS_MULTIPLY_OP);
@@ -213,7 +249,7 @@ int main(int argc, char **argv) {
 	scalarEps_2.addOutputData(&scalarEpsData_2);
 	trainingLoop.addLoopNode(&scalarEps_2);
 	auto scalarEpsDependency_2 = RelationEdge(&reluData, ALL_RELATION, &scalarEpsData_2, ALL_RELATION);
-	dependencies.push_back(&scalarEpsDependency_2);
+	dependencies->push_back(&scalarEpsDependency_2);
 
 	// Add epsilon mult and scalar mults
 	auto normFeat_2 = ForwardNode(UPDATE_NODE, ADD_OP);
@@ -226,11 +262,11 @@ int main(int argc, char **argv) {
 	normFeat_2.addOutputData(&normFeatData_2);
 	trainingLoop.addLoopNode(&normFeat_2);
 	auto normFeatNormDependency_2 = RelationEdge(&scalarEpsData_2, ALL_RELATION, &normFeatData_2, ALL_RELATION);
-	dependencies.push_back(&normFeatNormDependency_2);
+	dependencies->push_back(&normFeatNormDependency_2);
 	auto normFeatFeatDependency_2 = RelationEdge(&outputData_2, ALL_RELATION, &normFeatData_2, ALL_RELATION);
-	dependencies.push_back(&normFeatFeatDependency_2);
+	dependencies->push_back(&normFeatFeatDependency_2);
 	auto normFeatNormFeatAssociation_2 = RelationEdge(&scalarEpsData_2, ALL_RELATION, &outputData_2, ALL_RELATION);
-	associations.push_back(&normFeatNormFeatAssociation_2);
+	associations->push_back(&normFeatNormFeatAssociation_2);
 
     // Add weight operation
     auto ffn_2 = ForwardNode(UPDATE_NODE, FFN_OP);
@@ -254,10 +290,10 @@ int main(int argc, char **argv) {
 	//* Dependencies
     auto inOutWeightDepRelationFeat_2 = RelationEdge(&normFeatData_2, ALL_RELATION, &resData_2, ALL_RELATION);
     auto inOutWeightDepRelationWeight_2 = RelationEdge(&weightData_2, COLS_RELATION, &resData_2, ROWS_RELATION);
-    dependencies.push_back(&inOutWeightDepRelationFeat_2);
-    dependencies.push_back(&inOutWeightDepRelationWeight_2);
+    dependencies->push_back(&inOutWeightDepRelationFeat_2);
+    dependencies->push_back(&inOutWeightDepRelationWeight_2);
     auto inOutWeightAssociation_2 = RelationEdge(&normFeatData_2, ROWS_RELATION, &weightData_2, COLS_RELATION);
-    associations.push_back(&inOutWeightAssociation_2);
+    associations->push_back(&inOutWeightAssociation_2);
 
 	// ReLU operation
 	auto logSoftmaxOp = ForwardNode(POINTWISE, NON_LNR_OP_LOG_SOFTMAX);
@@ -269,20 +305,20 @@ int main(int argc, char **argv) {
 	logSoftmaxOp.addOutputData(&logSoftmaxData);
 	trainingLoop.addLoopNode(&logSoftmaxOp);
 	auto logSoftmaxOpOnesDependency = RelationEdge(&resData_2, ALL_RELATION, &logSoftmaxData, ALL_RELATION);
-	dependencies.push_back(&logSoftmaxOpOnesDependency);
+	dependencies->push_back(&logSoftmaxOpOnesDependency);
 
     // The entire program
-    program.push_back(&loadDataset);
-	program.push_back(&trainingLoop);
+    program->push_back(&loadDataset);
+	program->push_back(&trainingLoop);
 
 	auto ctx = new GALAContext(GPU_DEVICE, SINGLE_NODE_SINGLE);
 	std::string outputPath = "../test-codegen/";
 	auto genCode = CUDAGenerator(ctx, outputPath);
-	GALATransformations::complexityOperatorReordering(program, dependencies, associations, transforms);
-	GALATransformations::trainingInvariantCodeMotion(program, dependencies, associations, transforms);
-	GALATransformations::trainingSubGraph(program, dependencies, associations, transforms);
+	GALATransformations::complexityOperatorReordering(*program, *dependencies, *associations, *transforms);
+	GALATransformations::trainingInvariantCodeMotion(*program, *dependencies, *associations, *transforms);
+	GALATransformations::trainingSubGraph(*program, *dependencies, *associations, *transforms);
 
-	genCode.writeCode(program, dependencies, associations, transforms);
+	genCode.writeCode(*program, *dependencies, *associations, *transforms);
 
     // Should be enough for now
 	std::cout << "Works!" << std::endl;
