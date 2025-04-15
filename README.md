@@ -10,6 +10,20 @@ sudo apt-get install flex
 sudo apt-get install bison
 ```
 
+## Running code generation tests for GNNs
+```angular2html
+mkdir build # create a build directory 
+cd build
+cmake .. # run cmake
+make -j8 # make the tests
+tests/gcn_ir # run the codegen for gcn
+```
+Others models are GIN and GAT.
+This should generate the final executable code in the `test-codegen` folder.
+
+The test files are in the `tests` folder, with the name `gala_<model>_IR.cpp`.
+Currently, the manual IR in uncommented, and the IR generation from the front-end language is commented (needs to fix some bugs).  
+
 ## Data
 Scripts necessary for downloading data can be found in `scripts/data`.
 
