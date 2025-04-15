@@ -64,8 +64,8 @@ int main(int argc, char **argv) {
 //	std::vector<RelationEdge*> associations;
 //	std::vector<TransformEdge*> transforms;
 
-	// const char* fileName= "../../dsl-frontend-lowering/input/gcn.txt";
-	const char* fileName= "/home/damitha/gala-lang/GNN-Acceleration-Language/dsl-frontend-lowering/input/gat.txt";
+	const char* fileName= "../tests/input/gat.txt";
+//	const char* fileName= "/home/damitha/gala-lang/GNN-Acceleration-Language/tests/input/gat.txt";
 
 	std::vector<CIRNode*> newProgram;
 	program = &newProgram;
