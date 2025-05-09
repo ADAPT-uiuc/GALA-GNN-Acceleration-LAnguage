@@ -781,29 +781,22 @@ char *yytext;
 #line 1 "frontend.l"
 /* Definitions */
 #line 3 "frontend.l"
-    extern int yylex();
-    #include "ir/data.h"
-    #include "ir/compute.h"
-    #include "ir/frontendIR.h"
-    #include "frontend.tab.h"
-    using namespace std;
-    
-    /* if there ever ends up being a comment token, this is how you do it
-     \/\/.* { 
-        yylval.sval = strdup(yytext);
-        return COMMENT; 
-    } */
+extern int yylex();
+#include "ir/data.h"
+#include "ir/compute.h"
+#include "ir/frontend_metadata.h"
+#include "frontend.tab.h"
+using namespace std;
+
+/* comment token (if needed)
+    \/\/.* { 
+    yylval.sval = strdup(yytext);
+    return COMMENT; 
+} */
 #line 797 "build/lex.yy.c"
 /* Only one input file */
 /* Rules */
-/* TODO: not sure how to deal with graph or feat as a token, they are terminals in the grammar \
-    not sure if line 19 is right?, part of sample_op
-    add specific terminals for model_var, layer_var, model_spec, etc..
-    confused about model_spec. 
-    chatgpt says to use /b(True|False)/b for bool token (/b does boundaries)
-       to avoid stuff like TTrue or Falsee
-*/
-#line 807 "build/lex.yy.c"
+#line 800 "build/lex.yy.c"
 
 #define INITIAL 0
 
@@ -1020,9 +1013,9 @@ YY_DECL
 		}
 
 	{
-#line 28 "frontend.l"
+#line 21 "frontend.l"
 
-#line 1026 "build/lex.yy.c"
+#line 1019 "build/lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -1081,403 +1074,403 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 29 "frontend.l"
+#line 22 "frontend.l"
 { return LOAD; }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 30 "frontend.l"
+#line 23 "frontend.l"
 { return AGGR_INIT; }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 31 "frontend.l"
+#line 24 "frontend.l"
 { return FN_ARG; }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 32 "frontend.l"
+#line 25 "frontend.l"
 { return MUL_SUM; }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 33 "frontend.l"
+#line 26 "frontend.l"
 {return DSL_DOT; }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 34 "frontend.l"
+#line 27 "frontend.l"
 { return SET_UNDIRECTED; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 35 "frontend.l"
+#line 28 "frontend.l"
 { return SET_UNWEIGHTED; }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 36 "frontend.l"
+#line 29 "frontend.l"
 { return FEAT_SIZE_ASSIGN; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 37 "frontend.l"
+#line 30 "frontend.l"
 { return LABEL_SIZE_ASSIGN; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 38 "frontend.l"
+#line 31 "frontend.l"
 { return COARSEN; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 39 "frontend.l"
+#line 32 "frontend.l"
 { return RABBIT_REORDER_OP; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 40 "frontend.l"
+#line 33 "frontend.l"
 { return SAMPLE_RANDOM_OP; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 41 "frontend.l"
+#line 34 "frontend.l"
 { return FFN; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 42 "frontend.l"
+#line 35 "frontend.l"
 { return SCALAR_INIT; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 43 "frontend.l"
+#line 36 "frontend.l"
 { return SOFTMAX; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 44 "frontend.l"
+#line 37 "frontend.l"
 { return INIT_WEIGHT; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 45 "frontend.l"
+#line 38 "frontend.l"
 { return POW; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 46 "frontend.l"
+#line 39 "frontend.l"
 { return SRC_ATTR; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 47 "frontend.l"
+#line 40 "frontend.l"
 { return DST_ATTR; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 48 "frontend.l"
+#line 41 "frontend.l"
 { return FFN_OUT; }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 49 "frontend.l"
+#line 42 "frontend.l"
 { return SIZE_FN; }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 50 "frontend.l"
+#line 43 "frontend.l"
 { return RELU; }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 51 "frontend.l"
+#line 44 "frontend.l"
 { return LEAKY_RELU; }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 52 "frontend.l"
+#line 45 "frontend.l"
 { return RMSE_LOSS; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 53 "frontend.l"
+#line 46 "frontend.l"
 { return ADAM_T; }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 54 "frontend.l"
+#line 47 "frontend.l"
 { return DATASET; }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 55 "frontend.l"
+#line 48 "frontend.l"
 { return NONLN; }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 56 "frontend.l"
+#line 49 "frontend.l"
 { return AGGR; }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 57 "frontend.l"
+#line 50 "frontend.l"
 { return MODEL_W; }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 58 "frontend.l"
+#line 51 "frontend.l"
 { return LAYER; }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 59 "frontend.l"
+#line 52 "frontend.l"
 { return GRAPH_ATTR; }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 60 "frontend.l"
+#line 53 "frontend.l"
 { return NODE_ATTR; }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 61 "frontend.l"
+#line 54 "frontend.l"
 { return FEAT_ATTR; }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 62 "frontend.l"
+#line 55 "frontend.l"
 { return LABEL_ATTR; }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 63 "frontend.l"
+#line 56 "frontend.l"
 { return DEGREE_ATTR; }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 64 "frontend.l"
+#line 57 "frontend.l"
 { return EVAL; }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 65 "frontend.l"
+#line 58 "frontend.l"
 { return TRAIN; }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 66 "frontend.l"
+#line 59 "frontend.l"
 { return LOSS; }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 67 "frontend.l"
+#line 60 "frontend.l"
 { return OPTIMIZER; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 68 "frontend.l"
+#line 61 "frontend.l"
 { return ITERS; }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 69 "frontend.l"
+#line 62 "frontend.l"
 { return VAL_STEP; }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 70 "frontend.l"
+#line 63 "frontend.l"
 { return RELAXNLN; }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 71 "frontend.l"
+#line 64 "frontend.l"
 { return QUANT; }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 72 "frontend.l"
+#line 65 "frontend.l"
 { return SENSEI_OP; }
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 73 "frontend.l"
+#line 66 "frontend.l"
 { return COLTILE; }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 74 "frontend.l"
+#line 67 "frontend.l"
 { return NULL_KEY; }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 76 "frontend.l"
+#line 69 "frontend.l"
 { return LPAREN; }
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 77 "frontend.l"
+#line 70 "frontend.l"
 { return RPAREN; }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 78 "frontend.l"
+#line 71 "frontend.l"
 { return LBRACE; }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 79 "frontend.l"
+#line 72 "frontend.l"
 { return RBRACE; }
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 80 "frontend.l"
+#line 73 "frontend.l"
 { return LSQBRA; }
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 81 "frontend.l"
+#line 74 "frontend.l"
 { return RSQBRA; }
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 82 "frontend.l"
+#line 75 "frontend.l"
 { return DOT; }
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 83 "frontend.l"
+#line 76 "frontend.l"
 { return COMMA; }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 84 "frontend.l"
+#line 77 "frontend.l"
 { return INT; }
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 85 "frontend.l"
+#line 78 "frontend.l"
 { return IF; }
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 86 "frontend.l"
+#line 79 "frontend.l"
 { return ELSE; }
 	YY_BREAK
 case 58:
 YY_RULE_SETUP
-#line 87 "frontend.l"
+#line 80 "frontend.l"
 { return TR; }
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
-#line 88 "frontend.l"
+#line 81 "frontend.l"
 { return FA; }
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
-#line 89 "frontend.l"
+#line 82 "frontend.l"
 { return NEW; }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 90 "frontend.l"
+#line 83 "frontend.l"
 { return NOT; }
 	YY_BREAK
 case 62:
 YY_RULE_SETUP
-#line 91 "frontend.l"
+#line 84 "frontend.l"
 { return AND; }
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
-#line 92 "frontend.l"
+#line 85 "frontend.l"
 { return OR; }
 	YY_BREAK
 case 64:
 YY_RULE_SETUP
-#line 93 "frontend.l"
+#line 86 "frontend.l"
 { return SEMICOLON; }
 	YY_BREAK
 case 65:
 YY_RULE_SETUP
-#line 94 "frontend.l"
+#line 87 "frontend.l"
 { return NOTEQ; }
 	YY_BREAK
 case 66:
 YY_RULE_SETUP
-#line 95 "frontend.l"
+#line 88 "frontend.l"
 { return EQ; }
 	YY_BREAK
 case 67:
 YY_RULE_SETUP
-#line 96 "frontend.l"
+#line 89 "frontend.l"
 { return ASSIGN; }
 	YY_BREAK
 case 68:
 YY_RULE_SETUP
-#line 97 "frontend.l"
+#line 90 "frontend.l"
 { return GREATER; }
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
-#line 98 "frontend.l"
+#line 91 "frontend.l"
 { return LESS; }
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
-#line 99 "frontend.l"
+#line 92 "frontend.l"
 { return GREATEREQ; }
 	YY_BREAK
 case 71:
 YY_RULE_SETUP
-#line 100 "frontend.l"
+#line 93 "frontend.l"
 { return LESSEQ; }
 	YY_BREAK
 case 72:
 YY_RULE_SETUP
-#line 101 "frontend.l"
+#line 94 "frontend.l"
 { return PLUS; }
 	YY_BREAK
 case 73:
 YY_RULE_SETUP
-#line 102 "frontend.l"
+#line 95 "frontend.l"
 { return MINUS; }
 	YY_BREAK
 case 74:
 YY_RULE_SETUP
-#line 103 "frontend.l"
+#line 96 "frontend.l"
 { return MULTIPLY; }
 	YY_BREAK
 case 75:
 YY_RULE_SETUP
-#line 104 "frontend.l"
+#line 97 "frontend.l"
 { return DIVIDE; }
 	YY_BREAK
 case 76:
 YY_RULE_SETUP
-#line 105 "frontend.l"
+#line 98 "frontend.l"
 { return QUOTE; }
 	YY_BREAK
 case 77:
 /* rule 77 can match eol */
 YY_RULE_SETUP
-#line 106 "frontend.l"
+#line 99 "frontend.l"
 {}
 	YY_BREAK
 case 78:
 YY_RULE_SETUP
-#line 107 "frontend.l"
+#line 100 "frontend.l"
 {}
 	YY_BREAK
 case 79:
 YY_RULE_SETUP
-#line 108 "frontend.l"
+#line 101 "frontend.l"
 {}
 	YY_BREAK
 case 80:
 YY_RULE_SETUP
-#line 109 "frontend.l"
+#line 102 "frontend.l"
 {
     yylval.sval = strdup(yytext);
     return FLOAT; 
@@ -1485,7 +1478,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 81:
 YY_RULE_SETUP
-#line 113 "frontend.l"
+#line 106 "frontend.l"
 {
     yylval.sval = strdup(yytext);
     return INTEGER; 
@@ -1493,27 +1486,27 @@ YY_RULE_SETUP
 	YY_BREAK
 case 82:
 YY_RULE_SETUP
-#line 117 "frontend.l"
+#line 110 "frontend.l"
 {
     yylval.sval = strdup(yytext);
     return IDENTIFIER;
 }
 	YY_BREAK
 case YY_STATE_EOF(INITIAL):
-#line 121 "frontend.l"
+#line 114 "frontend.l"
 { yyterminate(); }
 	YY_BREAK
 case 83:
 YY_RULE_SETUP
-#line 122 "frontend.l"
+#line 115 "frontend.l"
 {}
 	YY_BREAK
 case 84:
 YY_RULE_SETUP
-#line 123 "frontend.l"
+#line 116 "frontend.l"
 ECHO;
 	YY_BREAK
-#line 1517 "build/lex.yy.c"
+#line 1510 "build/lex.yy.c"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -2516,5 +2509,5 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 123 "frontend.l"
+#line 116 "frontend.l"
 

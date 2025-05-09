@@ -61,82 +61,81 @@ extern int yydebug;
     RPAREN = 262,                  /* RPAREN  */
     SEMICOLON = 263,               /* SEMICOLON  */
     QUOTE = 264,                   /* QUOTE  */
-    COMMENT = 265,                 /* COMMENT  */
-    SET_UNWEIGHTED = 266,          /* SET_UNWEIGHTED  */
-    SET_UNDIRECTED = 267,          /* SET_UNDIRECTED  */
-    MODEL_W = 268,                 /* MODEL_W  */
-    EVAL = 269,                    /* EVAL  */
-    TRAIN = 270,                   /* TRAIN  */
-    LAYER = 271,                   /* LAYER  */
-    LOSS = 272,                    /* LOSS  */
-    OPTIMIZER = 273,               /* OPTIMIZER  */
-    ITERS = 274,                   /* ITERS  */
-    VAL_STEP = 275,                /* VAL_STEP  */
-    RMSE_LOSS = 276,               /* RMSE_LOSS  */
-    ADAM_T = 277,                  /* ADAM_T  */
-    AGGR_INIT = 278,               /* AGGR_INIT  */
-    FN_ARG = 279,                  /* FN_ARG  */
-    MUL_SUM = 280,                 /* MUL_SUM  */
-    DSL_FN = 281,                  /* DSL_FN  */
-    DSL_DOT = 282,                 /* DSL_DOT  */
-    FFN_OUT = 283,                 /* FFN_OUT  */
-    SIZE_FN = 284,                 /* SIZE_FN  */
-    RELAXNLN = 285,                /* RELAXNLN  */
-    QUANT = 286,                   /* QUANT  */
-    GRAPH_ATTR = 287,              /* GRAPH_ATTR  */
-    FEAT_ATTR = 288,               /* FEAT_ATTR  */
-    RELU = 289,                    /* RELU  */
-    LABEL_ATTR = 290,              /* LABEL_ATTR  */
-    DEGREE_ATTR = 291,             /* DEGREE_ATTR  */
-    NODE_ATTR = 292,               /* NODE_ATTR  */
-    LEAKY_RELU = 293,              /* LEAKY_RELU  */
-    RABBIT_REORDER_OP = 294,       /* RABBIT_REORDER_OP  */
-    SAMPLE_RANDOM_OP = 295,        /* SAMPLE_RANDOM_OP  */
-    POW = 296,                     /* POW  */
-    SCALAR_INIT = 297,             /* SCALAR_INIT  */
-    COLTILE = 298,                 /* COLTILE  */
-    AGGR = 299,                    /* AGGR  */
-    FEAT_SIZE_ASSIGN = 300,        /* FEAT_SIZE_ASSIGN  */
-    LABEL_SIZE_ASSIGN = 301,       /* LABEL_SIZE_ASSIGN  */
-    COARSEN = 302,                 /* COARSEN  */
-    SRC_ATTR = 303,                /* SRC_ATTR  */
-    DST_ATTR = 304,                /* DST_ATTR  */
-    INTEGER = 305,                 /* INTEGER  */
-    FLOAT = 306,                   /* FLOAT  */
-    SOFTMAX = 307,                 /* SOFTMAX  */
-    INIT_WEIGHT = 308,             /* INIT_WEIGHT  */
-    LBRACE = 309,                  /* LBRACE  */
-    RBRACE = 310,                  /* RBRACE  */
-    LSQBRA = 311,                  /* LSQBRA  */
-    RSQBRA = 312,                  /* RSQBRA  */
-    DOT = 313,                     /* DOT  */
-    COMMA = 314,                   /* COMMA  */
-    IF = 315,                      /* IF  */
-    ELSE = 316,                    /* ELSE  */
-    DO = 317,                      /* DO  */
-    WHILE = 318,                   /* WHILE  */
-    TR = 319,                      /* TR  */
-    FA = 320,                      /* FA  */
-    NOT = 321,                     /* NOT  */
-    AND = 322,                     /* AND  */
-    OR = 323,                      /* OR  */
-    NOTEQ = 324,                   /* NOTEQ  */
-    EQ = 325,                      /* EQ  */
-    GREATER = 326,                 /* GREATER  */
-    LESS = 327,                    /* LESS  */
-    GREATEREQ = 328,               /* GREATEREQ  */
-    LESSEQ = 329,                  /* LESSEQ  */
-    PLUS = 330,                    /* PLUS  */
-    MINUS = 331,                   /* MINUS  */
-    MULTIPLY = 332,                /* MULTIPLY  */
-    DIVIDE = 333,                  /* DIVIDE  */
-    FFN = 334,                     /* FFN  */
+    SET_UNWEIGHTED = 265,          /* SET_UNWEIGHTED  */
+    SET_UNDIRECTED = 266,          /* SET_UNDIRECTED  */
+    MODEL_W = 267,                 /* MODEL_W  */
+    EVAL = 268,                    /* EVAL  */
+    TRAIN = 269,                   /* TRAIN  */
+    LAYER = 270,                   /* LAYER  */
+    ITERS = 271,                   /* ITERS  */
+    VAL_STEP = 272,                /* VAL_STEP  */
+    AGGR_INIT = 273,               /* AGGR_INIT  */
+    FN_ARG = 274,                  /* FN_ARG  */
+    MUL_SUM = 275,                 /* MUL_SUM  */
+    DSL_DOT = 276,                 /* DSL_DOT  */
+    FFN_OUT = 277,                 /* FFN_OUT  */
+    SIZE_FN = 278,                 /* SIZE_FN  */
+    GRAPH_ATTR = 279,              /* GRAPH_ATTR  */
+    FEAT_ATTR = 280,               /* FEAT_ATTR  */
+    RELU = 281,                    /* RELU  */
+    LABEL_ATTR = 282,              /* LABEL_ATTR  */
+    DEGREE_ATTR = 283,             /* DEGREE_ATTR  */
+    NODE_ATTR = 284,               /* NODE_ATTR  */
+    LEAKY_RELU = 285,              /* LEAKY_RELU  */
+    POW = 286,                     /* POW  */
+    SCALAR_INIT = 287,             /* SCALAR_INIT  */
+    COLTILE = 288,                 /* COLTILE  */
+    FEAT_SIZE_ASSIGN = 289,        /* FEAT_SIZE_ASSIGN  */
+    LABEL_SIZE_ASSIGN = 290,       /* LABEL_SIZE_ASSIGN  */
+    COARSEN = 291,                 /* COARSEN  */
+    SRC_ATTR = 292,                /* SRC_ATTR  */
+    DST_ATTR = 293,                /* DST_ATTR  */
+    INTEGER = 294,                 /* INTEGER  */
+    FLOAT = 295,                   /* FLOAT  */
+    SOFTMAX = 296,                 /* SOFTMAX  */
+    INIT_WEIGHT = 297,             /* INIT_WEIGHT  */
+    LBRACE = 298,                  /* LBRACE  */
+    RBRACE = 299,                  /* RBRACE  */
+    DOT = 300,                     /* DOT  */
+    COMMA = 301,                   /* COMMA  */
+    TR = 302,                      /* TR  */
+    FA = 303,                      /* FA  */
+    PLUS = 304,                    /* PLUS  */
+    MINUS = 305,                   /* MINUS  */
+    MULTIPLY = 306,                /* MULTIPLY  */
+    DIVIDE = 307,                  /* DIVIDE  */
+    FFN = 308,                     /* FFN  */
+    NULL_KEY = 309,                /* NULL_KEY  */
+    LOSS = 310,                    /* LOSS  */
+    OPTIMIZER = 311,               /* OPTIMIZER  */
+    RMSE_LOSS = 312,               /* RMSE_LOSS  */
+    ADAM_T = 313,                  /* ADAM_T  */
+    DSL_FN = 314,                  /* DSL_FN  */
+    RELAXNLN = 315,                /* RELAXNLN  */
+    QUANT = 316,                   /* QUANT  */
+    RABBIT_REORDER_OP = 317,       /* RABBIT_REORDER_OP  */
+    SAMPLE_RANDOM_OP = 318,        /* SAMPLE_RANDOM_OP  */
+    AGGR = 319,                    /* AGGR  */
+    LSQBRA = 320,                  /* LSQBRA  */
+    RSQBRA = 321,                  /* RSQBRA  */
+    IF = 322,                      /* IF  */
+    ELSE = 323,                    /* ELSE  */
+    DO = 324,                      /* DO  */
+    WHILE = 325,                   /* WHILE  */
+    NOT = 326,                     /* NOT  */
+    AND = 327,                     /* AND  */
+    OR = 328,                      /* OR  */
+    NOTEQ = 329,                   /* NOTEQ  */
+    EQ = 330,                      /* EQ  */
+    GREATER = 331,                 /* GREATER  */
+    LESS = 332,                    /* LESS  */
+    GREATEREQ = 333,               /* GREATEREQ  */
+    LESSEQ = 334,                  /* LESSEQ  */
     DATASET = 335,                 /* DATASET  */
     NONLN = 336,                   /* NONLN  */
     SENSEI_OP = 337,               /* SENSEI_OP  */
     INT = 338,                     /* INT  */
-    NEW = 339,                     /* NEW  */
-    NULL_KEY = 340                 /* NULL_KEY  */
+    NEW = 339                      /* NEW  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -145,16 +144,15 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 305 "frontend.y"
+#line 29 "frontend.y"
 
     int ival;
     float fval;
-    char *sval;
-    FrontendIRNode *irNode;
-    ForwardNode* forwardNode;
-    TrainingLoopNode* trainingLoopNode;
+    char* sval;
+    LayerOpType ltype;
+    void* vval;
 
-#line 158 "build/frontend.tab.h"
+#line 156 "build/frontend.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

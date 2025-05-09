@@ -1,6 +1,5 @@
 Terminals unused in grammar
 
-    COMMENT
     LOSS
     OPTIMIZER
     RMSE_LOSS
@@ -165,179 +164,178 @@ Terminals, with rules where they appear
     RPAREN <sval> (262) 2 10 14 16 19 20 22 23 27 28 30 31 32 33 34 35 36 41 42 43 44 45 46 52 53 56
     SEMICOLON <sval> (263) 2 8 9 10 11 19 20 22 23 41 42 43 44 45 46
     QUOTE <sval> (264) 80
-    COMMENT <sval> (265)
-    SET_UNWEIGHTED <sval> (266) 42
-    SET_UNDIRECTED <sval> (267) 41
-    MODEL_W <sval> (268) 16
-    EVAL <sval> (269) 22
-    TRAIN <sval> (270) 23
-    LAYER <sval> (271) 14
-    LOSS <sval> (272)
-    OPTIMIZER <sval> (273)
-    ITERS <sval> (274) 64 65
-    VAL_STEP <sval> (275) 66 67
-    RMSE_LOSS <sval> (276)
-    ADAM_T <sval> (277)
-    AGGR_INIT <sval> (278) 56
-    FN_ARG <sval> (279) 56
-    MUL_SUM <sval> (280) 57
-    DSL_FN <sval> (281)
-    DSL_DOT <sval> (282) 29 56 76 77
-    FFN_OUT <sval> (283) 30
-    SIZE_FN <sval> (284) 52
-    RELAXNLN <sval> (285)
-    QUANT <sval> (286)
-    GRAPH_ATTR <sval> (287) 9 10 50
-    FEAT_ATTR <sval> (288) 49
-    RELU <sval> (289) 31 76 77
-    LABEL_ATTR <sval> (290) 51
-    DEGREE_ATTR <sval> (291) 10 53
-    NODE_ATTR <sval> (292) 48
-    LEAKY_RELU <sval> (293) 32
-    RABBIT_REORDER_OP <sval> (294)
-    SAMPLE_RANDOM_OP <sval> (295)
-    POW <sval> (296) 33
-    SCALAR_INIT <sval> (297) 34
-    COLTILE <sval> (298) 45
-    AGGR <sval> (299)
-    FEAT_SIZE_ASSIGN <sval> (300) 43
-    LABEL_SIZE_ASSIGN <sval> (301) 44
-    COARSEN <sval> (302) 46
-    SRC_ATTR <sval> (303) 54
-    DST_ATTR <sval> (304) 55
-    INTEGER <sval> (305) 34 43 44 45 46 64 65 66 67 70 71
-    FLOAT <sval> (306) 33
-    SOFTMAX <sval> (307) 35
-    INIT_WEIGHT <sval> (308) 36
-    LBRACE <sval> (309) 14 16
-    RBRACE <sval> (310) 14 16
-    LSQBRA <sval> (311)
-    RSQBRA <sval> (312)
-    DOT <sval> (313) 9 10 22 23 41 42 45 46 48 49 50 51 52 53 54 55
-    COMMA <sval> (314) 27 30 33 65 67 70 72 74 77
-    IF <sval> (315)
-    ELSE <sval> (316)
-    DO <sval> (317)
-    WHILE <sval> (318)
-    TR <sval> (319) 78
-    FA <sval> (320) 79
-    NOT <sval> (321)
-    AND <sval> (322)
-    OR <sval> (323)
-    NOTEQ <sval> (324)
-    EQ <sval> (325)
-    GREATER <sval> (326)
-    LESS <sval> (327)
-    GREATEREQ <sval> (328)
-    LESSEQ <sval> (329)
-    PLUS <sval> (330) 58
-    MINUS <sval> (331) 59
-    MULTIPLY <sval> (332) 60
-    DIVIDE <sval> (333) 61
-    FFN <sval> (334) 30
+    SET_UNWEIGHTED <sval> (265) 42
+    SET_UNDIRECTED <sval> (266) 41
+    MODEL_W <sval> (267) 16
+    EVAL <sval> (268) 22
+    TRAIN <sval> (269) 23
+    LAYER <sval> (270) 14
+    ITERS <sval> (271) 64 65
+    VAL_STEP <sval> (272) 66 67
+    AGGR_INIT <sval> (273) 56
+    FN_ARG <sval> (274) 56
+    MUL_SUM <sval> (275) 57
+    DSL_DOT <sval> (276) 29 56 76 77
+    FFN_OUT <sval> (277) 30
+    SIZE_FN <sval> (278) 52
+    GRAPH_ATTR <sval> (279) 9 10 50
+    FEAT_ATTR <sval> (280) 49
+    RELU <sval> (281) 31 76 77
+    LABEL_ATTR <sval> (282) 51
+    DEGREE_ATTR <sval> (283) 10 53
+    NODE_ATTR <sval> (284) 48
+    LEAKY_RELU <sval> (285) 32
+    POW <sval> (286) 33
+    SCALAR_INIT <sval> (287) 34
+    COLTILE <sval> (288) 45
+    FEAT_SIZE_ASSIGN <sval> (289) 43
+    LABEL_SIZE_ASSIGN <sval> (290) 44
+    COARSEN <sval> (291) 46
+    SRC_ATTR <sval> (292) 54
+    DST_ATTR <sval> (293) 55
+    INTEGER <sval> (294) 34 43 44 45 46 64 65 66 67 70 71
+    FLOAT <sval> (295) 33
+    SOFTMAX <sval> (296) 35
+    INIT_WEIGHT <sval> (297) 36
+    LBRACE <sval> (298) 14 16
+    RBRACE <sval> (299) 14 16
+    DOT <sval> (300) 9 10 22 23 41 42 45 46 48 49 50 51 52 53 54 55
+    COMMA <sval> (301) 27 30 33 65 67 70 72 74 77
+    TR <sval> (302) 78
+    FA <sval> (303) 79
+    PLUS <sval> (304) 58
+    MINUS <sval> (305) 59
+    MULTIPLY <sval> (306) 60
+    DIVIDE <sval> (307) 61
+    FFN <sval> (308) 30
+    NULL_KEY <sval> (309) 72 73
+    LOSS <sval> (310)
+    OPTIMIZER <sval> (311)
+    RMSE_LOSS <sval> (312)
+    ADAM_T <sval> (313)
+    DSL_FN <sval> (314)
+    RELAXNLN <sval> (315)
+    QUANT <sval> (316)
+    RABBIT_REORDER_OP <sval> (317)
+    SAMPLE_RANDOM_OP <sval> (318)
+    AGGR <sval> (319)
+    LSQBRA <sval> (320)
+    RSQBRA <sval> (321)
+    IF <sval> (322)
+    ELSE <sval> (323)
+    DO <sval> (324)
+    WHILE <sval> (325)
+    NOT <sval> (326)
+    AND <sval> (327)
+    OR <sval> (328)
+    NOTEQ <sval> (329)
+    EQ <sval> (330)
+    GREATER <sval> (331)
+    LESS <sval> (332)
+    GREATEREQ <sval> (333)
+    LESSEQ <sval> (334)
     DATASET <sval> (335)
     NONLN <sval> (336)
     SENSEI_OP <sval> (337)
     INT <sval> (338)
     NEW <sval> (339)
-    NULL_KEY <sval> (340) 72 73
 
 
 Nonterminals, with rules where they appear
 
-    $accept (86)
+    $accept (85)
         on left: 0
-    program <irNode> (87)
+    program <vval> (86)
         on left: 1
         on right: 0
-    load_dataset <forwardNode> (88)
+    load_dataset <vval> (87)
         on left: 2
         on right: 1
-    algorithm <trainingLoopNode> (89)
+    algorithm <vval> (88)
         on left: 3 4 5
         on right: 1 4
-    statements <trainingLoopNode> (90)
+    statements <vval> (89)
         on left: 6 7
         on right: 7 14
-    statement <forwardNode> (91)
+    statement <vval> (90)
         on left: 8 9 10 11
         on right: 4 7
-    layers <trainingLoopNode> (92)
+    layers <vval> (91)
         on left: 12 13
         on right: 5 13
-    layer_def <trainingLoopNode> (93)
+    layer_def <vval> (92)
         on left: 14
         on right: 12 13
-    model <irNode> (94)
+    model <vval> (93)
         on left: 15
         on right: 5
-    model_def <irNode> (95)
+    model_def <vval> (94)
         on left: 16
         on right: 15
-    layer_inits <irNode> (96)
+    layer_inits <vval> (95)
         on left: 17 18
         on right: 16 18
-    layer_init <irNode> (97)
+    layer_init <vval> (96)
         on left: 19
         on right: 18
-    model_init <irNode> (98)
+    model_init <vval> (97)
         on left: 20
         on right: 15
-    model_uses <irNode> (99)
+    model_uses <vval> (98)
         on left: 21
         on right: 15
-    model_use <irNode> (100)
+    model_use <vval> (99)
         on left: 22 23
         on right: 21
-    gnn_op <sval> (101)
+    gnn_op <ltype> (100)
         on left: 24 25 26
         on right: 8
-    function <sval> (102)
+    function <ltype> (101)
         on left: 27 28 29
         on right: 25 26
-    update_op <sval> (103)
+    update_op <ltype> (102)
         on left: 30 31 32 33 34 35 36
         on right: 29
-    schedules (104)
+    schedules (103)
         on left: 37 38
         on right: 1 38
-    schedule <irNode> (105)
+    schedule <vval> (104)
         on left: 39 40
         on right: 37 38
-    data_transform <irNode> (106)
+    data_transform <vval> (105)
         on left: 41 42 43 44 45
         on right: 39
-    function_transform <irNode> (107)
+    function_transform <vval> (106)
         on left: 46
         on right: 40
-    data_var <sval> (108)
+    data_var <sval> (107)
         on left: 47 48 49 50 51 52 53 54 55
         on right: 24 26 27 28 30 31 32 33 35 41 42 45 46 48 49 50 51 52 53 54 55 74 75
-    function_init <forwardNode> (109)
+    function_init <vval> (108)
         on left: 56
         on right: 11
-    semiring_op (110)
+    semiring_op (109)
         on left: 57
         on right: 56
-    op <ival> (111)
+    op <ival> (110)
         on left: 58 59 60 61
         on right: 24 26 32
-    train_args <irNode> (112)
+    train_args <vval> (111)
         on left: 62 63
         on right: 23 63
-    train_arg <sval> (113)
+    train_arg <sval> (112)
         on left: 64 65 66 67
         on right: 63
-    args <irNode> (114)
+    args <vval> (113)
         on left: 68 69
         on right: 14 16 19 20 22 69
-    arg <sval> (115)
+    arg <sval> (114)
         on left: 70 71 72 73 74 75 76 77
         on right: 69
-    bool <ival> (116)
+    bool <ival> (115)
         on left: 78 79
         on right: 41 42
-    string <sval> (117)
+    string <sval> (116)
         on left: 80
         on right: 2
 
