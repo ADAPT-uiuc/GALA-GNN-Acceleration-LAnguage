@@ -34,7 +34,7 @@ class ModelConfig {
     public:
         string dataset_name;
         int iterations;
-        int input_size;
+        int output_input_classes; // output of first layer fed into second layer
         int num_layers;
         int validation_step;
         vector<LayerOpType> layer_operations;
@@ -54,7 +54,7 @@ class ModelConfig {
         ModelConfig(){
             dataset_name = "\0";
             iterations = 0;
-            input_size = 0;
+            output_input_classes = 0;
             num_layers = 0;
             layer_operations.clear();
             graph_transformations.clear();
@@ -104,7 +104,7 @@ class ModelConfig {
             string a = "Model Configuration:\n";
             a += "Dataset Name: " + dataset_name + "\n";
             a += "Iterations: " + std::to_string(iterations) + "\n";
-            a += "Input Size: " + std::to_string(input_size) + "\n";
+            a += "Output Input Classes: " + std::to_string(output_input_classes) + "\n";
             a += "Number of Layers: " + std::to_string(num_layers) + "\n";
             a += "Layer Operations:\n";
             for (const auto& op : layer_operations) {

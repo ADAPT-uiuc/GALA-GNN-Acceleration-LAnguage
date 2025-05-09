@@ -1857,13 +1857,13 @@ yyreduce:
 
   case 71: /* arg: INTEGER COMMA  */
 #line 290 "frontend.y"
-                    { m1.input_size = atof((yyvsp[-1].sval)); }
+                    { m1.output_input_classes = atof((yyvsp[-1].sval)); }
 #line 1862 "build/frontend.tab.c"
     break;
 
   case 72: /* arg: INTEGER  */
 #line 291 "frontend.y"
-    { m1.input_size = atof((yyvsp[0].sval)); }
+    { m1.output_input_classes = atof((yyvsp[0].sval)); }
 #line 1868 "build/frontend.tab.c"
     break;
 
@@ -2156,11 +2156,12 @@ DataNode* addNormalization_CIR(DataNode* prevData, TrainingLoopNode* trainingLoo
 	dependencies.push_back(powerOpDegreesDependency);
     return normData;
 }
-DataNode* addNormCalc_CIR(DataNode* normData, DataNode* prevData, TrainingLoopNode* trainingLoop){ // prevData is either feat or res
+DataNode* addNormCalc_CIR(DataNode* normData, DataNode* prevData, TrainingLoopNode* trainingLoop, int layerNum, bool featInput){ // prevData is either feat or res
     if (debug == 2) cout << "normalization-calculation\n";
 	// 1st normalization calculation
 	ForwardNode* normFeat1 = new ForwardNode(UPDATE_NODE, ROW_BROADCAST_OP);
-    DataNode* normFeat1Data = createDataNode(RM_DTYPE, false, false, {-1, 602}, true, "res", INT32, INT32, F32);
+    pair<int,int> normFeat1Data_inputDim = {-1, featInput ? m1.graph_transformations[FEAT_SIZE] : m1.output_input_classes};
+    DataNode* normFeat1Data = createDataNode(RM_DTYPE, false, false, normFeat1Data_inputDim, true, "res", INT32, INT32, F32);
 	normFeat1->addInputData(normData);
 	normFeat1->addInputData(prevData);
 	normFeat1->addOutputData(normFeat1Data);
@@ -2174,10 +2175,11 @@ DataNode* addNormCalc_CIR(DataNode* normData, DataNode* prevData, TrainingLoopNo
     return normFeat1Data;
 
 }
-DataNode* addAggregate_CIR(DataNode* prevData, DataNode* graphData, TrainingLoopNode* trainingLoop){
+DataNode* addAggregate_CIR(DataNode* prevData, DataNode* graphData, TrainingLoopNode* trainingLoop, int layerNum){
     if (debug == 2) cout << "aggregate" << '\n';
     ForwardNode* aggregate = new ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
-    DataNode* outputData = createDataNode(RM_DTYPE, false, false, {-1, m1.graph_transformations[FEAT_SIZE]}, true, "res", INT32, INT32, F32);
+    pair<int,int> outputData_inputDim = {-1, (layerNum == 0) ? m1.graph_transformations[FEAT_SIZE] : m1.output_input_classes};
+    DataNode* outputData = createDataNode(RM_DTYPE, false, false, outputData_inputDim, true, "res", INT32, INT32, F32);
     
     aggregate->addInputData(prevData);
     aggregate->addInputData(graphData); 
@@ -2197,9 +2199,19 @@ DataNode* addFFN_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int lay
     ForwardNode* ffn = new ForwardNode(UPDATE_NODE, FFN_OP);
     // weight as matrix in DIR
     string weightNum = "weight" + to_string(layerNum+1);
-    DataNode* weightData = createDataNode(RM_DTYPE, false, false, {-2,-3}, true, weightNum, INT32, INT32, F32);
+    pair<int,int> weightInputDim;
+    pair<int,int> resInputDim;
+    if (layerNum == 0){
+        weightInputDim = {m1.graph_transformations[FEAT_SIZE], m1.output_input_classes};
+        resInputDim = {-1, m1.output_input_classes};
+    }
+    else{
+        weightInputDim = {m1.output_input_classes, m1.graph_transformations[LABEL_SIZE]};
+        resInputDim = {-1, m1.graph_transformations[LABEL_SIZE]};
+    }
+    DataNode* weightData = createDataNode(RM_DTYPE, false, false, weightInputDim, true, weightNum, INT32, INT32, F32);
     // Res DIR
-    DataNode* resData = createDataNode(RM_DTYPE, false, false, {-1,-3}, true, "res", INT32, INT32, F32);
+    DataNode* resData = createDataNode(RM_DTYPE, false, false, resInputDim, true, "res", INT32, INT32, F32);
     ffn->addInputData(prevData);
     ffn->addInputData(weightData);
     ffn->addOutputData(resData);
@@ -2215,11 +2227,12 @@ DataNode* addFFN_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int lay
     return resData;
 
 }
-DataNode* addReLU_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop){
+DataNode* addReLU_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int layerNum){
     if (debug == 2) cout << "relu\n";
     // ReLU operation
 	ForwardNode* reluOp = new ForwardNode(POINTWISE, NON_LNR_OP_RELU);
-    DataNode* reluData = createDataNode(RM_DTYPE, false, false, {-1, 32}, true, "res", INT32, INT32, F32);
+    pair<int,int> reluData_inputDim = {-1, (layerNum == 0) ? m1.output_input_classes : m1.graph_transformations[LABEL_SIZE]};
+    DataNode* reluData = createDataNode(RM_DTYPE, false, false, reluData_inputDim, true, "res", INT32, INT32, F32);
 	reluOp->addInputData(prevData);
 	reluOp->addOutputData(reluData);
 	trainingLoop->addLoopNode(reluOp);
@@ -2255,18 +2268,18 @@ DataNode* addLayer(int layerNum, DataNode* connectNode, DataNode* graphData, Dat
                 break;
             case MULT_NORM_RES:
                 if (trainingLoop->getLoopNodeNum() < 5) // temporary fix to see if use featData or resData
-                    prevData = addNormCalc_CIR(normData, featData, trainingLoop);
+                    prevData = addNormCalc_CIR(normData, featData, trainingLoop, layerNum, true);
                 else
-                    prevData = addNormCalc_CIR(normData, prevData, trainingLoop);
+                    prevData = addNormCalc_CIR(normData, prevData, trainingLoop, layerNum, false);
                 break;
             case MESSAGE_PASSING_AGGREGATE:
-                prevData = addAggregate_CIR(prevData, graphData, trainingLoop);
+                prevData = addAggregate_CIR(prevData, graphData, trainingLoop, layerNum);
                 break;
             case FEED_FORWARD_NN:
                 prevData = addFFN_CIR(prevData, trainingLoop, layerNum);
                 break;
             case NON_LINEARITY:
-                prevData = addReLU_CIR(prevData, trainingLoop);
+                prevData = addReLU_CIR(prevData, trainingLoop, layerNum);
                 break;
         }
     }
@@ -2352,7 +2365,7 @@ int main(int argc, char** argv){
     }
     yyin = myfile;
     yydebug = 0;
-    debug = 0; // switch to 0 ifyw no print statements
+    debug = 1; // switch to 0 ifyw no print statements
     yyparse();
     cout << "Parsed!\n";
     if (debug){
