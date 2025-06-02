@@ -1,28 +1,23 @@
 /* Definitions */
 %{
-    extern int yylex();
-    #include "frontendIR.h"
-    #include "parser.tab.hpp"
-    using namespace std;
-    
-    /* if there ever ends up being a comment token, this is how you do it
-     \/\/.* { 
-        yylval.sval = strdup(yytext);
-        return COMMENT; 
-    } */
+extern int yylex();
+#include "ir/data.h"
+#include "ir/compute.h"
+#include "ir/frontend_metadata.h"
+#include "frontend.tab.h"
+using namespace std;
+
+/* comment token (if needed)
+    \/\/.* {
+    yylval.sval = strdup(yytext);
+    return COMMENT;
+} */
 %}
 
 /* Only one input file */
 %option noyywrap
 
 /* Rules */
-/* TODO: not sure how to deal with graph or feat as a token, they are terminals in the grammar \
-    not sure if line 19 is right?, part of sample_op
-    add specific terminals for model_var, layer_var, model_spec, etc..
-    confused about model_spec. 
-    chatgpt says to use /b(True|False)/b for bool token (/b does boundaries)
-       to avoid stuff like TTrue or Falsee
-*/
 %%
 load_dataset { return LOAD; }
 dsl.get_aggregate { return AGGR_INIT; }
