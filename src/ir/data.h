@@ -104,6 +104,8 @@ private:
     // To be used by the global meta-data array
     int defaultIndex = 0;
     std::string defaultName = "";
+    bool defaultDirected = false;
+    bool isDerived = false;
 public:
   // Set the data informaiton
   DataInfo(DataFormat format,
@@ -198,7 +200,20 @@ public:
   {
       return this->defaultName;
   }
-
+    void setDefaultDirected(bool isDirected)
+  {
+      this->defaultDirected = isDirected;
+  }
+    bool getDefaultDirected()
+  {
+      return this->defaultDirected;
+  }
+    void setDerived(bool deriv){
+      this->isDerived = deriv;
+  }
+    bool getDerived(){
+      return this->isDerived;
+  }
 
 
 

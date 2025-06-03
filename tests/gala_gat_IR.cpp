@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
 	auto originalRootGraphLevel = graphData.getData(); // Returns pointer
 	auto originalGraphInfo = originalRootGraphLevel->next(); // Returns pointer
 	auto transformedGraphInfo = DataInfo(CSR_STYPE, false, false);
-	transformedGraphInfo.addOpt(COL_TILE_DOPT, "65000");
+	transformedGraphInfo.addOpt(COL_TILE_DOPT, "300000");
 	auto transformedTileGraphLevel = DataLevel(&transformedGraphInfo, false);
 	auto transformedRootGraphLevel = DataLevel(&transformedTileGraphLevel, true);
 	auto transformedGraph = DataNode("graph_tile", graphData.getIType(), graphData.getNType(), graphData.getVType(), &transformedRootGraphLevel);
@@ -121,14 +121,16 @@ int main(int argc, char **argv) {
 	auto trgrapgFeatAssociation = RelationEdge(&transformedGraph, ALL_RELATION, &featData, ROWS_RELATION);
 	associations->push_back(&graphFeatAssociation);
 	auto tileTransformation = TransformData(COL_TILE_DOPT);
-	tileTransformation.addParam("65000");
+	tileTransformation.addParam("300000");
 	auto graphTrgraph = TransformEdge(&graphData, &transformedGraph);
 	graphTrgraph.addTransformation(&tileTransformation);
 	transforms->push_back(&graphTrgraph);
 
 	featInfo.setDims(-1, 602);
 
-	auto trainingLoop = TrainingLoopNode(100);
+	// auto trainingLoop = TrainingLoopNode(100);
+	auto trainingLoop = TrainingLoopNode(100, CROSS_ENTROPY, ADAM, 0, 5, 0.001);
+
 
 	// Add weight operation
 	auto ffn = ForwardNode(UPDATE_NODE, FFN_OP);
@@ -159,7 +161,7 @@ int main(int argc, char **argv) {
 
 	// Add attention weight operation (L side)
 	// L side
-	auto atten_l = ForwardNode(UPDATE_NODE, FFN_OP);
+	auto atten_l = ForwardNode(UPDATE_NODE, FFN_OP_EDGE);
 	// Weight as a matrix in the DIR
 	auto attenLWeightInfo = DataInfo(CM_DTYPE);
 	attenLWeightInfo.setDims(32, 1); // -2=input embedding dimension, -3=output classes
@@ -183,7 +185,7 @@ int main(int argc, char **argv) {
 	auto inOutAttenLAssociation = RelationEdge(&resData, ROWS_RELATION, &attenLWeightData, COLS_RELATION);
 	associations->push_back(&inOutAttenLAssociation);
 	// R side
-	auto atten_r = ForwardNode(UPDATE_NODE, FFN_OP);
+	auto atten_r = ForwardNode(UPDATE_NODE, FFN_OP_EDGE);
 	// Weight as a matrix in the DIR
 	auto attenRWeightInfo = DataInfo(CM_DTYPE);
 	attenRWeightInfo.setDims(32, 1); // -2=input embedding dimension, -3=output classes
@@ -210,8 +212,9 @@ int main(int argc, char **argv) {
 	// Edge aggregation
 	auto aggregateEdge = ForwardNode(AGGREGATE_EDGE, AGGREGATE_EDGE_SUM_OP);
 	auto aggrEdgeInfo = DataInfo(CSR_STYPE, transformedGraphInfo.getDirected(), true);
-	aggrEdgeInfo.addOpt(COL_TILE_DOPT, "65000");
+	aggrEdgeInfo.addOpt(COL_TILE_DOPT, "300000");
 	aggrEdgeInfo.setIndex(0);
+	aggrEdgeInfo.setDerived(true);
 	// aggrEdgeInfo.setDims(-4, 1); //-4=E=114M (E = Edges)
 	auto rootAggrEdgeLevel = DataLevel(&aggrEdgeInfo, true);
 	auto aggrEdgeData = DataNode("attn", INT32, INT32, F32, &rootAggrEdgeLevel);
@@ -236,10 +239,11 @@ int main(int argc, char **argv) {
 
 	// Leaky ReLU operation
 	auto leakyReluOp = ForwardNode(UPDATE_EDGE, NON_LNR_OP_LEAKY_RELU);
-	leakyReluOp.addParam("0.2");
+	leakyReluOp.addParam("0.02");
 	auto leakyReluInfo = DataInfo(CSR_STYPE, transformedGraphInfo.getDirected(), true);
-	leakyReluInfo.addOpt(COL_TILE_DOPT, "65000");
+	leakyReluInfo.addOpt(COL_TILE_DOPT, "300000");
 	leakyReluInfo.setIndex(0);
+	leakyReluInfo.setDerived(true);
 	// leakyReluInfo.setDims(-4, 1);
 	auto rootLeakyReluLevel = DataLevel(&leakyReluInfo, true);
 	auto leakyReluData = DataNode("attn", INT32, INT32, F32, &rootLeakyReluLevel);
@@ -252,8 +256,9 @@ int main(int argc, char **argv) {
 	// Leaky ReLU operation
 	auto softmaxOp = ForwardNode(UPDATE_EDGE, NON_LNR_OP_SOFTMAX);
 	auto softmaxInfo = DataInfo(CSR_STYPE, transformedGraphInfo.getDirected(), true);
-	softmaxInfo.addOpt(COL_TILE_DOPT, "65000");
+	softmaxInfo.addOpt(COL_TILE_DOPT, "300000");
 	softmaxInfo.setIndex(0);
+	softmaxInfo.setDerived(true);
 	// leakyReluInfo.setDims(-4, 1);
 	auto rootSoftmaxLevel = DataLevel(&softmaxInfo, true);
 	auto softmaxData = DataNode("attn", INT32, INT32, F32, &rootSoftmaxLevel);
@@ -324,7 +329,7 @@ int main(int argc, char **argv) {
 
 	// Add attention weight operation (L side)
 	// L side
-	auto atten_l_2 = ForwardNode(UPDATE_NODE, FFN_OP);
+	auto atten_l_2 = ForwardNode(UPDATE_NODE, FFN_OP_EDGE);
 	// Weight as a matrix in the DIR
 	auto attenLWeightInfo_2 = DataInfo(CM_DTYPE);
 	attenLWeightInfo_2.setDims(41, 1); // -2=input embedding dimension, -3=output classes
@@ -348,7 +353,7 @@ int main(int argc, char **argv) {
 	auto inOutAttenLAssociation_2 = RelationEdge(&resData_2, ROWS_RELATION, &attenLWeightData_2, COLS_RELATION);
 	associations->push_back(&inOutAttenLAssociation_2);
 	// R side
-	auto atten_r_2 = ForwardNode(UPDATE_NODE, FFN_OP);
+	auto atten_r_2 = ForwardNode(UPDATE_NODE, FFN_OP_EDGE);
 	// Weight as a matrix in the DIR
 	auto attenRWeightInfo_2 = DataInfo(CM_DTYPE);
 	attenRWeightInfo_2.setDims(41, 1); // -2=input embedding dimension, -3=output classes
@@ -375,8 +380,9 @@ int main(int argc, char **argv) {
 	// Edge aggregation
 	auto aggregateEdge_2 = ForwardNode(AGGREGATE_EDGE, AGGREGATE_EDGE_SUM_OP);
 	auto aggrEdgeInfo_2 = DataInfo(CSR_STYPE, transformedGraphInfo.getDirected(), true);
-	aggrEdgeInfo_2.addOpt(COL_TILE_DOPT, "65000");
+	aggrEdgeInfo_2.addOpt(COL_TILE_DOPT, "300000");
 	aggrEdgeInfo_2.setIndex(0);
+	aggrEdgeInfo_2.setDerived(true);
 	// aggrEdgeInfo.setDims(-4, 1); //-4=E=114M (E = Edges)
 	auto rootAggrEdgeLevel_2 = DataLevel(&aggrEdgeInfo_2, true);
 	auto aggrEdgeData_2 = DataNode("attn", INT32, INT32, F32, &rootAggrEdgeLevel_2);
@@ -401,10 +407,11 @@ int main(int argc, char **argv) {
 
 	// Leaky ReLU operation
 	auto leakyReluOp_2 = ForwardNode(UPDATE_EDGE, NON_LNR_OP_LEAKY_RELU);
-	leakyReluOp_2.addParam("0.2");
+	leakyReluOp_2.addParam("0.02");
 	auto leakyReluInfo_2 = DataInfo(CSR_STYPE, transformedGraphInfo.getDirected(), true);
-	leakyReluInfo_2.addOpt(COL_TILE_DOPT, "65000");
+	leakyReluInfo_2.addOpt(COL_TILE_DOPT, "300000");
 	leakyReluInfo_2.setIndex(0);
+	leakyReluInfo_2.setDerived(true);
 	// leakyReluInfo.setDims(-4, 1);
 	auto rootLeakyReluLevel_2 = DataLevel(&leakyReluInfo_2, true);
 	auto leakyReluData_2 = DataNode("attn", INT32, INT32, F32, &rootLeakyReluLevel_2);
@@ -417,8 +424,9 @@ int main(int argc, char **argv) {
 	// Leaky ReLU operation
 	auto softmaxOp_2 = ForwardNode(UPDATE_EDGE, NON_LNR_OP_SOFTMAX);
 	auto softmaxInfo_2 = DataInfo(CSR_STYPE, transformedGraphInfo.getDirected(), true);
-	softmaxInfo_2.addOpt(COL_TILE_DOPT, "65000");
+	softmaxInfo_2.addOpt(COL_TILE_DOPT, "300000");
 	softmaxInfo_2.setIndex(0);
+	softmaxInfo_2.setDerived(true);
 	// leakyReluInfo.setDims(-4, 1);
 	auto rootSoftmaxLevel_2 = DataLevel(&softmaxInfo_2, true);
 	auto softmaxData_2 = DataNode("attn", INT32, INT32, F32, &rootSoftmaxLevel_2);
@@ -467,7 +475,10 @@ int main(int argc, char **argv) {
 	std::string outputPath = "../test-codegen/";
 	auto genCode = CUDAGenerator(ctx, outputPath);
 	GALATransformations::complexityOperatorReordering(*program, *dependencies, *associations, *transforms);
-	GALATransformations::trainingInvariantCodeMotion(*program, *dependencies, *associations, *transforms);
+	// Commented since it has no effect here -- TODO have an automatic way for this
+	// 	GALATransformations::trainingInvariantCodeMotion(program, dependencies, associations, transforms);
+	// Not that sginificant of a speedup -- around 10% -- But has the bug of not working
+	// 	GALATransformations::trainingSubGraph(program, dependencies, associations, transforms);
 	genCode.writeCode(*program, *dependencies, *associations, *transforms);
 
     // Should be enough for now
