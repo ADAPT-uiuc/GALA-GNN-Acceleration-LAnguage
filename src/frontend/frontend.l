@@ -1,9 +1,9 @@
 /* Definitions */
 %{
 extern int yylex();
-#include "ir/data.h"
-#include "ir/compute.h"
-#include "ir/frontend_metadata.h"
+#include "../ir/data.h"
+#include "../ir/compute.h"
+#include "../ir/frontend_metadata.h"
 #include "frontend.tab.h"
 using namespace std;
 

@@ -3,9 +3,9 @@
 #include <string.h>
 #include <vector>
 #include <map>
-#include "ir/data.h"
-#include "ir/compute.h"
-#include "ir/frontend_metadata.h"
+#include "../ir/data.h"
+#include "../ir/compute.h"
+#include "../ir/frontend_metadata.h"
 using namespace std;
 
 extern int yydebug;
