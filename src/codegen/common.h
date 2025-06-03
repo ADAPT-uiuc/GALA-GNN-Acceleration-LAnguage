@@ -309,6 +309,7 @@ public:
         }
     }
 
+    // Move to data node 
     bool hasDOpt(DataNode* dNode, DataOptimization op)
     {
         auto opts = dNode->getDataInfo()->getOpts();
@@ -323,13 +324,27 @@ public:
         return false;
     }
 
+    // TODO Move to compute node
+    bool hasCOpt(ComputeNode* cNode, CompOptimization op)
+    {
+        for (int ix = 0; ix < cNode->getNumOpts(); ix++)
+        {
+            auto opt = cNode->getOpt(ix);
+            if (opt.first == op)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     std::string getKernelName(ComputeNode* cNode)
     {
         std::string kernelName = "";
         if (cNode->getOp() == AGGREGATE_MUL_SUM_OP)
         {
             kernelName += "aggregate_node_mul_sum";
-        } if (cNode->getOp() == AGGREGATE_MUL_SUM_DIRECT)
+        } else if (cNode->getOp() == AGGREGATE_MUL_SUM_DIRECT)
         {
             kernelName += "aggregate_node_mul_sum_direct";
         } else if (cNode->getOp() == NON_LNR_OP_SOFTMAX)
@@ -482,7 +497,7 @@ public:
 
     }
 
-    void generateOpCode(ComputeNode* cNode, int& fcCount, int& epCount, bool outOfLoop, bool& hasFFNEdgeUpdate,
+    void generateOpCode(ComputeNode* cNode, int& fcCount, int& fcEdgeCount, int& epCount, bool outOfLoop, bool& hasFFNEdgeUpdate,
         std::unordered_set<std::string> &encounteredAutograds,
         std::vector<int> &inputSizes,
         std::vector<TransformEdge*>& transforms)
@@ -675,6 +690,19 @@ public:\n\
             model.getForward()->addCode(tempForwardAggrCall);
         } else if (cNode->getOp() == AGGREGATE_MUL_SUM_OP)
         {
+            if (hasCOpt(cNode, SAMPLE_COPT)){
+                if (encounteredAutograds.find("random_r_b") == encounteredAutograds.end())
+                {
+                    encounteredAutograds.insert("random_r_b");
+                    std::string forwardRandCall = "    std::random_device rd;\n\
+    std::mt19937 gen(rd());\n\
+    std::uniform_int_distribution<> distrib(0, 100);\n\
+    global_ra = distrib(gen);\n\
+    global_rb = distrib(gen);\n";
+                    model.getForward()->addCode(forwardRandCall);
+                }
+            }
+            
             if (hasFFNEdgeUpdate)
             {
                 bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);
@@ -990,6 +1018,20 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
   
             }
             fcCount++;
+        }  else if (cNode->getOp() == FFN_OP_EDGE)
+        {
+            std::string fcDef = "torch::nn::Linear efc" + std::to_string(fcEdgeCount) + "{nullptr};";
+            model.getDef()->addCode(fcDef);
+
+            std::string fcInit = "efc" + std::to_string(fcEdgeCount) + " = register_module(\"efc"
+            + std::to_string(fcEdgeCount) + "\", torch::nn::Linear(size" + std::to_string(fcCount)
+            + ", 1));";
+            model.getInit()->addCode(fcInit);
+
+            // TODO add the inputs to the forward call based on the actual inputs
+            std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = efc" + std::to_string(fcEdgeCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
+            model.getForward()->addCode(forwardCall);
+            fcEdgeCount++;
         } else if (cNode->getOp() == SCALAR_ADD_EPS_MULTIPLY_OP)
         {
             std::string epDef = "torch::Tensor eps" + std::to_string(epCount) + "{nullptr};";
@@ -1062,6 +1104,7 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
     {
         std::vector<int> inputSizes;
         int fcCount = 0;
+        int fcEdgeCount = 0;
         int epCount = 0;
         bool hasFFNEdgeUpdate = false;
 
@@ -1074,7 +1117,7 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
             auto oNode = dynamic_cast<ComputeNode*>(outNode);
             if (oNode)
             {
-                generateOpCode(oNode, fcCount, epCount, true, hasFFNEdgeUpdate, encounteredAutograds, inputSizes, transforms);
+                generateOpCode(oNode, fcCount, fcEdgeCount, epCount, true, hasFFNEdgeUpdate, encounteredAutograds, inputSizes, transforms);
 
                 // Generate the transfer code after the load operation
                 if (oNode->getOp() == LOAD_OP)
@@ -1115,7 +1158,7 @@ forward(torch::Tensor t_iden";
                         model.getForwardCallPost()->addCode(initTensor);
                     }
 
-                    generateOpCode(cNode, fcCount, epCount, false, hasFFNEdgeUpdate, encounteredAutograds, inputSizes, transforms);
+                    generateOpCode(cNode, fcCount, fcEdgeCount, epCount, false, hasFFNEdgeUpdate, encounteredAutograds, inputSizes, transforms);
                 }
                 CIRNode* inNode = loopNode->getNode(loopNode->getLoopNodeNum()-1);
                 auto cNode = dynamic_cast<ComputeNode*>(inNode);
@@ -1153,7 +1196,7 @@ forward(torch::Tensor t_iden";
                 if (loopNode->getOptimizer() == ADAM)
                 {
                     std::string optmCode = "torch::optim::Adam optimizer(\n\
-    net->parameters(), torch::optim::AdamOptions(1e-2).weight_decay(5e-4));\n";
+    net->parameters(), torch::optim::AdamOptions(" + std::to_string(loopNode->getLearningRate()) +").weight_decay(5e-4));\n";
                     model.getPreCall()->addCode(optmCode);
                 } else
                 {
@@ -1343,6 +1386,8 @@ typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;\n\
 int global_nrows;\n\
 int global_classes;\n\
 int global_emb_size;\n\
+int global_ra;\n\
+int global_rb;\n\
 std::vector<int> global_segments;\n\
 bool global_is_directed;\n\
 \n\
