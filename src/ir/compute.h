@@ -40,6 +40,7 @@ enum ComputeOp {
     AGGREGATE_EDGE_MUL_OP,
     AGGREGATE_MUL_SUM_DIRECT, // No autograd
     FFN_OP, // Can also be UPDATE
+    FFN_OP_EDGE,
     BIAS_OP,
     NON_LNR_OP_RELU,
     NON_LNR_OP_LOG_SOFTMAX,
@@ -170,6 +171,7 @@ private:
     int numIter;
     int stepValid;
     int stepTest;
+    float learningRate;
     LossFunction lossFunc;
     NNOptimizer optimizer;
     // The steps in the program validation happens. If not specified the numIter.
@@ -177,17 +179,19 @@ private:
     //  temp solution - Remove everything and then add everything back
     std::vector<ForwardNode *> loop;
 public:
-    TrainingLoopNode(int numIter, LossFunction lossFunc = CROSS_ENTROPY, NNOptimizer optimizer = ADAM, int stepValid = 0, int stepTest = 1){
+    TrainingLoopNode(int numIter, LossFunction lossFunc = CROSS_ENTROPY, NNOptimizer optimizer = ADAM, int stepValid = 0, int stepTest = 1, float learningRate = 0.01){
         this->numIter = numIter;
         this->lossFunc = lossFunc;
         this->optimizer = optimizer;
         this->stepValid = stepValid;
         this->stepTest = stepTest;
+        this->learningRate = learningRate;
     }
 
     int getIter() { return this->numIter; }
     int getValidStep() { return this->stepValid; }
     int getTestStep() { return this->stepTest; }
+    float getLearningRate() { return this->learningRate; }
     LossFunction getLossFunc() { return this->lossFunc; }
     NNOptimizer getOptimizer() { return this->optimizer; }
 
@@ -199,9 +203,9 @@ public:
     ForwardNode *getNode(int i) { return this->loop.at(i); }
     void eraseFirstNLoopNodes(int n, int start = 0)
     {
-        for (int i_n = start; i_n < n; i_n++)
+        for (int i_n = start; i_n < start + n; i_n++)
         {
-            this->loop.erase(this->loop.begin());
+            this->loop.erase(this->loop.begin() + start);
         }
     }
     void insertToLoopNodes(int i, ForwardNode *newNode)

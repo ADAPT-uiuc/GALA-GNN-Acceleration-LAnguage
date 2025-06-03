@@ -58,6 +58,8 @@ public:
     std::string coarsenedKernelCall(ComputeNode* cNode, int cFact, int prevLayer, int weighted = true)
     {
         std::string res = "";
+        bool isKernelSample = hasCOpt(cNode, SAMPLE_COPT);
+
         // Add check for the next coarsening
         // Top layer just divide
         if (prevLayer == -1)
@@ -106,13 +108,19 @@ public:
             {
                 res += "    " + getKernelName(cNode) + "_kernel" + std::to_string(cFact - 1) + "<<<gridDim, blockDim, 0, stream"
                 + std::to_string(cFact) + ">>>(\n\
-        oden_array, &offset_ptr[i1 * (nrows + 1)]," + (weightedStr) + " iden_ptr, &col_ptr[start_vals], nrows, dcols);\n";
+        oden_array, &offset_ptr[i1 * (nrows + 1)]," + (weightedStr);
             } else
             {
 
                 res += "    " + getKernelName(cNode) + "_kernel0<<<gridDim, blockDim, 0, stream0>>>(\n\
-        oden_array, &offset_ptr[i1 * (nrows + 1)]," + (weightedStr) + " iden_ptr, &col_ptr[start_vals], nrows, dcols);\n";
+        oden_array, &offset_ptr[i1 * (nrows + 1)]," + (weightedStr);
             }
+            res += " iden_ptr, &col_ptr[start_vals], nrows, dcols";
+            if (isKernelSample){
+                res += ", global_ra, global_rb";
+            }
+            res += ");\n";
+                // TODO Continue from here to add a,b
         } else
         {
             if (cFact != 0)
@@ -120,13 +128,17 @@ public:
                 res += "    " + getKernelName(cNode) + "_kernel" + std::to_string(cFact - 1) + "_offset<<<gridDim, blockDim, 0, stream"
                 + std::to_string(cFact) + ">>>(\n\
         oden_array, &offset_ptr[i1 * (nrows + 1)]," + (weightedStr) +" iden_ptr, &col_ptr[start_vals], nrows, dcols, ((int)dcols /"
-                + std::to_string(32 * (cFact + 1)) + ") * " + std::to_string(32 * (cFact + 1)) + ");\n";
+                + std::to_string(32 * (cFact + 1)) + ") * " + std::to_string(32 * (cFact + 1));
             } else
             {
                 res += "    " + getKernelName(cNode) + "_kernel0_offset<<<gridDim, blockDim, 0, stream0>>>(\n\
         oden_array, &offset_ptr[i1 * (nrows + 1)]," + (weightedStr) + " iden_ptr, &col_ptr[start_vals], nrows, dcols, ((int)dcols /"
-                + std::to_string(32 * (cFact + 1)) + ") * " + std::to_string(32 * (cFact + 1)) + ");\n";
+                + std::to_string(32 * (cFact + 1)) + ") * " + std::to_string(32 * (cFact + 1));
             }
+            if (isKernelSample){
+                res += ", global_ra, global_rb";
+            }
+            res += ");\n";
         }
         // Remainder
         if (cFact != 0)
@@ -174,6 +186,7 @@ public:
             }
 
             bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);
+            bool isKernelSample = hasCOpt(cNode, SAMPLE_COPT);
 
             std::string kernelCodeStr = "";
 
@@ -193,7 +206,11 @@ public:
 
                 kernelCodeStr += "float *__restrict__ B,\n\
                     int *__restrict__ J_indices_data, int nrows,\n\
-                    int dcols) {\n\
+                    int dcols";
+                if (isKernelSample){
+                    kernelCodeStr += ", int ra, int rb";
+                }    
+                kernelCodeStr += ") {\n\
 if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {\n";
 
                 // The local register storage
@@ -202,13 +219,24 @@ if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {\n";
                     kernelCodeStr += "    float local" + std::to_string(j) + " = C[(((((((int)blockIdx.x) * 8)\
 + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) + ((int)threadIdx.x)) + " + std::to_string(32 * j) + ")];\n";
                 }
-
-                            kernelCodeStr += "\
+                
+                if (isKernelSample) {
+                    kernelCodeStr += "\
+        int jmax =\n\
+        (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -\n\
+         J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);\n\
+    if (jmax > 0) {\n\
+      for (int ji = 0; ji < nsamples; ++ji) {\n\
+        int j = (ra * ji + rb) % jmax;\n";
+                } else {
+                    kernelCodeStr += "\
         for (int j = 0;\n\
              j <\n\
              (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -\n\
               J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);\n\
              ++j) {\n";
+                }
+                            
                             for (int j = 0; j <= cFact; j++)
                             {
                                 kernelCodeStr += "\
@@ -232,6 +260,10 @@ C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +\n\
 (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) +\n\
 ((int)threadIdx.x) + " + std::to_string(32 * j) + ")] = local" + std::to_string(j) + ";\n";
                 }
+
+                if (isKernelSample){
+                    kernelCodeStr += "     }\n";
+                }
                 kernelCodeStr += "   }\n}\n\n";
             }
 
@@ -249,7 +281,11 @@ C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +\n\
 
                 kernelCodeStr += "float *__restrict__ B,\n\
                     int *__restrict__ J_indices_data, int nrows,\n\
-                    int dcols, int offset) {\n\
+                    int dcols, int offset";
+                if (isColTile){
+                    kernelCodeStr += ", int ra, int rb";
+                }
+                kernelCodeStr += ") {\n\
 if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {\n";
 
                 // The local register storage
@@ -260,12 +296,23 @@ if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {\n";
                     + std::to_string(32 * j) + ") + offset];\n";
                 }
 
-                kernelCodeStr += "\
+                if (isKernelSample){
+                    kernelCodeStr += "\
+        int jmax =\n\
+        (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -\n\
+         J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);\n\
+    if (jmax > 0) {\n\
+      for (int ji = 0; ji < nsamples; ++ji) {\n\
+        int j = (ra * ji + rb) % jmax;\n";
+                } else {
+                    kernelCodeStr += "\
 for (int j = 0;\n\
  j <\n\
  (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -\n\
   J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);\n\
  ++j) {\n";
+                }
+
                 for (int j = 0; j <= cFact; j++)
                 {
                     kernelCodeStr += "\
@@ -290,6 +337,11 @@ C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +\n\
 (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) +\n\
 ((int)threadIdx.x) + " + std::to_string(32 * j) + ") + offset] = local" + std::to_string(j) + ";\n";
                 }
+                
+                if (isKernelSample){
+                    kernelCodeStr += "     }\n";
+                }
+
                 kernelCodeStr += "   }\n}\n\n";
             }
 
@@ -795,115 +847,143 @@ torch::Tensor bounds, int nrows, int segments) {\n\
             if (!defaultLoaded)
             {
                 auto inputInfo =  inputData->getDataInfo();
-                if (encounteredStrings.find(inputInfo->getDefaultName()) == encounteredStrings.end())
-                {
-                    if (inputInfo->getFormat() == CSR_STYPE)
+
+                // std::cout << inputData->getName() << " :a: " << inputInfo->getDefaultName()  << " " << inputInfo->getDefaultIndex() << " " << inputInfo->getIndex() << std::endl;
+
+                if (!(inputInfo->getIndex() <= 0)){
+                    std::string dataName;
+                    if (inputInfo->getDefaultName() == ""){
+                        dataName = inputData->getName();
+                    } else {
+                        dataName = inputInfo->getDefaultName();
+                    }
+                    // std::cout << inputData->getName() << " :das" << std::endl;
+
+                    // std::cout << ":asd======== " << dataName << std::endl; 
+
+                    if (encounteredStrings.find(dataName) == encounteredStrings.end())
                     {
-                        defaultLoaded = true;
-                        int indexData = inputInfo->getDefaultIndex();
-                        encounteredStrings.insert(inputInfo->getDefaultName());
 
-                        bool isColTile = hasDOpt(inputData, COL_TILE_DOPT);
-                        inputTransferCode += "  int *dA_csrOffsets"+std::to_string(indexData)+", *dA_columns"+std::to_string(indexData)+"; \n\
-      float *dA_values"+std::to_string(indexData)+";\n\
-    \n\
-      CUDA_CHECK(cudaMalloc((void **)&dA_columns"+std::to_string(indexData)+", nvals"+std::to_string(indexData)+" * sizeof(int)));\n\
-      CUDA_CHECK(cudaMalloc((void **)&dA_values"+std::to_string(indexData)+", nvals"+std::to_string(indexData)+" * sizeof(float)));\n";
-                        if (isColTile)
+                        if (inputInfo->getFormat() == CSR_STYPE)
                         {
-                            inputTransferCode += "\n\
-      CUDA_CHECK(cudaMalloc((void **)&dA_csrOffsets"+std::to_string(indexData)+", (nrows + 1) * segments_" + inputData->getName() + " * sizeof(int)));\n\
-    \n\
-      CUDA_CHECK(cudaMemcpy(dA_csrOffsets"+std::to_string(indexData)+", offset_ptr_" + inputData->getName() + ",\n\
-                            (nrows + 1) * segments_" + inputData->getName() + " * sizeof(int), cudaMemcpyHostToDevice));\n\
-      CUDA_CHECK(cudaMemcpy(dA_columns"+std::to_string(indexData)+", col_ptr_" + inputData->getName() + ", nvals"+std::to_string(indexData)+" * sizeof(int),\n\
-                            cudaMemcpyHostToDevice));\n\
-      CUDA_CHECK(cudaMemcpy(dA_values"+std::to_string(indexData)+", val_ptr_" + inputData->getName() + ", nvals"+std::to_string(indexData)+" * sizeof(float),\n\
-                            cudaMemcpyHostToDevice));\n\
-      torch::Tensor t_offsets"+std::to_string(indexData)+" =\n\
-          torch::from_blob(dA_csrOffsets"+std::to_string(indexData)+", {(nrows+ 1) * segments_" + inputData->getName() + "}, options_cu_int);\n";
-                        } else
-                        {
-                            inputTransferCode += "  CUDA_CHECK(cudaMalloc((void **)&dA_csrOffsets"+std::to_string(indexData)+", (nrows + 1) * sizeof(int)));\n\
-    \n\
-      CUDA_CHECK(cudaMemcpy(dA_csrOffsets"+std::to_string(indexData)+", adj"+std::to_string(indexData)+".offset_ptr(),\n\
-                            (nrows + 1) * sizeof(int), cudaMemcpyHostToDevice));\n\
-      CUDA_CHECK(cudaMemcpy(dA_columns"+std::to_string(indexData)+", adj"+std::to_string(indexData)+".ids_ptr(), nvals"+std::to_string(indexData)+" * sizeof(int),\n\
-                            cudaMemcpyHostToDevice));\n\
-      CUDA_CHECK(cudaMemcpy(dA_values"+std::to_string(indexData)+", adj"+std::to_string(indexData)+".vals_ptr(), nvals"+std::to_string(indexData)+" * sizeof(float),\n\
-                            cudaMemcpyHostToDevice));\n\
-      torch::Tensor t_offsets"+std::to_string(indexData)+" =\n\
-          torch::from_blob(dA_csrOffsets"+std::to_string(indexData)+", {nrows+ 1}, options_cu_int);\n";
-                        }
+                            // std::cout << inputData->getName() << " cas" << std::endl;
 
-                        inputTransferCode += "  torch::Tensor t_cols"+std::to_string(indexData)+" = torch::from_blob(dA_columns"+std::to_string(indexData)+", {nvals"+std::to_string(indexData)+"}, options_cu_int);\n\
-    \n\
-      torch::Tensor t_vals"+std::to_string(indexData)+" =\n\
-          torch::from_blob(dA_values"+std::to_string(indexData)+", {nvals"+std::to_string(indexData)+"}, options_cu_float_ngrad);\n";
+                            defaultLoaded = true;
 
-                        inputTransferCode += "  global_offset_graph.push_back(t_offsets"+std::to_string(indexData)+");\n\
-      global_columns_graph.push_back(t_cols"+std::to_string(indexData)+");\n\
-      global_value_graph.push_back(t_vals"+std::to_string(indexData)+");\n";
+                            int indexData = inputInfo->getDefaultIndex();
+                            encounteredStrings.insert(dataName);
 
-                        // These are graphs for backprop
-                        if (!inputInfo->getDirected())
-                        {
+                            //std::cout << dataName << " " << indexData << std::endl;
+
+                            bool isColTile = hasDOpt(inputData, COL_TILE_DOPT);
+                            inputTransferCode += "  int *dA_csrOffsets"+std::to_string(indexData)+", *dA_columns"+std::to_string(indexData)+"; \n\
+        float *dA_values"+std::to_string(indexData)+";\n\
+        \n\
+        CUDA_CHECK(cudaMalloc((void **)&dA_columns"+std::to_string(indexData)+", nvals"+std::to_string(indexData)+" * sizeof(int)));\n\
+        CUDA_CHECK(cudaMalloc((void **)&dA_values"+std::to_string(indexData)+", nvals"+std::to_string(indexData)+" * sizeof(float)));\n";
+                            if (isColTile)
+                            {
+                                inputTransferCode += "\n\
+        CUDA_CHECK(cudaMalloc((void **)&dA_csrOffsets"+std::to_string(indexData)+", (nrows + 1) * segments_" + dataName + " * sizeof(int)));\n\
+        \n\
+        CUDA_CHECK(cudaMemcpy(dA_csrOffsets"+std::to_string(indexData)+", offset_ptr_" + dataName + ",\n\
+                                (nrows + 1) * segments_" + dataName + " * sizeof(int), cudaMemcpyHostToDevice));\n\
+        CUDA_CHECK(cudaMemcpy(dA_columns"+std::to_string(indexData)+", col_ptr_" + dataName + ", nvals"+std::to_string(indexData)+" * sizeof(int),\n\
+                                cudaMemcpyHostToDevice));\n\
+        CUDA_CHECK(cudaMemcpy(dA_values"+std::to_string(indexData)+", val_ptr_" + dataName + ", nvals"+std::to_string(indexData)+" * sizeof(float),\n\
+                                cudaMemcpyHostToDevice));\n\
+        torch::Tensor t_offsets"+std::to_string(indexData)+" =\n\
+            torch::from_blob(dA_csrOffsets"+std::to_string(indexData)+", {(nrows+ 1) * segments_" + dataName + "}, options_cu_int);\n";
+                            } else
+                            {
+                                inputTransferCode += "  CUDA_CHECK(cudaMalloc((void **)&dA_csrOffsets"+std::to_string(indexData)+", (nrows + 1) * sizeof(int)));\n\
+        \n\
+        CUDA_CHECK(cudaMemcpy(dA_csrOffsets"+std::to_string(indexData)+", adj"+std::to_string(indexData)+".offset_ptr(),\n\
+                                (nrows + 1) * sizeof(int), cudaMemcpyHostToDevice));\n\
+        CUDA_CHECK(cudaMemcpy(dA_columns"+std::to_string(indexData)+", adj"+std::to_string(indexData)+".ids_ptr(), nvals"+std::to_string(indexData)+" * sizeof(int),\n\
+                                cudaMemcpyHostToDevice));\n\
+        CUDA_CHECK(cudaMemcpy(dA_values"+std::to_string(indexData)+", adj"+std::to_string(indexData)+".vals_ptr(), nvals"+std::to_string(indexData)+" * sizeof(float),\n\
+                                cudaMemcpyHostToDevice));\n\
+        torch::Tensor t_offsets"+std::to_string(indexData)+" =\n\
+            torch::from_blob(dA_csrOffsets"+std::to_string(indexData)+", {nrows+ 1}, options_cu_int);\n";
+                            }
+
+                            inputTransferCode += "  torch::Tensor t_cols"+std::to_string(indexData)+" = torch::from_blob(dA_columns"+std::to_string(indexData)+", {nvals"+std::to_string(indexData)+"}, options_cu_int);\n\
+        \n\
+        torch::Tensor t_vals"+std::to_string(indexData)+" =\n\
+            torch::from_blob(dA_values"+std::to_string(indexData)+", {nvals"+std::to_string(indexData)+"}, options_cu_float_ngrad);\n";
+
                             inputTransferCode += "  global_offset_graph.push_back(t_offsets"+std::to_string(indexData)+");\n\
         global_columns_graph.push_back(t_cols"+std::to_string(indexData)+");\n\
         global_value_graph.push_back(t_vals"+std::to_string(indexData)+");\n";
-                        } else
-                        {
-                             inputTransferCode += "  int *dA_csrOffsets"+std::to_string(indexData)+"_b, *dA_columns"+std::to_string(indexData)+"_b; \n\
-      float *dA_values"+std::to_string(indexData)+"_b;\n\
-    \n\
-      CUDA_CHECK(cudaMalloc((void **)&dA_columns"+std::to_string(indexData)+"_b, nvals"+std::to_string(indexData)+" * sizeof(int)));\n\
-      CUDA_CHECK(cudaMalloc((void **)&dA_values"+std::to_string(indexData)+"_b, nvals"+std::to_string(indexData)+" * sizeof(float)));\n";
-                        if (isColTile)
-                        {
-                            inputTransferCode += "\n\
-      CUDA_CHECK(cudaMalloc((void **)&dA_csrOffsets"+std::to_string(indexData)+"_b, (nrows + 1) * segments_" + inputData->getName() + "_b * sizeof(int)));\n\
-    \n\
-      CUDA_CHECK(cudaMemcpy(dA_csrOffsets"+std::to_string(indexData)+"_b, offset_ptr_" + inputData->getName() + "_b,\n\
-                            (nrows + 1) * segments_" + inputData->getName() + "_b * sizeof(int), cudaMemcpyHostToDevice));\n\
-      CUDA_CHECK(cudaMemcpy(dA_columns"+std::to_string(indexData)+"_b, col_ptr_" + inputData->getName() + "_b, nvals"+std::to_string(indexData)+" * sizeof(int),\n\
-                            cudaMemcpyHostToDevice));\n\
-      CUDA_CHECK(cudaMemcpy(dA_values"+std::to_string(indexData)+"_b, val_ptr_" + inputData->getName() + "_b, nvals"+std::to_string(indexData)+" * sizeof(float),\n\
-                            cudaMemcpyHostToDevice));\n\
-      torch::Tensor t_offsets"+std::to_string(indexData)+"_b =\n\
-          torch::from_blob(dA_csrOffsets"+std::to_string(indexData)+"_b, {(nrows+ 1) * segments_" + inputData->getName() + "_b}, options_cu_int);\n";
-                        } else
-                        {
-                            inputTransferCode += "  CUDA_CHECK(cudaMalloc((void **)&dA_csrOffsets"+std::to_string(indexData)+"_b, (nrows + 1) * sizeof(int)));\n\
-    \n\
-      CUDA_CHECK(cudaMemcpy(dA_csrOffsets"+std::to_string(indexData)+"_b, adj"+std::to_string(indexData)+"_b.offset_ptr(),\n\
-                            (nrows + 1) * sizeof(int), cudaMemcpyHostToDevice));\n\
-      CUDA_CHECK(cudaMemcpy(dA_columns"+std::to_string(indexData)+"_b, adj"+std::to_string(indexData)+"_b.ids_ptr(), nvals"+std::to_string(indexData)+" * sizeof(int),\n\
-                            cudaMemcpyHostToDevice));\n\
-      CUDA_CHECK(cudaMemcpy(dA_values"+std::to_string(indexData)+"_b, adj"+std::to_string(indexData)+"_b.vals_ptr(), nvals"+std::to_string(indexData)+" * sizeof(float),\n\
-                            cudaMemcpyHostToDevice));\n\
-      torch::Tensor t_offsets"+std::to_string(indexData)+"_b =\n\
-          torch::from_blob(dA_csrOffsets"+std::to_string(indexData)+"_b, {nrows+ 1}, options_cu_int);\n";
-                        }
 
-                        inputTransferCode += "  torch::Tensor t_cols"+std::to_string(indexData)+"_b = torch::from_blob(dA_columns"+std::to_string(indexData)+"_b, {nvals"+std::to_string(indexData)+"}, options_cu_int);\n\
-    \n\
-      torch::Tensor t_vals"+std::to_string(indexData)+"_b =\n\
-          torch::from_blob(dA_values"+std::to_string(indexData)+"_b, {nvals"+std::to_string(indexData)+"}, options_cu_float_ngrad);\n";
+                            // These are graphs for backprop
+                            if (!inputInfo->getDefaultDirected())
+                            {
+                                inputTransferCode += "  global_offset_graph.push_back(t_offsets"+std::to_string(indexData)+");\n\
+            global_columns_graph.push_back(t_cols"+std::to_string(indexData)+");\n\
+            global_value_graph.push_back(t_vals"+std::to_string(indexData)+");\n";
+                            } else
+                            {
+                                std::cout << "Running this" << std::endl;
+                                inputTransferCode += "  int *dA_csrOffsets"+std::to_string(indexData)+"_b, *dA_columns"+std::to_string(indexData)+"_b; \n\
+        float *dA_values"+std::to_string(indexData)+"_b;\n\
+        \n\
+        CUDA_CHECK(cudaMalloc((void **)&dA_columns"+std::to_string(indexData)+"_b, nvals"+std::to_string(indexData)+" * sizeof(int)));\n\
+        CUDA_CHECK(cudaMalloc((void **)&dA_values"+std::to_string(indexData)+"_b, nvals"+std::to_string(indexData)+" * sizeof(float)));\n";
+                            if (isColTile)
+                            {
+                                inputTransferCode += "\n\
+        CUDA_CHECK(cudaMalloc((void **)&dA_csrOffsets"+std::to_string(indexData)+"_b, (nrows + 1) * segments_" + dataName + "_b * sizeof(int)));\n\
+        \n\
+        CUDA_CHECK(cudaMemcpy(dA_csrOffsets"+std::to_string(indexData)+"_b, offset_ptr_" + dataName + "_b,\n\
+                                (nrows + 1) * segments_" + dataName + "_b * sizeof(int), cudaMemcpyHostToDevice));\n\
+        CUDA_CHECK(cudaMemcpy(dA_columns"+std::to_string(indexData)+"_b, col_ptr_" + dataName + "_b, nvals"+std::to_string(indexData)+" * sizeof(int),\n\
+                                cudaMemcpyHostToDevice));\n\
+        CUDA_CHECK(cudaMemcpy(dA_values"+std::to_string(indexData)+"_b, val_ptr_" + dataName + "_b, nvals"+std::to_string(indexData)+" * sizeof(float),\n\
+                                cudaMemcpyHostToDevice));\n\
+        torch::Tensor t_offsets"+std::to_string(indexData)+"_b =\n\
+            torch::from_blob(dA_csrOffsets"+std::to_string(indexData)+"_b, {(nrows+ 1) * segments_" + dataName + "_b}, options_cu_int);\n";
+                            } else
+                            {
+                                inputTransferCode += "  CUDA_CHECK(cudaMalloc((void **)&dA_csrOffsets"+std::to_string(indexData)+"_b, (nrows + 1) * sizeof(int)));\n\
+        \n\
+        CUDA_CHECK(cudaMemcpy(dA_csrOffsets"+std::to_string(indexData)+"_b, adj"+std::to_string(indexData)+"_b.offset_ptr(),\n\
+                                (nrows + 1) * sizeof(int), cudaMemcpyHostToDevice));\n\
+        CUDA_CHECK(cudaMemcpy(dA_columns"+std::to_string(indexData)+"_b, adj"+std::to_string(indexData)+"_b.ids_ptr(), nvals"+std::to_string(indexData)+" * sizeof(int),\n\
+                                cudaMemcpyHostToDevice));\n\
+        CUDA_CHECK(cudaMemcpy(dA_values"+std::to_string(indexData)+"_b, adj"+std::to_string(indexData)+"_b.vals_ptr(), nvals"+std::to_string(indexData)+" * sizeof(float),\n\
+                                cudaMemcpyHostToDevice));\n\
+        torch::Tensor t_offsets"+std::to_string(indexData)+"_b =\n\
+            torch::from_blob(dA_csrOffsets"+std::to_string(indexData)+"_b, {nrows+ 1}, options_cu_int);\n";
+                            }
 
-                        inputTransferCode += "  global_offset_graph.push_back(t_offsets"+std::to_string(indexData)+"_b);\n\
-      global_columns_graph.push_back(t_cols"+std::to_string(indexData)+"_b);\n\
-      global_value_graph.push_back(t_vals"+std::to_string(indexData)+"_b);\n";
+                            inputTransferCode += "  torch::Tensor t_cols"+std::to_string(indexData)+"_b = torch::from_blob(dA_columns"+std::to_string(indexData)+"_b, {nvals"+std::to_string(indexData)+"}, options_cu_int);\n\
+        \n\
+        torch::Tensor t_vals"+std::to_string(indexData)+"_b =\n\
+            torch::from_blob(dA_values"+std::to_string(indexData)+"_b, {nvals"+std::to_string(indexData)+"}, options_cu_float_ngrad);\n";
+
+                            inputTransferCode += "  global_offset_graph.push_back(t_offsets"+std::to_string(indexData)+"_b);\n\
+        global_columns_graph.push_back(t_cols"+std::to_string(indexData)+"_b);\n\
+        global_value_graph.push_back(t_vals"+std::to_string(indexData)+"_b);\n";
+                            }
                         }
                     }
+
                 }
             }
 
             // Check if the string has been encountered before
             if (encounteredStrings.find(inputData->getName()) == encounteredStrings.end()) {
+
                 // For now only generate the transfer code for CSR type graphs
                 auto inputInfo =  inputData->getDataInfo();
-                if (inputInfo->getFormat() == CSR_STYPE)
+                if (inputInfo->getFormat() == CSR_STYPE && !inputInfo->getDerived())
                 {
+                    // std::cout << inputData->getName() << " bas" << std::endl;
+
+                    // TODO Check if this is a dependant of an exising graph
+                    
                     int indexData = (int)encounteredStrings.size();
                     if (inputInfo->getIndex() != -1)
                     {
