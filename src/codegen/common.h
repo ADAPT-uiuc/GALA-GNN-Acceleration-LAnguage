@@ -330,7 +330,7 @@ public:
         for (int ix = 0; ix < cNode->getNumOpts(); ix++)
         {
             auto opt = cNode->getOpt(ix);
-            if (opt.first == op)
+            if (opt->first == op)
             {
                 return true;
             }
