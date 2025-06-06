@@ -4,7 +4,8 @@ extern int yylex();
 #include "../ir/data.h"
 #include "../ir/compute.h"
 #include "../ir/frontend_metadata.h"
-#include "frontend.tab.h"
+//#include "frontend.tab.h"
+#include "parser.hpp"
 using namespace std;
 
 /* comment token (if needed)

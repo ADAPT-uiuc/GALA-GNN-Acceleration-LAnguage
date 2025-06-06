@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string.h>
 #include <vector>
+#include <cstring>
 #include <map>
 #include "../ir/data.h"
 #include "../ir/compute.h"
@@ -20,10 +21,10 @@ int debug = 0;
 
 DataNode* normData; // very temp solution, find fix asap
 
-vector<CIRNode*> program;
-vector<RelationEdge*> dependencies;
-vector<RelationEdge*> associations;
-vector<TransformEdge*> transforms;
+extern vector<CIRNode*> program;
+extern vector<RelationEdge*> dependencies;
+extern vector<RelationEdge*> associations;
+extern vector<TransformEdge*> transforms;
 %}
 
 %union {
@@ -221,7 +222,7 @@ data_var : IDENTIFIER
     }
     | data_var DOT NODE_ATTR
     {
-        if ($1 == "feats"){
+        if (strcmp($1, "feats") == 0){
             $$ = $1;
         }
         $$ = strdup("node");
@@ -504,7 +505,7 @@ void generate_ir(){
         DataInfo* originalGraphInfo = dynamic_cast<DataInfo*>(graphData->getData()->next());
         DataInfo* transformedGraphInfo = new DataInfo(CSR_STYPE, !m1.graph_transformations[UNDIRECTED], !m1.graph_transformations[UNWEIGHTED]);
         if (m1.data_transformations[0].first == COL_TILE){ // only one data transform for now for gcn
-            transformedGraphInfo->addOpt(COL_TILE_DOPT, m1.data_transformations[0].second);
+            transformedGraphInfo->addOpt(COL_TILE_DOPT, std::to_string(m1.data_transformations[0].second));
         }
         DataLevel* transformedTileGraphLevel = new DataLevel(transformedGraphInfo, false);
 	    DataLevel* transformedRootGraphLevel = new DataLevel(transformedTileGraphLevel, true);
@@ -544,53 +545,6 @@ void generate_ir(){
     cout << "IR Generated!\n";
 }
 
-int main(int argc, char** argv){
-    /* read from file instead of stdin */
-    if (argc < 2){
-        cout << "no filename provided";
-        return 1;
-    }
-    const char* fileName= argv[1];
-    FILE *myfile = fopen(fileName, "r");
-    if (!myfile) {
-        cout << "Invalid File" << endl;
-        return -1;
-    }
-    yyin = myfile;
-    yydebug = 0;
-    debug = 1; // switch to 0 ifyw no print statements
-    yyparse();
-    cout << "Parsed!\n";
-    if (debug){
-        cout << " ---------------- printing model config ----------------------\n";
-        cout << m1.to_string() << '\n';
-        cout << "---------------------------------------------------------------\n";
-    }
-    generate_ir();
-    if (debug){
-        cout << " --------     checking generated ir output ------------ \n";
-        cout << "PROGRAM (CIR Nodes): " << program.size() << '\n';
-        for (int i = 0; i < program.size(); i++){
-
-            /* ComputeNode* brruv = dynamic_cast<ComputeNode*>(program[i]); */
-            /* cout << "     program node " << i << " with op and opType " << brruv->getOp() << ' ' << brruv->getOpType() << '\n'; */
-            cout << "        program node " << i << "\n";
-        }
-        cout << "DEPENDENCIES " << dependencies.size() << '\n';
-        for (int i = 0; i < dependencies.size(); i++){
-            cout << "     dependency edge " << i << " with nodes " << dependencies[i]->getNode1()->getName() << ' ' << dependencies[i]->getNode2()->getName() << '\n';
-        }
-        cout << "ASSOCIATIONS " << associations.size() << '\n';
-        for (int i = 0; i < associations.size(); i++){
-            cout << "     associations edge " << i << " with nodes " << associations[i]->getNode1()->getName() << ' ' << associations[i]->getNode2()->getName() << '\n';
-        }
-        cout << "TRANSFORMS " << transforms.size() << '\n';
-        for (int i = 0; i < transforms.size(); i++){
-            cout << "     transform edge " << i << " with nodes " << transforms[i]->getNode1()->getName() << ' ' << transforms[i]->getNode2()->getName() << '\n';
-        }
-    }
-    fclose(myfile);
-}
 void yyerror(const char *s){
     printf("Failed to parse: %s\n", s);
     /* halt program */

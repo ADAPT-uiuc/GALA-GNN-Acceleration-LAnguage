@@ -35,6 +35,9 @@ typedef int val_int_t;
 // Frontend
 #include "../src/frontend/context.h"
 
+#pragma once
+void generate_ir();
+
 extern FILE* yyin;
 extern int yyparse();
 std::vector<CIRNode*>* program = nullptr;
@@ -78,6 +81,7 @@ int main(int argc, char **argv) {
 	yyin = myfile;
 	yyparse();
 	fclose(myfile);
+	// generate_ir();
 
 	std::cout << "PROGRAM (CIR Nodes): " << program->size() << '\n';
 	std::cout << "DEPENDENCIES " << dependencies->size() << '\n';
