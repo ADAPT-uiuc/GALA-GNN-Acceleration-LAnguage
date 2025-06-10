@@ -21,6 +21,7 @@ typedef int val_int_t;
 // IR classes
 #include "../src/ir/data.h"
 #include "../src/ir/compute.h"
+#include "../src/ir/frontend_metadata.h"
 #include "../src/codegen/cuda.h"
 #include "../src/middle-end/middle-end.h"
 
@@ -35,15 +36,21 @@ typedef int val_int_t;
 // Frontend
 #include "../src/frontend/context.h"
 
-#pragma once
+// #pragma once
 void generate_ir();
 
 extern FILE* yyin;
 extern int yyparse();
-std::vector<CIRNode*>* program = nullptr;
-std::vector<RelationEdge*>* dependencies = nullptr;
-std::vector<RelationEdge*>* associations = nullptr;
-std::vector<TransformEdge*>* transforms = nullptr;
+ModelConfig m1 = ModelConfig();
+std::vector<CIRNode*> program;
+std::vector<RelationEdge*> dependencies;
+std::vector<RelationEdge*> associations;
+std::vector<TransformEdge*> transforms;
+
+std::vector<CIRNode*>* programP = nullptr;
+std::vector<RelationEdge*>* dependenciesP = nullptr;
+std::vector<RelationEdge*>* associationsP = nullptr;
+std::vector<TransformEdge*>* transformsP = nullptr;
 
 //Dense matrix with double values.
 typedef DenseMatrix<ind1_t, ind2_t, val_t> DMd_t;
@@ -64,14 +71,19 @@ int main(int argc, char **argv) {
 	const char* fileName= "../tests/input/gcn.txt";
 	// const char* fileName= "/home/damitha/gala-lang/GNN-Acceleration-Language/tests/input/gcn.txt";
 
-	std::vector<CIRNode*> newProgram;
-	program = &newProgram;
-	std::vector<RelationEdge*> newDependencies;
-	dependencies = &newDependencies;
-	std::vector<RelationEdge*> newAssociations;
-	associations = &newAssociations;
-	std::vector<TransformEdge*> newTransforms;
-	transforms = &newTransforms;
+	// std::vector<CIRNode*> newProgram;
+	// program = &newProgram;
+	// std::vector<RelationEdge*> newDependencies;
+	// dependencies = &newDependencies;
+	// std::vector<RelationEdge*> newAssociations;
+	// associations = &newAssociations;
+	// std::vector<TransformEdge*> newTransforms;
+	// transforms = &newTransforms;
+
+	programP = &program;
+	dependenciesP = &dependencies;
+	associationsP = &associations;
+	transformsP = &transforms;
 
 	FILE *myfile = fopen(fileName, "r");
 	if (!myfile) {
@@ -81,12 +93,12 @@ int main(int argc, char **argv) {
 	yyin = myfile;
 	yyparse();
 	fclose(myfile);
-	// generate_ir();
+	generate_ir();
 
-	std::cout << "PROGRAM (CIR Nodes): " << program->size() << '\n';
-	std::cout << "DEPENDENCIES " << dependencies->size() << '\n';
-	std::cout << "ASSOCIATIONS " << associations->size() << '\n';
-	std::cout << "TRANSFORMS " << transforms->size() << '\n';
+	std::cout << "PROGRAM (CIR Nodes): " << programP->size() << '\n';
+	std::cout << "DEPENDENCIES " << dependenciesP->size() << '\n';
+	std::cout << "ASSOCIATIONS " << associationsP->size() << '\n';
+	std::cout << "TRANSFORMS " << transformsP->size() << '\n';
 
 
  //    auto loadDataset = ForwardNode(POINTWISE, LOAD_OP);

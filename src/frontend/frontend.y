@@ -16,7 +16,7 @@ extern FILE *yyin;
 
 void yyerror(const char *s);
 
-ModelConfig m1 = ModelConfig(); // just considering one model per input file for now
+extern ModelConfig m1; // just considering one model per input file for now
 int debug = 0;
 
 DataNode* normData; // very temp solution, find fix asap
@@ -480,7 +480,6 @@ DataNode* addLayer(int layerNum, DataNode* connectNode, DataNode* graphData, Dat
     return prevData;
 }
 void generate_ir(){
-
     DataNode* graphData; 
     DataNode* featData;
     RelationEdge* graphFeatAssociation;
