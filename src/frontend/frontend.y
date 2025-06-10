@@ -2,7 +2,6 @@
 #include <iostream>
 #include <string.h>
 #include <vector>
-#include <cstring>
 #include <map>
 #include "../ir/data.h"
 #include "../ir/compute.h"
@@ -38,8 +37,8 @@ extern vector<TransformEdge*> transforms;
 
 %token<sval> IDENTIFIER ASSIGN LOAD;
 %token<sval> LPAREN RPAREN SEMICOLON QUOTE SET_UNWEIGHTED SET_UNDIRECTED
-%token<sval> MODEL_W EVAL TRAIN LAYER ITERS VAL_STEP 
-%token<sval> AGGR_INIT FN_ARG MUL_SUM DSL_DOT FFN_OUT SIZE_FN 
+%token<sval> MODEL_W EVAL TRAIN LAYER ITERS VAL_STEP
+%token<sval> AGGR_INIT FN_ARG MUL_SUM DSL_DOT FFN_OUT SIZE_FN
 %token<sval> GRAPH_ATTR FEAT_ATTR RELU LABEL_ATTR DEGREE_ATTR NODE_ATTR LEAKY_RELU
 %token<sval> POW SCALAR_INIT
 %token<sval> COLTILE FEAT_SIZE_ASSIGN LABEL_SIZE_ASSIGN COARSEN SRC_ATTR DST_ATTR;
@@ -52,17 +51,17 @@ extern vector<TransformEdge*> transforms;
 
 %type <ival> bool op
 %type <ltype> function update_op gnn_op
-%type <sval> arg train_arg string data_var 
+%type <sval> arg train_arg string data_var
 %type <vval> load_dataset function_init statement
 %type <vval> algorithm layers layer_def statements
 %type <vval> program schedule args train_args
 %type <vval> layer_inits layer_init data_transform function_transform
-%type <vval> model model_def model_init model_uses model_use 
+%type <vval> model model_def model_init model_uses model_use
 
 %%
 program : load_dataset algorithm schedules {}
 ;
-load_dataset : IDENTIFIER ASSIGN LOAD LPAREN string RPAREN SEMICOLON 
+load_dataset : IDENTIFIER ASSIGN LOAD LPAREN string RPAREN SEMICOLON
     { m1.dataset_name = $5; }
 ;
 algorithm : { }
@@ -70,7 +69,7 @@ algorithm : { }
     | layers model {}
 ;
 statements : { }
-    | statements statement 
+    | statements statement
     {}
 ;
 statement : IDENTIFIER ASSIGN gnn_op SEMICOLON
@@ -118,8 +117,8 @@ statement : IDENTIFIER ASSIGN gnn_op SEMICOLON
     {
     }
 ;
-layers : layer_def {} 
-    | layers layer_def 
+layers : layer_def {}
+    | layers layer_def
     {}
 ;
 layer_def : IDENTIFIER ASSIGN LAYER LPAREN args RPAREN LBRACE statements RBRACE
@@ -138,8 +137,8 @@ layer_init : IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON { m1.num_
 model_init : IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON { }
 ;
 model_uses : model_use model_use {  }
-    /* | model_uses model_use {}  this rule creating a lot of ambiguity syntax errors, 
-        avoiding more than two model_uses for now*/ 
+    /* | model_uses model_use {}  this rule creating a lot of ambiguity syntax errors,
+        avoiding more than two model_uses for now*/
 ;
 model_use : IDENTIFIER ASSIGN IDENTIFIER DOT EVAL LPAREN args RPAREN SEMICOLON {  }
     | IDENTIFIER DOT TRAIN LPAREN train_args RPAREN SEMICOLON {  }
@@ -150,7 +149,7 @@ gnn_op : data_var op data_var
             $$ = MULT_NORM_RES;
         }
     }
-    | function 
+    | function
     { $$ = $1; }
     | function op data_var
     {}
@@ -166,7 +165,7 @@ function : IDENTIFIER LPAREN data_var COMMA data_var RPAREN
         // similarly know that this is relu
         $$ = NON_LINEARITY;
     }
-    | DSL_DOT update_op 
+    | DSL_DOT update_op
     {
         $$ = $2;
     }
@@ -197,16 +196,16 @@ schedule : data_transform
     {
     }
 ;
-// this is where todo all graph transform, data transform 
+// this is where todo all graph transform, data transform
 data_transform : data_var ASSIGN data_var DOT SET_UNDIRECTED LPAREN bool RPAREN SEMICOLON
     {  m1.addGraphTransformation(UNDIRECTED, (float) !$7);  }
     | data_var ASSIGN data_var DOT SET_UNWEIGHTED LPAREN bool RPAREN SEMICOLON
     {  m1.addGraphTransformation(UNWEIGHTED, (float) !$7); }
     | FEAT_SIZE_ASSIGN LPAREN INTEGER RPAREN SEMICOLON
     {  m1.addGraphTransformation(FEAT_SIZE, atof($3));  }
-    | LABEL_SIZE_ASSIGN LPAREN INTEGER RPAREN SEMICOLON 
+    | LABEL_SIZE_ASSIGN LPAREN INTEGER RPAREN SEMICOLON
     {  m1.addGraphTransformation(LABEL_SIZE, atof($3));  }
-    | data_var ASSIGN data_var DOT COLTILE LPAREN INTEGER RPAREN SEMICOLON 
+    | data_var ASSIGN data_var DOT COLTILE LPAREN INTEGER RPAREN SEMICOLON
     {  m1.addDataTransformation(COL_TILE, atof($7));  }
 ;
 // this is where to do compute transform
@@ -374,9 +373,9 @@ DataNode* addAggregate_CIR(DataNode* prevData, DataNode* graphData, TrainingLoop
     ForwardNode* aggregate = new ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
     pair<int,int> outputData_inputDim = {-1, (layerNum == 0) ? m1.graph_transformations[FEAT_SIZE] : m1.output_input_classes};
     DataNode* outputData = createDataNode(RM_DTYPE, false, false, outputData_inputDim, true, "res", INT32, INT32, F32);
-    
+
     aggregate->addInputData(prevData);
-    aggregate->addInputData(graphData); 
+    aggregate->addInputData(graphData);
     aggregate->addOutputData(outputData);
     trainingLoop->addLoopNode(aggregate);
 
@@ -410,7 +409,7 @@ DataNode* addFFN_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int lay
     ffn->addInputData(weightData);
     ffn->addOutputData(resData);
     trainingLoop->addLoopNode(ffn);
-    // Relation (dependency) between weight and features 
+    // Relation (dependency) between weight and features
     RelationEdge* inOutWeightDepRelationFeat = new RelationEdge(prevData, ALL_RELATION, resData, ALL_RELATION);
     RelationEdge* inOutWeightDepRelationWeight = new RelationEdge(weightData, COLS_RELATION, resData, ROWS_RELATION);
     dependencies.push_back(inOutWeightDepRelationFeat);
@@ -439,7 +438,7 @@ DataNode* addReLU_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int la
 purpose:
  - looks through model config layer_transformations and makes the appropriate nodes and edges accordingly
 parameters:
- - isFirstLayer: stuff like degreesOp and powerOp are only created for first layer, if not first skip those 
+ - isFirstLayer: stuff like degreesOp and powerOp are only created for first layer, if not first skip those
  - connectingNodes: empty for first layer, but for future layers its the inputs to that layer
  - graph: either un-transformed or transformed graph to be put in as one of the connecting nodes
  - trainingLoop: where the nodes will be added
@@ -524,7 +523,7 @@ void generate_ir(){
         graph = transformedGraph;
     }
     else{ // then make sure to modify the original graph with the schedule transformations!
-        
+
         DataInfo* graphInfo = dynamic_cast<DataInfo*>(graphData->getData()->next());
         graphInfo->setDirected(!m1.graph_transformations[UNDIRECTED]);
         graphInfo->setWeighted(!m1.graph_transformations[UNWEIGHTED]);
@@ -533,11 +532,11 @@ void generate_ir(){
 
     DataInfo* featInfo = dynamic_cast<DataInfo*>(featData->getData()->next());
     featInfo->setDims(-1, m1.graph_transformations[FEAT_SIZE]);
-    
+
     TrainingLoopNode* trainingLoop = new TrainingLoopNode(m1.iterations, CROSS_ENTROPY, ADAM, m1.validation_step);
     DataNode* connectNode;
     for (int i = 0; i < m1.num_layers; i++){
-        connectNode = addLayer(i, connectNode, graph, featData, trainingLoop); 
+        connectNode = addLayer(i, connectNode, graph, featData, trainingLoop);
     }
     program.push_back(trainingLoop);
 

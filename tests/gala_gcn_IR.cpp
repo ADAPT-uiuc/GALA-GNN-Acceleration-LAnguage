@@ -80,11 +80,6 @@ int main(int argc, char **argv) {
 	// std::vector<TransformEdge*> newTransforms;
 	// transforms = &newTransforms;
 
-	programP = &program;
-	dependenciesP = &dependencies;
-	associationsP = &associations;
-	transformsP = &transforms;
-
 	FILE *myfile = fopen(fileName, "r");
 	if (!myfile) {
 		std::cout << "Invalid File" << std::endl;
@@ -93,13 +88,38 @@ int main(int argc, char **argv) {
 	yyin = myfile;
 	yyparse();
 	fclose(myfile);
+
+	cout << " ---------------- printing model config ----------------------\n";
+	cout << m1.to_string() << '\n';
+	cout << "---------------------------------------------------------------\n";
+
 	generate_ir();
 
-	std::cout << "PROGRAM (CIR Nodes): " << programP->size() << '\n';
-	std::cout << "DEPENDENCIES " << dependenciesP->size() << '\n';
-	std::cout << "ASSOCIATIONS " << associationsP->size() << '\n';
-	std::cout << "TRANSFORMS " << transformsP->size() << '\n';
+	cout << " --------     checking generated ir output ------------ \n";
+	cout << "PROGRAM (CIR Nodes): " << program.size() << '\n';
+	programP = &program;
+	dependenciesP = &dependencies;
+	associationsP = &associations;
+	transformsP = &transforms;
 
+	for (int i = 0; i < program.size(); i++){
+
+		/* ComputeNode* brruv = dynamic_cast<ComputeNode*>(program[i]); */
+		/* cout << "     program node " << i << " with op and opType " << brruv->getOp() << ' ' << brruv->getOpType() << '\n'; */
+		cout << "        program node " << i << "\n";
+	}
+	cout << "DEPENDENCIES " << dependencies.size() << '\n';
+	for (int i = 0; i < dependencies.size(); i++){
+		cout << "     dependency edge " << i << " with nodes " << dependencies[i]->getNode1()->getName() << ", " << dependencies[i]->getNode2()->getName() << '\n';
+	}
+	cout << "ASSOCIATIONS " << associations.size() << '\n';
+	for (int i = 0; i < associations.size(); i++){
+		cout << "     associations edge " << i << " with nodes " << associations[i]->getNode1()->getName() << ", " << associations[i]->getNode2()->getName() << '\n';
+	}
+	cout << "TRANSFORMS " << transforms.size() << '\n';
+	for (int i = 0; i < transforms.size(); i++){
+		cout << "     transform edge " << i << " with nodes " << transforms[i]->getNode1()->getName() << ", " << transforms[i]->getNode2()->getName() << '\n';
+	}
 
  //    auto loadDataset = ForwardNode(POINTWISE, LOAD_OP);
  //    loadDataset.addParam("/shared/damitha2/gala_npy/RedditDataset/");
