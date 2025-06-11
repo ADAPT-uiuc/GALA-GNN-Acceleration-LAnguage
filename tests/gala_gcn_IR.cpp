@@ -36,16 +36,15 @@ typedef int val_int_t;
 // Frontend
 #include "../src/frontend/context.h"
 
-// #pragma once
-void generate_ir();
+extern void generate_ir();
 
 extern FILE* yyin;
 extern int yyparse();
-ModelConfig m1 = ModelConfig();
-std::vector<CIRNode*> program;
-std::vector<RelationEdge*> dependencies;
-std::vector<RelationEdge*> associations;
-std::vector<TransformEdge*> transforms;
+ModelConfig m1;
+std::vector<CIRNode*> programVec;
+std::vector<RelationEdge*> dependenciesVec;
+std::vector<RelationEdge*> associationsVec;
+std::vector<TransformEdge*> transformsVec;
 
 std::vector<CIRNode*>* programP = nullptr;
 std::vector<RelationEdge*>* dependenciesP = nullptr;
@@ -71,14 +70,19 @@ int main(int argc, char **argv) {
 	const char* fileName= "../tests/input/gcn.txt";
 	// const char* fileName= "/home/damitha/gala-lang/GNN-Acceleration-Language/tests/input/gcn.txt";
 
+	m1 = ModelConfig();
 	// std::vector<CIRNode*> newProgram;
-	// program = &newProgram;
+	// programP = &newProgram;
 	// std::vector<RelationEdge*> newDependencies;
-	// dependencies = &newDependencies;
+	// dependenciesP = &newDependencies;
 	// std::vector<RelationEdge*> newAssociations;
-	// associations = &newAssociations;
+	// associationsP = &newAssociations;
 	// std::vector<TransformEdge*> newTransforms;
-	// transforms = &newTransforms;
+	// transformsP = &newTransforms;
+	programP = &programVec;
+	dependenciesP = &dependenciesVec;
+	associationsP = &associationsVec;
+	transformsP = &transformsVec;
 
 	FILE *myfile = fopen(fileName, "r");
 	if (!myfile) {
@@ -96,29 +100,24 @@ int main(int argc, char **argv) {
 	generate_ir();
 
 	cout << " --------     checking generated ir output ------------ \n";
-	cout << "PROGRAM (CIR Nodes): " << program.size() << '\n';
-	programP = &program;
-	dependenciesP = &dependencies;
-	associationsP = &associations;
-	transformsP = &transforms;
+	cout << "PROGRAM (CIR Nodes): " << programVec.size() << '\n';
 
-	for (int i = 0; i < program.size(); i++){
-
+	for (int i = 0; i < programVec.size(); i++){
 		/* ComputeNode* brruv = dynamic_cast<ComputeNode*>(program[i]); */
 		/* cout << "     program node " << i << " with op and opType " << brruv->getOp() << ' ' << brruv->getOpType() << '\n'; */
 		cout << "        program node " << i << "\n";
 	}
-	cout << "DEPENDENCIES " << dependencies.size() << '\n';
-	for (int i = 0; i < dependencies.size(); i++){
-		cout << "     dependency edge " << i << " with nodes " << dependencies[i]->getNode1()->getName() << ", " << dependencies[i]->getNode2()->getName() << '\n';
+	cout << "DEPENDENCIES " << dependenciesVec.size() << '\n';
+	for (int i = 0; i < dependenciesVec.size(); i++){
+		cout << "     dependency edge " << i << " with nodes " << dependenciesVec[i]->getNode1()->getName() << ", " << dependenciesVec[i]->getNode2()->getName() << '\n';
 	}
-	cout << "ASSOCIATIONS " << associations.size() << '\n';
-	for (int i = 0; i < associations.size(); i++){
-		cout << "     associations edge " << i << " with nodes " << associations[i]->getNode1()->getName() << ", " << associations[i]->getNode2()->getName() << '\n';
+	cout << "ASSOCIATIONS " << associationsVec.size() << '\n';
+	for (int i = 0; i < associationsVec.size(); i++){
+		cout << "     associations edge " << i << " with nodes " << associationsVec[i]->getNode1()->getName() << ", " << associationsVec[i]->getNode2()->getName() << '\n';
 	}
-	cout << "TRANSFORMS " << transforms.size() << '\n';
-	for (int i = 0; i < transforms.size(); i++){
-		cout << "     transform edge " << i << " with nodes " << transforms[i]->getNode1()->getName() << ", " << transforms[i]->getNode2()->getName() << '\n';
+	cout << "TRANSFORMS " << transformsVec.size() << '\n';
+	for (int i = 0; i < transformsVec.size(); i++){
+		cout << "     transform edge " << i << " with nodes " << transformsVec[i]->getNode1()->getName() << ", " << transformsVec[i]->getNode2()->getName() << '\n';
 	}
 
  //    auto loadDataset = ForwardNode(POINTWISE, LOAD_OP);

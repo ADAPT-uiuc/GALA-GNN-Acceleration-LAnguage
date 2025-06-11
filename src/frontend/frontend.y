@@ -16,14 +16,14 @@ extern FILE *yyin;
 void yyerror(const char *s);
 
 extern ModelConfig m1; // just considering one model per input file for now
-int debug = 0;
+int debug = 2;
 
 DataNode* normData; // very temp solution, find fix asap
 
-extern vector<CIRNode*> program;
-extern vector<RelationEdge*> dependencies;
-extern vector<RelationEdge*> associations;
-extern vector<TransformEdge*> transforms;
+extern vector<CIRNode*> programVec;
+extern vector<RelationEdge*> dependenciesVec;
+extern vector<RelationEdge*> associationsVec;
+extern vector<TransformEdge*> transformsVec;
 %}
 
 %union {
@@ -318,7 +318,7 @@ DataNode* addDegrees_CIR(DataNode* graphData, TrainingLoopNode* trainingLoop){
 	trainingLoop->addLoopNode(onesTensorOp);
 	//* Dependencies
 	RelationEdge* onesTensorGraphAssociation = new RelationEdge(graphData, ALL_RELATION, onesData, ROWS_RELATION);
-	associations.push_back(onesTensorGraphAssociation);
+	associationsVec.push_back(onesTensorGraphAssociation);
 
 	// The actual degrees calculation
 	ForwardNode* degreesOp = new ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_DIRECT);
@@ -332,9 +332,9 @@ DataNode* addDegrees_CIR(DataNode* graphData, TrainingLoopNode* trainingLoop){
 	degreesOp->addOpt(COARSE_COPT, 2);
 	trainingLoop->addLoopNode(degreesOp);
 	RelationEdge* degreesOpOnesDependency = new RelationEdge(onesData, ALL_RELATION, degreesData, ALL_RELATION);
-	dependencies.push_back(degreesOpOnesDependency);
+	dependenciesVec.push_back(degreesOpOnesDependency);
 	RelationEdge* degreesOpGraphDependency = new RelationEdge(graphData, ALL_RELATION, degreesData, ROWS_RELATION);
-	dependencies.push_back(degreesOpGraphDependency);
+	dependenciesVec.push_back(degreesOpGraphDependency);
     return degreesData;
 }
 DataNode* addNormalization_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop){
@@ -346,7 +346,7 @@ DataNode* addNormalization_CIR(DataNode* prevData, TrainingLoopNode* trainingLoo
 	powerOp->addOutputData(normData);
 	trainingLoop->addLoopNode(powerOp);
 	RelationEdge* powerOpDegreesDependency = new RelationEdge(prevData, ALL_RELATION, normData, ALL_RELATION);
-	dependencies.push_back(powerOpDegreesDependency);
+	dependenciesVec.push_back(powerOpDegreesDependency);
     return normData;
 }
 DataNode* addNormCalc_CIR(DataNode* normData, DataNode* prevData, TrainingLoopNode* trainingLoop, int layerNum, bool featInput){ // prevData is either feat or res
@@ -360,11 +360,11 @@ DataNode* addNormCalc_CIR(DataNode* normData, DataNode* prevData, TrainingLoopNo
 	normFeat1->addOutputData(normFeat1Data);
 	trainingLoop->addLoopNode(normFeat1);
 	RelationEdge* normFeat1NormDependency = new RelationEdge(normData, ALL_RELATION, normFeat1Data, ROWS_RELATION);
-	dependencies.push_back(normFeat1NormDependency);
+	dependenciesVec.push_back(normFeat1NormDependency);
 	RelationEdge* normFeat1FeatDependency = new RelationEdge(prevData, ALL_RELATION, normFeat1Data, ALL_RELATION);
-	dependencies.push_back(normFeat1FeatDependency);
+	dependenciesVec.push_back(normFeat1FeatDependency);
 	RelationEdge* normFeat1NormFeatAssociation = new RelationEdge(normData, ALL_RELATION, prevData, ROWS_RELATION);
-	associations.push_back(normFeat1NormFeatAssociation);
+	associationsVec.push_back(normFeat1NormFeatAssociation);
     return normFeat1Data;
 
 }
@@ -382,8 +382,8 @@ DataNode* addAggregate_CIR(DataNode* prevData, DataNode* graphData, TrainingLoop
     // Relation (dependency) between features and aggregated output
     RelationEdge* inOutAggrRelationFeat = new RelationEdge(prevData, ALL_RELATION, outputData, ALL_RELATION);
     RelationEdge* inOutAggrRelationGraph = new RelationEdge(graphData, ALL_RELATION, outputData, ALL_RELATION);
-    dependencies.push_back(inOutAggrRelationFeat);
-    dependencies.push_back(inOutAggrRelationGraph);
+    dependenciesVec.push_back(inOutAggrRelationFeat);
+    dependenciesVec.push_back(inOutAggrRelationGraph);
     return outputData;
 
 }
@@ -412,11 +412,11 @@ DataNode* addFFN_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int lay
     // Relation (dependency) between weight and features
     RelationEdge* inOutWeightDepRelationFeat = new RelationEdge(prevData, ALL_RELATION, resData, ALL_RELATION);
     RelationEdge* inOutWeightDepRelationWeight = new RelationEdge(weightData, COLS_RELATION, resData, ROWS_RELATION);
-    dependencies.push_back(inOutWeightDepRelationFeat);
-    dependencies.push_back(inOutWeightDepRelationWeight);
+    dependenciesVec.push_back(inOutWeightDepRelationFeat);
+    dependenciesVec.push_back(inOutWeightDepRelationWeight);
     // Relation (association) between aggregate node and weight
     RelationEdge* inOutWeightAssociation = new RelationEdge(prevData, ROWS_RELATION, weightData, COLS_RELATION);
-    associations.push_back(inOutWeightAssociation);
+    associationsVec.push_back(inOutWeightAssociation);
     return resData;
 
 }
@@ -430,7 +430,7 @@ DataNode* addReLU_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int la
 	reluOp->addOutputData(reluData);
 	trainingLoop->addLoopNode(reluOp);
 	RelationEdge* reluOpOnesDependency = new RelationEdge(prevData, ALL_RELATION, reluData, ALL_RELATION);
-	dependencies.push_back(reluOpOnesDependency);
+	dependenciesVec.push_back(reluOpOnesDependency);
     return reluData;
 }
 
@@ -447,6 +447,7 @@ return:
  */
 DataNode* addLayer(int layerNum, DataNode* connectNode, DataNode* graphData, DataNode* featData, TrainingLoopNode* trainingLoop){
     DataNode* prevData = connectNode;
+    //std::cout << "calls: " << m1.layer_operations.size() << std::endl;
     for (LayerOpType t : m1.layer_operations){
         switch (t){
             case GET_DEGREES: // if first layer, this is first for gcn
@@ -482,6 +483,7 @@ void generate_ir(){
     DataNode* graphData; 
     DataNode* featData;
     RelationEdge* graphFeatAssociation;
+    cout << "A size:" << associationsVec.size() << endl;
     if (m1.dataset_name != "\0"){ // load dataset
         if (debug == 2) cout << "load dataset section with name " << m1.dataset_name << "\n";
         auto loadDataset = ForwardNode(POINTWISE, LOAD_OP);
@@ -491,11 +493,11 @@ void generate_ir(){
 
         // association between graph and features
         graphFeatAssociation = new RelationEdge(graphData, ALL_RELATION, featData, ROWS_RELATION);
-        associations.push_back(graphFeatAssociation);
+        associationsVec.push_back(graphFeatAssociation);
         loadDataset.addOutputData(featData);
         loadDataset.addOutputData(graphData);
 
-        program.push_back(&loadDataset);
+        programVec.push_back(&loadDataset);
     }
     bool createdTransformedGraph = false;
     DataNode* graph;
@@ -510,14 +512,14 @@ void generate_ir(){
 	    DataNode* transformedGraph = new DataNode("graph_tile", graphData->getIType(), graphData->getNType(), graphData->getVType(), transformedRootGraphLevel);
 
         RelationEdge* trgraphFeatAssociation = new RelationEdge(transformedGraph, ALL_RELATION, featData, ROWS_RELATION);
-        associations.push_back(trgraphFeatAssociation);
+        associationsVec.push_back(trgraphFeatAssociation);
         if (m1.data_transformations[0].first == COL_TILE){ // only one data transform for now for gcn
             TransformData* tileTransformation = new TransformData(COL_TILE_DOPT);
             /* tileTransformation->addParam(m1.data_transformations[0].second); */
             tileTransformation->addParam("65000"); // why is it a string parameter?
             TransformEdge* graphTrgraph = new TransformEdge(graphData, transformedGraph);
             graphTrgraph->addTransformation(tileTransformation);
-            transforms.push_back(graphTrgraph);
+            transformsVec.push_back(graphTrgraph);
         }
 
         graph = transformedGraph;
@@ -535,10 +537,14 @@ void generate_ir(){
 
     TrainingLoopNode* trainingLoop = new TrainingLoopNode(m1.iterations, CROSS_ENTROPY, ADAM, m1.validation_step);
     DataNode* connectNode;
+
+    //std::cout << "HERERE" << std::endl;
     for (int i = 0; i < m1.num_layers; i++){
+        std::cout << "Layer: " << i << std::endl;
         connectNode = addLayer(i, connectNode, graph, featData, trainingLoop);
+        //std::cout << connectNode->getName() << std::endl;
     }
-    program.push_back(trainingLoop);
+    programVec.push_back(trainingLoop);
 
     cout << "IR Generated!\n";
 }
