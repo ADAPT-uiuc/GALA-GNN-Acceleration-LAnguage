@@ -540,7 +540,7 @@ void generate_ir(){
 
     //std::cout << "HERERE" << std::endl;
     for (int i = 0; i < m1.num_layers; i++){
-        std::cout << "Layer: " << i << std::endl;
+        //std::cout << "Layer: " << i << std::endl;
         connectNode = addLayer(i, connectNode, graph, featData, trainingLoop);
         //std::cout << connectNode->getName() << std::endl;
     }
