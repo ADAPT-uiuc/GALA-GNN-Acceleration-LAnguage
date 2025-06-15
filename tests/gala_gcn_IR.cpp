@@ -392,19 +392,23 @@ int main(int argc, char **argv) {
  //    program->push_back(&loadDataset);
 	// program->push_back(&trainingLoop);
  // //
-	// double start, end;
-	// start = get_time();
- //
-	// auto ctx = new GALAContext(GPU_DEVICE, SINGLE_NODE_SINGLE);
-	// std::string outputPath = "../test-codegen/";
-	// auto genCode = CUDAGenerator(ctx, outputPath);
-	// GALATransformations::complexityOperatorReordering(*program, *dependencies, *associations, *transforms);
-	// GALATransformations::trainingInvariantCodeMotion(*program, *dependencies, *associations, *transforms);
-	// GALATransformations::trainingSubGraph(*program, *dependencies, *associations, *transforms);
-	// genCode.writeCode(*program, *dependencies, *associations, *transforms);
- //
-	// end = get_time();
-	// std::cout << "Time taken: " << (end - start)*1000  << std::endl;
+	double start, end;
+	start = get_time();
+
+	auto ctx = new GALAContext(GPU_DEVICE, SINGLE_NODE_SINGLE);
+	std::string outputPath = "../test-codegen/";
+	auto genCode = CUDAGenerator(ctx, outputPath);
+	GALATransformations::complexityOperatorReordering(programVec, dependenciesVec,
+		associationsVec, transformsVec);
+	GALATransformations::trainingInvariantCodeMotion(programVec, dependenciesVec,
+		associationsVec, transformsVec);
+	GALATransformations::trainingSubGraph(programVec, dependenciesVec,
+		associationsVec, transformsVec);
+	genCode.writeCode(programVec, dependenciesVec,
+		associationsVec, transformsVec);
+
+	end = get_time();
+	std::cout << "Time taken: " << (end - start)*1000  << std::endl;
 
     // Should be enough for now
 	std::cout << "Works!" << std::endl;
