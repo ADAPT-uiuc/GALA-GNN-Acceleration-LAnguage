@@ -41,15 +41,20 @@ extern void generate_ir();
 extern FILE* yyin;
 extern int yyparse();
 ModelConfig m1;
-std::vector<CIRNode*> programVec;
-std::vector<RelationEdge*> dependenciesVec;
-std::vector<RelationEdge*> associationsVec;
-std::vector<TransformEdge*> transformsVec;
+// std::vector<CIRNode*> programVec;
+// std::vector<RelationEdge*> dependenciesVec;
+// std::vector<RelationEdge*> associationsVec;
+// std::vector<TransformEdge*> transformsVec;
 
-std::vector<CIRNode*>* programP = nullptr;
-std::vector<RelationEdge*>* dependenciesP = nullptr;
-std::vector<RelationEdge*>* associationsP = nullptr;
-std::vector<TransformEdge*>* transformsP = nullptr;
+// std::vector<CIRNode*>* program = nullptr;
+// std::vector<RelationEdge*>* dependencies = nullptr;
+// std::vector<RelationEdge*>* associations = nullptr;
+// std::vector<TransformEdge*>* transforms = nullptr;
+
+std::vector<CIRNode*> GALAFEContext::program;
+std::vector<RelationEdge*> GALAFEContext::dependencies;
+std::vector<RelationEdge*> GALAFEContext::associations;
+std::vector<TransformEdge*> GALAFEContext::transforms;
 
 //Dense matrix with double values.
 typedef DenseMatrix<ind1_t, ind2_t, val_t> DMd_t;
@@ -71,18 +76,6 @@ int main(int argc, char **argv) {
 	// const char* fileName= "/home/damitha/gala-lang/GNN-Acceleration-Language/tests/input/gcn.txt";
 
 	m1 = ModelConfig();
-	// std::vector<CIRNode*> newProgram;
-	// programP = &newProgram;
-	// std::vector<RelationEdge*> newDependencies;
-	// dependenciesP = &newDependencies;
-	// std::vector<RelationEdge*> newAssociations;
-	// associationsP = &newAssociations;
-	// std::vector<TransformEdge*> newTransforms;
-	// transformsP = &newTransforms;
-	programP = &programVec;
-	dependenciesP = &dependenciesVec;
-	associationsP = &associationsVec;
-	transformsP = &transformsVec;
 
 	FILE *myfile = fopen(fileName, "r");
 	if (!myfile) {
@@ -100,45 +93,73 @@ int main(int argc, char **argv) {
 	generate_ir();
 
 	cout << " --------     checking generated ir output ------------ \n";
-	cout << "PROGRAM (CIR Nodes): " << programVec.size() << '\n';
+	cout << "PROGRAM (CIR Nodes): " << GALAFEContext::program.size() << '\n';
 
-	for (int i = 0; i < programVec.size(); i++){
+	for (int i = 0; i < GALAFEContext::program.size(); i++){
 		/* ComputeNode* brruv = dynamic_cast<ComputeNode*>(program[i]); */
 		/* cout << "     program node " << i << " with op and opType " << brruv->getOp() << ' ' << brruv->getOpType() << '\n'; */
 		cout << "        program node " << i << "\n";
 	}
-	cout << "DEPENDENCIES " << dependenciesVec.size() << '\n';
-	for (int i = 0; i < dependenciesVec.size(); i++){
-		cout << "     dependency edge " << i << " with nodes " << dependenciesVec[i]->getNode1()->getName() << ", " << dependenciesVec[i]->getNode2()->getName() << '\n';
+	cout << "DEPENDENCIES " << GALAFEContext::dependencies.size() << '\n';
+	for (int i = 0; i < GALAFEContext::dependencies.size(); i++){
+		cout << "     dependency edge " << i << " with nodes " << GALAFEContext::dependencies[i]->getNode1()->getName() << ", " << GALAFEContext::dependencies[i]->getNode2()->getName() << '\n';
 	}
-	cout << "ASSOCIATIONS " << associationsVec.size() << '\n';
-	for (int i = 0; i < associationsVec.size(); i++){
-		cout << "     associations edge " << i << " with nodes " << associationsVec[i]->getNode1()->getName() << ", " << associationsVec[i]->getNode2()->getName() << '\n';
+	cout << "ASSOCIATIONS " << GALAFEContext::associations.size() << '\n';
+	for (int i = 0; i < GALAFEContext::associations.size(); i++){
+		cout << "     associations edge " << i << " with nodes " << GALAFEContext::associations[i]->getNode1()->getName() << ", " << GALAFEContext::associations[i]->getNode2()->getName() << '\n';
 	}
-	cout << "TRANSFORMS " << transformsVec.size() << '\n';
-	for (int i = 0; i < transformsVec.size(); i++){
-		cout << "     transform edge " << i << " with nodes " << transformsVec[i]->getNode1()->getName() << ", " << transformsVec[i]->getNode2()->getName() << '\n';
+	cout << "TRANSFORMS " << GALAFEContext::transforms.size() << '\n';
+	for (int i = 0; i < GALAFEContext::transforms.size(); i++){
+		cout << "     transform edge " << i << " with nodes " << GALAFEContext::transforms[i]->getNode1()->getName() << ", " << GALAFEContext::transforms[i]->getNode2()->getName() << '\n';
 	}
 
- //    auto loadDataset = ForwardNode(POINTWISE, LOAD_OP);
- //    loadDataset.addParam("/shared/damitha2/gala_npy/RedditDataset/");
- //
- //    // Graph
- //    auto graphInfo = DataInfo(CSR_STYPE, true, true);
- //    auto rootGraphLevel = DataLevel(&graphInfo, true);
- //    auto graphData = DataNode("adj0", INT32, INT32, F32, &rootGraphLevel);
- //    // Feat
- //    auto featInfo = DataInfo(RM_DTYPE);
- //    featInfo.setDims(-1, -2);
- //    auto rootFeatLevel = DataLevel(&featInfo, true);
- //    auto featData = DataNode("t_iden", INT32, INT32, F32, &rootFeatLevel);
- //
+	// std::vector<CIRNode*> programVecCopy;
+	// for (auto ptr : programVec) {
+	// 	if (ComputeNode* test = dynamic_cast<ComputeNode*>(ptr)){
+	// 		std::cout << "1" << std::endl;
+	// 	} else {
+	// 		std::cout << "2" << std::endl;
+	// 	}
+	// 	std::cout << "1" << std::endl;
+		
+	// 	// auto newObj = new ForwardNode(*ptr);
+    //     // programVecCopy.push_back(newObj);  // Copy the object, not just the pointer
+    // }
+	// std::vector<RelationEdge*> dependenciesVecCopy = dependenciesVec;
+	// std::vector<RelationEdge*> associationsVecCopy = associationsVec;
+	// std::vector<TransformEdge*> transformsVecCopy = transformsVec;
+
+
+	/*******************/
+
+	// std::vector<CIRNode*> newProgram;
+	// program = &newProgram;
+	// std::vector<RelationEdge*> newDependencies;
+	// dependencies = &newDependencies;
+	// std::vector<RelationEdge*> newAssociations;
+	// associations = &newAssociations;
+	// std::vector<TransformEdge*> newTransforms;
+	// transforms = &newTransforms;
+
+    // auto loadDataset = ForwardNode(POINTWISE, LOAD_OP);
+    // loadDataset.addParam("/shared/damitha2/gala_npy/RedditDataset/");
+ 
+    // // Graph
+    // auto graphInfo = DataInfo(CSR_STYPE, true, true);
+    // auto rootGraphLevel = DataLevel(&graphInfo, true);
+    // auto graphData = DataNode("adj0", INT32, INT32, F32, &rootGraphLevel);
+    // // Feat
+    // auto featInfo = DataInfo(RM_DTYPE);
+    // featInfo.setDims(-1, -2);
+    // auto rootFeatLevel = DataLevel(&featInfo, true);
+    // auto featData = DataNode("t_iden", INT32, INT32, F32, &rootFeatLevel);
+ 
 	// // Association between graph and features
 	// auto graphFeatAssociation = RelationEdge(&graphData, ALL_RELATION, &featData, ROWS_RELATION);
 	// associations->push_back(&graphFeatAssociation);
 	// loadDataset.addOutputData(&featData);
 	// loadDataset.addOutputData(&graphData);
- //
+ 
 	// auto originalRootGraphLevel = graphData.getData(); // Returns pointer
 	// auto originalGraphInfo = originalRootGraphLevel->next(); // Returns pointer
 	// auto transformedGraphInfo = DataInfo(CSR_STYPE, false, false);
@@ -148,17 +169,17 @@ int main(int argc, char **argv) {
 	// auto transformedGraph = DataNode("graph_tile", graphData.getIType(), graphData.getNType(), graphData.getVType(), &transformedRootGraphLevel);
 	// // Association between graph and features
 	// auto trgrapgFeatAssociation = RelationEdge(&transformedGraph, ALL_RELATION, &featData, ROWS_RELATION);
-	// associations->push_back(&graphFeatAssociation);
+	// associations->push_back(&trgrapgFeatAssociation);
 	// auto tileTransformation = TransformData(COL_TILE_DOPT);
 	// tileTransformation.addParam("65000");
 	// auto graphTrgraph = TransformEdge(&graphData, &transformedGraph);
 	// graphTrgraph.addTransformation(&tileTransformation);
 	// transforms->push_back(&graphTrgraph);
- //
+ 
 	// featInfo.setDims(-1, 602);
- //
+ 
 	// auto trainingLoop = TrainingLoopNode(100, CROSS_ENTROPY, ADAM, 0, 5);
- //
+ 
 	// /// Degree op
 	// // Ones
 	// // NOTE: In the front-end code there is no need for a user to get the degrees() by getting ones, and doing an
@@ -173,7 +194,7 @@ int main(int argc, char **argv) {
 	// //* Dependencies
 	// auto onesTensorGraphAssociation = RelationEdge(&transformedGraph, ALL_RELATION, &onesData, ROWS_RELATION);
 	// associations->push_back(&onesTensorGraphAssociation);
- //
+ 
 	// // The actual degrees calculation
 	// auto degreesOp = ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_DIRECT);
 	// auto degreesInfo = DataInfo(RM_DTYPE);
@@ -189,7 +210,7 @@ int main(int argc, char **argv) {
 	// dependencies->push_back(&degreesOpOnesDependency);
 	// auto degreesOpGraphDependency = RelationEdge(&transformedGraph, ALL_RELATION, &degreesData, ROWS_RELATION);
 	// dependencies->push_back(&degreesOpGraphDependency);
- //
+ 
 	// // Normalization operation (get power -1/2)
 	// auto powerOp = ForwardNode(POINTWISE, POWER_OP);
 	// powerOp.addParam("-0.5");
@@ -202,7 +223,7 @@ int main(int argc, char **argv) {
 	// trainingLoop.addLoopNode(&powerOp);
 	// auto powerOpNormDependency = RelationEdge(&degreesData, ALL_RELATION, &normData, ALL_RELATION);
 	// dependencies->push_back(&powerOpNormDependency);
- //
+ 
 	// // 1st normalization calculation
 	// auto normFeat1 = ForwardNode(UPDATE_NODE, ROW_BROADCAST_OP);
 	// auto normFeat1Info = DataInfo(RM_DTYPE);
@@ -219,53 +240,53 @@ int main(int argc, char **argv) {
 	// dependencies->push_back(&normFeat1FeatDependency);
 	// auto normFeat1NormFeatAssociation = RelationEdge(&normData, ALL_RELATION, &featData, ROWS_RELATION);
 	// associations->push_back(&normFeat1NormFeatAssociation);
- //
- //    // Add aggregate operation
- //    auto aggregate = ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
- //    auto outputInfo = DataInfo(RM_DTYPE);
- //    outputInfo.setDims(-1, 602); // -1=N=232965, the number of nodes in the graph
- //    auto rootOutputLevel = DataLevel(&outputInfo, true);
- //    auto outputData = DataNode("res", INT32, INT32, F32, &rootOutputLevel);
+ 
+    // // Add aggregate operation
+    // auto aggregate = ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
+    // auto outputInfo = DataInfo(RM_DTYPE);
+    // outputInfo.setDims(-1, 602); // -1=N=232965, the number of nodes in the graph
+    // auto rootOutputLevel = DataLevel(&outputInfo, true);
+    // auto outputData = DataNode("res", INT32, INT32, F32, &rootOutputLevel);
 	// aggregate.addInputData(&normFeat1Data);
 	// aggregate.addInputData(&transformedGraph);
- //    aggregate.addOutputData(&outputData);
+    // aggregate.addOutputData(&outputData);
 	// aggregate.addOpt(COARSE_COPT, 2);
- //    trainingLoop.addLoopNode(&aggregate);
+    // trainingLoop.addLoopNode(&aggregate);
 	// //* Dependencies
- //    // Dependency relation between the features and the aggregated output
+    // // Dependency relation between the features and the aggregated output
 	// auto inOutAggrRelationFeat = RelationEdge(&normFeat1Data, ALL_RELATION, &outputData, ALL_RELATION);
 	// // Dependency relation between the graph and the aggregated output
 	// auto inOutAggrRelationGraph = RelationEdge(&transformedGraph, ALL_RELATION, &outputData, ROWS_RELATION);
- //    dependencies->push_back(&inOutAggrRelationFeat);
- //    dependencies->push_back(&inOutAggrRelationGraph);
- //
- //    // Add weight operation
- //    auto ffn = ForwardNode(UPDATE_NODE, FFN_OP);
- //    // Weight as a matrix in the DIR
- //    auto weightInfo = DataInfo(CM_DTYPE);
- //    weightInfo.setDims(-2, 32); // -2=input embedding dimension, -3=output classes
- //    auto weightLevel = DataLevel(&weightInfo, true);
- //    auto weightData = DataNode("weight1", INT32, INT32, F32, &weightLevel);
- //    // Res DIR
- //    auto resInfo = DataInfo(RM_DTYPE);
- //    resInfo.setDims(-1, 32); // -1=N=232965, the number of nodes in the graph, -3=output classes
+    // dependencies->push_back(&inOutAggrRelationFeat);
+    // dependencies->push_back(&inOutAggrRelationGraph);
+ 
+    // // Add weight operation
+    // auto ffn = ForwardNode(UPDATE_NODE, FFN_OP);
+    // // Weight as a matrix in the DIR
+    // auto weightInfo = DataInfo(CM_DTYPE);
+    // weightInfo.setDims(-2, 32); // -2=input embedding dimension, -3=output classes
+    // auto weightLevel = DataLevel(&weightInfo, true);
+    // auto weightData = DataNode("weight1", INT32, INT32, F32, &weightLevel);
+    // // Res DIR
+    // auto resInfo = DataInfo(RM_DTYPE);
+    // resInfo.setDims(-1, 32); // -1=N=232965, the number of nodes in the graph, -3=output classes
 	// auto rootResLevel = DataLevel(&resInfo, true);
 	// auto resData = DataNode("res", INT32, INT32, F32, &rootResLevel);
 	// // set dimenions from the new schedule information
 	// weightInfo.setDims(602, 32); //
 	// resInfo.setDims(-1, 32); // -1=N=232965, the number of nodes in the graph
- //    ffn.addInputData(&outputData);
- //    ffn.addInputData(&weightData);
- //    ffn.addOutputData(&resData);
- //    trainingLoop.addLoopNode(&ffn);
+    // ffn.addInputData(&outputData);
+    // ffn.addInputData(&weightData);
+    // ffn.addOutputData(&resData);
+    // trainingLoop.addLoopNode(&ffn);
 	// //* Dependencies
- //    auto inOutWeightDepRelationFeat = RelationEdge(&outputData, ALL_RELATION, &resData, ALL_RELATION);
- //    auto inOutWeightDepRelationWeight = RelationEdge(&weightData, COLS_RELATION, &resData, ROWS_RELATION);
- //    dependencies->push_back(&inOutWeightDepRelationFeat);
- //    dependencies->push_back(&inOutWeightDepRelationWeight);
- //    auto inOutWeightAssociation = RelationEdge(&outputData, ROWS_RELATION, &weightData, COLS_RELATION);
- //    associations->push_back(&inOutWeightAssociation);
- //
+    // auto inOutWeightDepRelationFeat = RelationEdge(&outputData, ALL_RELATION, &resData, ALL_RELATION);
+    // auto inOutWeightDepRelationWeight = RelationEdge(&weightData, COLS_RELATION, &resData, ROWS_RELATION);
+    // dependencies->push_back(&inOutWeightDepRelationFeat);
+    // dependencies->push_back(&inOutWeightDepRelationWeight);
+    // auto inOutWeightAssociation = RelationEdge(&outputData, ROWS_RELATION, &weightData, COLS_RELATION);
+    // associations->push_back(&inOutWeightAssociation);
+ 
 	// // 2nd normalization calculation
 	// auto normFeat2 = ForwardNode(UPDATE_NODE, ROW_BROADCAST_OP);
 	// auto normFeat2Info = DataInfo(RM_DTYPE);
@@ -282,7 +303,7 @@ int main(int argc, char **argv) {
 	// dependencies->push_back(&normFeat2FeatDependency);
 	// auto normFeat2NormFeatAssociation = RelationEdge(&normData, ALL_RELATION, &resData, ROWS_RELATION);
 	// associations->push_back(&normFeat2NormFeatAssociation);
- //
+ 
 	// // ReLU operation
 	// auto reluOp = ForwardNode(POINTWISE, NON_LNR_OP_RELU);
 	// auto reluInfo = DataInfo(RM_DTYPE);
@@ -294,7 +315,7 @@ int main(int argc, char **argv) {
 	// trainingLoop.addLoopNode(&reluOp);
 	// auto reluOpOnesDependency = RelationEdge(&normFeat2Data, ALL_RELATION, &reluData, ALL_RELATION);
 	// dependencies->push_back(&reluOpOnesDependency);
- //
+ 
 	// /// 2nd layer
 	// // 1st normalization calculation
 	// auto normFeat1_2 = ForwardNode(UPDATE_NODE, ROW_BROADCAST_OP);
@@ -312,53 +333,53 @@ int main(int argc, char **argv) {
 	// dependencies->push_back(&normFeat1FeatDependency_2);
 	// auto normFeat1NormFeatAssociation_2 = RelationEdge(&normData, ALL_RELATION, &reluData, ROWS_RELATION);
 	// associations->push_back(&normFeat1NormFeatAssociation_2);
- //
- //    // Add aggregate operation
- //    auto aggregate_2 = ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
- //    auto outputInfo_2 = DataInfo(RM_DTYPE);
- //    outputInfo.setDims(-1, 32); // -1=N=232965, the number of nodes in the graph
- //    auto rootOutputLevel_2 = DataLevel(&outputInfo_2, true);
- //    auto outputData_2 = DataNode("res", INT32, INT32, F32, &rootOutputLevel_2);
+ 
+    // // Add aggregate operation
+    // auto aggregate_2 = ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
+    // auto outputInfo_2 = DataInfo(RM_DTYPE);
+    // outputInfo.setDims(-1, 32); // -1=N=232965, the number of nodes in the graph
+    // auto rootOutputLevel_2 = DataLevel(&outputInfo_2, true);
+    // auto outputData_2 = DataNode("res", INT32, INT32, F32, &rootOutputLevel_2);
 	// aggregate_2.addInputData(&normFeat1Data_2);
 	// aggregate_2.addInputData(&transformedGraph);
- //    aggregate_2.addOutputData(&outputData_2);
+    // aggregate_2.addOutputData(&outputData_2);
 	// aggregate_2.addOpt(COARSE_COPT, 2);
- //    trainingLoop.addLoopNode(&aggregate_2);
+    // trainingLoop.addLoopNode(&aggregate_2);
 	// //* Dependencies
- //    // Dependency relation between the features and the aggregated output
+    // // Dependency relation between the features and the aggregated output
 	// auto inOutAggrRelationFeat_2 = RelationEdge(&normFeat1Data_2, ALL_RELATION, &outputData_2, ALL_RELATION);
 	// // Dependency relation between the graph and the aggregated output
 	// auto inOutAggrRelationGraph_2 = RelationEdge(&transformedGraph, ALL_RELATION, &outputData_2, ROWS_RELATION);
- //    dependencies->push_back(&inOutAggrRelationFeat_2);
- //    dependencies->push_back(&inOutAggrRelationGraph_2);
- //
- //    // Add weight operation
- //    auto ffn_2 = ForwardNode(UPDATE_NODE, FFN_OP);
- //    // Weight as a matrix in the DIR
- //    auto weightInfo_2 = DataInfo(CM_DTYPE);
- //    weightInfo_2.setDims(32, -3); // -2=input embedding dimension, -3=output classes
- //    auto weightLevel_2 = DataLevel(&weightInfo_2, true);
- //    auto weightData_2 = DataNode("weight2", INT32, INT32, F32, &weightLevel_2);
- //    // Res DIR
- //    auto resInfo_2 = DataInfo(RM_DTYPE);
- //    resInfo_2.setDims(-1, -3); // -1=N=232965, the number of nodes in the graph, -3=output classes
+    // dependencies->push_back(&inOutAggrRelationFeat_2);
+    // dependencies->push_back(&inOutAggrRelationGraph_2);
+ 
+    // // Add weight operation
+    // auto ffn_2 = ForwardNode(UPDATE_NODE, FFN_OP);
+    // // Weight as a matrix in the DIR
+    // auto weightInfo_2 = DataInfo(CM_DTYPE);
+    // weightInfo_2.setDims(32, -3); // -2=input embedding dimension, -3=output classes
+    // auto weightLevel_2 = DataLevel(&weightInfo_2, true);
+    // auto weightData_2 = DataNode("weight2", INT32, INT32, F32, &weightLevel_2);
+    // // Res DIR
+    // auto resInfo_2 = DataInfo(RM_DTYPE);
+    // resInfo_2.setDims(-1, -3); // -1=N=232965, the number of nodes in the graph, -3=output classes
 	// auto rootResLevel_2 = DataLevel(&resInfo_2, true);
 	// auto resData_2 = DataNode("res", INT32, INT32, F32, &rootResLevel_2);
 	// // set dimenions from the new schedule information
 	// weightInfo_2.setDims(32, 41); //
 	// resInfo_2.setDims(-1, 41); // -1=N=232965, the number of nodes in the graph
- //    ffn_2.addInputData(&outputData_2);
- //    ffn_2.addInputData(&weightData_2);
- //    ffn_2.addOutputData(&resData_2);
- //    trainingLoop.addLoopNode(&ffn_2);
+    // ffn_2.addInputData(&outputData_2);
+    // ffn_2.addInputData(&weightData_2);
+    // ffn_2.addOutputData(&resData_2);
+    // trainingLoop.addLoopNode(&ffn_2);
 	// //* Dependencies
- //    auto inOutWeightDepRelationFeat_2 = RelationEdge(&outputData_2, ALL_RELATION, &resData_2, ALL_RELATION);
- //    auto inOutWeightDepRelationWeight_2 = RelationEdge(&weightData_2, COLS_RELATION, &resData_2, ROWS_RELATION);
- //    dependencies->push_back(&inOutWeightDepRelationFeat_2);
- //    dependencies->push_back(&inOutWeightDepRelationWeight_2);
- //    auto inOutWeightAssociation_2 = RelationEdge(&outputData_2, ROWS_RELATION, &weightData_2, COLS_RELATION);
- //    associations->push_back(&inOutWeightAssociation_2);
- //
+    // auto inOutWeightDepRelationFeat_2 = RelationEdge(&outputData_2, ALL_RELATION, &resData_2, ALL_RELATION);
+    // auto inOutWeightDepRelationWeight_2 = RelationEdge(&weightData_2, COLS_RELATION, &resData_2, ROWS_RELATION);
+    // dependencies->push_back(&inOutWeightDepRelationFeat_2);
+    // dependencies->push_back(&inOutWeightDepRelationWeight_2);
+    // auto inOutWeightAssociation_2 = RelationEdge(&outputData_2, ROWS_RELATION, &weightData_2, COLS_RELATION);
+    // associations->push_back(&inOutWeightAssociation_2);
+ 
 	// // 2nd normalization calculation
 	// auto normFeat2_2 = ForwardNode(UPDATE_NODE, ROW_BROADCAST_OP);
 	// auto normFeat2Info_2 = DataInfo(RM_DTYPE);
@@ -375,7 +396,7 @@ int main(int argc, char **argv) {
 	// dependencies->push_back(&normFeat2FeatDependency_2);
 	// auto normFeat2NormFeatAssociation_2 = RelationEdge(&normData, ALL_RELATION, &resData_2, ROWS_RELATION);
 	// associations->push_back(&normFeat2NormFeatAssociation_2);
- //
+ 
 	// // ReLU operation
 	// auto logSoftmaxOp = ForwardNode(POINTWISE, NON_LNR_OP_LOG_SOFTMAX);
 	// auto logSoftmaxInfo = DataInfo(RM_DTYPE);
@@ -387,25 +408,68 @@ int main(int argc, char **argv) {
 	// trainingLoop.addLoopNode(&logSoftmaxOp);
 	// auto logSoftmaxOpOnesDependency = RelationEdge(&normFeat2Data_2, ALL_RELATION, &logSoftmaxData, ALL_RELATION);
 	// dependencies->push_back(&logSoftmaxOpOnesDependency);
- //
- //    // The entire program
- //    program->push_back(&loadDataset);
+ 
+    // // The entire program
+    // program->push_back(&loadDataset);
 	// program->push_back(&trainingLoop);
- // //
+
+	// cout << " --------     checking generated ir output ------------ \n";
+	// cout << "PROGRAM (CIR Nodes): " << program->size() << '\n';
+
+	// for (int i = 0; i < program->size(); i++){
+	// 	/* ComputeNode* brruv = dynamic_cast<ComputeNode*>(program[i]); */
+	// 	/* cout << "     program node " << i << " with op and opType " << brruv->getOp() << ' ' << brruv->getOpType() << '\n'; */
+	// 	cout << "        program node " << i << "\n";
+	// }
+	// cout << "DEPENDENCIES " << dependencies->size() << '\n';
+	// for (int i = 0; i < dependencies->size(); i++){
+	// 	cout << "     dependency edge " << i << " with nodes " << (*dependencies)[i]->getNode1()->getName() << ", " << (*dependencies)[i]->getNode2()->getName() << '\n';
+	// }
+	// cout << "ASSOCIATIONS " << associations->size() << '\n';
+	// for (int i = 0; i < associations->size(); i++){
+	// 	cout << "     associations edge " << i << " with nodes " << (*associations)[i]->getNode1()->getName() << ", " << (*associations)[i]->getNode2()->getName() << '\n';
+	// }
+	// cout << "TRANSFORMS " << transforms->size() << '\n';
+	// for (int i = 0; i < transforms->size(); i++){
+	// 	cout << "     transform edge " << i << " with nodes " << (*transforms)[i]->getNode1()->getName() << ", " << (*transforms)[i]->getNode2()->getName() << '\n';
+	// }
+
+
+	// double start, end;
+	// start = get_time();
+
+	// auto ctx = new GALAContext(GPU_DEVICE, SINGLE_NODE_SINGLE);
+	// std::string outputPath = "../test-codegen/";
+	// auto genCode = CUDAGenerator(ctx, outputPath);
+	// GALATransformations::complexityOperatorReordering(*program, *dependencies,
+	// 	*associations, *transforms);
+	// GALATransformations::trainingInvariantCodeMotion(*program, *dependencies,
+	// 	*associations, *transforms);
+	// GALATransformations::trainingSubGraph(*program, *dependencies,
+	// 	*associations, *transforms);
+	// genCode.writeCode(*program, *dependencies,
+	// 	*associations, *transforms);
+
+	// end = get_time();
+	// std::cout << "Time taken: " << (end - start)*1000  << std::endl;
+
+	/***********************************/
+	// Below - with frontend
+
 	double start, end;
 	start = get_time();
 
 	auto ctx = new GALAContext(GPU_DEVICE, SINGLE_NODE_SINGLE);
 	std::string outputPath = "../test-codegen/";
 	auto genCode = CUDAGenerator(ctx, outputPath);
-	GALATransformations::complexityOperatorReordering(programVec, dependenciesVec,
-		associationsVec, transformsVec);
-	GALATransformations::trainingInvariantCodeMotion(programVec, dependenciesVec,
-		associationsVec, transformsVec);
-	GALATransformations::trainingSubGraph(programVec, dependenciesVec,
-		associationsVec, transformsVec);
-	genCode.writeCode(programVec, dependenciesVec,
-		associationsVec, transformsVec);
+	// GALATransformations::complexityOperatorReordering(programVec, dependenciesVec,
+	// 	associationsVec, transformsVec);
+	// GALATransformations::trainingInvariantCodeMotion(programVec, dependenciesVec,
+	// 	associationsVec, transformsVec);
+	// GALATransformations::trainingSubGraph(programVec, dependenciesVec,
+	// 	associationsVec, transformsVec);
+	genCode.writeCode(GALAFEContext::program, GALAFEContext::dependencies,
+		GALAFEContext::associations, GALAFEContext::transforms);
 
 	end = get_time();
 	std::cout << "Time taken: " << (end - start)*1000  << std::endl;

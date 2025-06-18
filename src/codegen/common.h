@@ -1422,7 +1422,9 @@ std::vector<torch::Tensor> global_bounds;\n";
         // CMake (also has write for now?)
         initCMake();
         // Kernels
+        // std::cout << "Works0" << std::endl;
         initKernels(program);
+        // std::cout << "Works1" << std::endl;
         commonPerCode(program);
 
         generateCode(program, transforms);
@@ -1430,19 +1432,23 @@ std::vector<torch::Tensor> global_bounds;\n";
         this->writeCode(cmakeCode, outStreamCMake);
         this->writeCode(importCode, outStreamModel);
         this->writeCode(kernelCode, outStreamModel);
+        // std::cout << "Works2" << std::endl;
         this->writeCode(kernelCallCode, outStreamModel);
         this->writeCode(*model.getDef(), outStreamModel);
         this->writeCode(*model.getInitCall(), outStreamModel, ", ", true, true);
         this->writeCode(*model.getInit(), outStreamModel);
+        // std::cout << "Works3" << std::endl;
         this->writeCode(*model.getForwardCallPre(), outStreamModel, "");
         this->writeCode(*model.getForwardCallInternal(), outStreamModel, "");
         this->writeCode(*model.getForwardCallPost(), outStreamModel);
         this->writeCode(*model.getForward(), outStreamModel);
         this->writeCode(preCode, outStreamModel);
+        // std::cout << "Works4" << std::endl;
         this->writeCode(*model.getInv(), outStreamModel);
         this->writeCode(*model.getPreCall(), outStreamModel, "");
         this->writeCode(*model.getCall(), outStreamModel, "");
         this->writeCode(*model.getPostCall(), outStreamModel);
+        // std::cout << "Works5" << std::endl;
         this->writeCode(postCode, outStreamModel);
 
         this->closeStream();
