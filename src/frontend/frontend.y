@@ -537,7 +537,7 @@ void generate_ir(){
     featInfo->setDims(-1, m1.graph_transformations[FEAT_SIZE]);
 
     TrainingLoopNode* trainingLoop = new TrainingLoopNode(m1.iterations, CROSS_ENTROPY, ADAM, m1.validation_step);
-    DataNode* connectNode;
+    DataNode* connectNode = featData;;
 
     //std::cout << "HERERE" << std::endl;
     for (int i = 0; i < m1.num_layers; i++){
