@@ -805,12 +805,21 @@ torch::Tensor bounds, int nrows, int segments) {\n\
         std::unordered_set<std::string> encountedOps;
         for (int i = 0; i < program.size(); i++)
         {
+            // std::cout << "Works0.0" << std::endl;
             CIRNode* outNode = program[i];
+            // if (outNode == nullptr){
+            //     std::cout << "This is null" << std::endl;
+            // }
+            // std::cout << "Works0.0.0" << std::endl;
             auto oNode = dynamic_cast<ComputeNode*>(outNode);
+            // std::cout << "Works0.1" << oNode->getOp() << std::endl;
             if (oNode)
             {
+                // std::cout << "Works0.2.0" << std::endl;
                 auto cNode = dynamic_cast<ComputeNode*>(outNode);
+                // std::cout << "Works0.2" << std::endl;
                 std::string kernelName = getKernelName(cNode);
+                // std::cout << kernelName << std::endl;
 
                 if (encountedOps.find(kernelName) == encountedOps.end())
                 {
@@ -818,6 +827,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
                     encountedOps.insert(kernelName);
                 }
             } else {
+                // std::cout << "Works0.3.0" << std::endl;
                 auto loopNode = dynamic_cast<TrainingLoopNode*>(outNode);
                 for (int ix = 0; ix < loopNode->getLoopNodeNum(); ix++)
                 {

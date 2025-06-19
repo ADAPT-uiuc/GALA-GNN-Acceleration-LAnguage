@@ -73,7 +73,7 @@ public:
     virtual ~CIRNode() {};
 };
 
-class ComputeNode : public CIRNode {
+class ComputeNode : virtual public CIRNode {
 private:
   	OpType opType;
     ComputeOp op;

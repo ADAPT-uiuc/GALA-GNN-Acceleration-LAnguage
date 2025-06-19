@@ -3,9 +3,10 @@
 #include <string.h>
 #include <vector>
 #include <map>
-#include "../ir/data.h"
-#include "../ir/compute.h"
-#include "../ir/frontend_metadata.h"
+// #include "../ir/data.h"
+// #include "../ir/compute.h"
+// #include "../ir/frontend_metadata.h"
+#include "context.h"
 using namespace std;
 
 extern int yydebug;
@@ -20,10 +21,10 @@ int debug = 2;
 
 DataNode* normData; // very temp solution, find fix asap
 
-extern vector<CIRNode*> programVec;
-extern vector<RelationEdge*> dependenciesVec;
-extern vector<RelationEdge*> associationsVec;
-extern vector<TransformEdge*> transformsVec;
+// extern vector<CIRNode*> programVec;
+// extern vector<RelationEdge*> dependenciesVec;
+// extern vector<RelationEdge*> associationsVec;
+// extern vector<TransformEdge*> transformsVec;
 %}
 
 %union {
@@ -318,7 +319,7 @@ DataNode* addDegrees_CIR(DataNode* graphData, TrainingLoopNode* trainingLoop){
 	trainingLoop->addLoopNode(onesTensorOp);
 	//* Dependencies
 	RelationEdge* onesTensorGraphAssociation = new RelationEdge(graphData, ALL_RELATION, onesData, ROWS_RELATION);
-	associationsVec.push_back(onesTensorGraphAssociation);
+	GALAFEContext::associations.push_back(onesTensorGraphAssociation);
 
 	// The actual degrees calculation
 	ForwardNode* degreesOp = new ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_DIRECT);
@@ -332,9 +333,9 @@ DataNode* addDegrees_CIR(DataNode* graphData, TrainingLoopNode* trainingLoop){
 	degreesOp->addOpt(COARSE_COPT, 2);
 	trainingLoop->addLoopNode(degreesOp);
 	RelationEdge* degreesOpOnesDependency = new RelationEdge(onesData, ALL_RELATION, degreesData, ALL_RELATION);
-	dependenciesVec.push_back(degreesOpOnesDependency);
+	GALAFEContext::dependencies.push_back(degreesOpOnesDependency);
 	RelationEdge* degreesOpGraphDependency = new RelationEdge(graphData, ALL_RELATION, degreesData, ROWS_RELATION);
-	dependenciesVec.push_back(degreesOpGraphDependency);
+	GALAFEContext::dependencies.push_back(degreesOpGraphDependency);
     return degreesData;
 }
 DataNode* addNormalization_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop){
@@ -346,7 +347,7 @@ DataNode* addNormalization_CIR(DataNode* prevData, TrainingLoopNode* trainingLoo
 	powerOp->addOutputData(normData);
 	trainingLoop->addLoopNode(powerOp);
 	RelationEdge* powerOpDegreesDependency = new RelationEdge(prevData, ALL_RELATION, normData, ALL_RELATION);
-	dependenciesVec.push_back(powerOpDegreesDependency);
+	GALAFEContext::dependencies.push_back(powerOpDegreesDependency);
     return normData;
 }
 DataNode* addNormCalc_CIR(DataNode* normData, DataNode* prevData, TrainingLoopNode* trainingLoop, int layerNum, bool featInput){ // prevData is either feat or res
@@ -360,11 +361,11 @@ DataNode* addNormCalc_CIR(DataNode* normData, DataNode* prevData, TrainingLoopNo
 	normFeat1->addOutputData(normFeat1Data);
 	trainingLoop->addLoopNode(normFeat1);
 	RelationEdge* normFeat1NormDependency = new RelationEdge(normData, ALL_RELATION, normFeat1Data, ROWS_RELATION);
-	dependenciesVec.push_back(normFeat1NormDependency);
+	GALAFEContext::dependencies.push_back(normFeat1NormDependency);
 	RelationEdge* normFeat1FeatDependency = new RelationEdge(prevData, ALL_RELATION, normFeat1Data, ALL_RELATION);
-	dependenciesVec.push_back(normFeat1FeatDependency);
+	GALAFEContext::dependencies.push_back(normFeat1FeatDependency);
 	RelationEdge* normFeat1NormFeatAssociation = new RelationEdge(normData, ALL_RELATION, prevData, ROWS_RELATION);
-	associationsVec.push_back(normFeat1NormFeatAssociation);
+	GALAFEContext::associations.push_back(normFeat1NormFeatAssociation);
     return normFeat1Data;
 
 }
@@ -382,8 +383,8 @@ DataNode* addAggregate_CIR(DataNode* prevData, DataNode* graphData, TrainingLoop
     // Relation (dependency) between features and aggregated output
     RelationEdge* inOutAggrRelationFeat = new RelationEdge(prevData, ALL_RELATION, outputData, ALL_RELATION);
     RelationEdge* inOutAggrRelationGraph = new RelationEdge(graphData, ALL_RELATION, outputData, ALL_RELATION);
-    dependenciesVec.push_back(inOutAggrRelationFeat);
-    dependenciesVec.push_back(inOutAggrRelationGraph);
+    GALAFEContext::dependencies.push_back(inOutAggrRelationFeat);
+    GALAFEContext::dependencies.push_back(inOutAggrRelationGraph);
     return outputData;
 
 }
@@ -412,11 +413,11 @@ DataNode* addFFN_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int lay
     // Relation (dependency) between weight and features
     RelationEdge* inOutWeightDepRelationFeat = new RelationEdge(prevData, ALL_RELATION, resData, ALL_RELATION);
     RelationEdge* inOutWeightDepRelationWeight = new RelationEdge(weightData, COLS_RELATION, resData, ROWS_RELATION);
-    dependenciesVec.push_back(inOutWeightDepRelationFeat);
-    dependenciesVec.push_back(inOutWeightDepRelationWeight);
+    GALAFEContext::dependencies.push_back(inOutWeightDepRelationFeat);
+    GALAFEContext::dependencies.push_back(inOutWeightDepRelationWeight);
     // Relation (association) between aggregate node and weight
     RelationEdge* inOutWeightAssociation = new RelationEdge(prevData, ROWS_RELATION, weightData, COLS_RELATION);
-    associationsVec.push_back(inOutWeightAssociation);
+    GALAFEContext::associations.push_back(inOutWeightAssociation);
     return resData;
 
 }
@@ -430,7 +431,7 @@ DataNode* addReLU_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int la
 	reluOp->addOutputData(reluData);
 	trainingLoop->addLoopNode(reluOp);
 	RelationEdge* reluOpOnesDependency = new RelationEdge(prevData, ALL_RELATION, reluData, ALL_RELATION);
-	dependenciesVec.push_back(reluOpOnesDependency);
+	GALAFEContext::dependencies.push_back(reluOpOnesDependency);
     return reluData;
 }
 
@@ -483,21 +484,21 @@ void generate_ir(){
     DataNode* graphData; 
     DataNode* featData;
     RelationEdge* graphFeatAssociation;
-    cout << "A size:" << associationsVec.size() << endl;
+    cout << "A size:" << GALAFEContext::associations.size() << endl;
     if (m1.dataset_name != "\0"){ // load dataset
         if (debug == 2) cout << "load dataset section with name " << m1.dataset_name << "\n";
-        auto loadDataset = ForwardNode(POINTWISE, LOAD_OP);
-        loadDataset.addParam(m1.dataset_name);
+        auto loadDataset = new ForwardNode(POINTWISE, LOAD_OP);
+        loadDataset->addParam(m1.dataset_name);
         graphData = createDataNode(CSR_STYPE, true, true, {0,0}, true, "adj0", INT32, INT32, F32);
         featData = createDataNode(RM_DTYPE, false, false, {-1, -2}, true, "t_iden", INT32, INT32, F32);
 
         // association between graph and features
         graphFeatAssociation = new RelationEdge(graphData, ALL_RELATION, featData, ROWS_RELATION);
-        associationsVec.push_back(graphFeatAssociation);
-        loadDataset.addOutputData(featData);
-        loadDataset.addOutputData(graphData);
+        GALAFEContext::associations.push_back(graphFeatAssociation);
+        loadDataset->addOutputData(featData);
+        loadDataset->addOutputData(graphData);
 
-        programVec.push_back(&loadDataset);
+        GALAFEContext::program.push_back(loadDataset);
     }
     bool createdTransformedGraph = false;
     DataNode* graph;
@@ -512,14 +513,14 @@ void generate_ir(){
 	    DataNode* transformedGraph = new DataNode("graph_tile", graphData->getIType(), graphData->getNType(), graphData->getVType(), transformedRootGraphLevel);
 
         RelationEdge* trgraphFeatAssociation = new RelationEdge(transformedGraph, ALL_RELATION, featData, ROWS_RELATION);
-        associationsVec.push_back(trgraphFeatAssociation);
+        GALAFEContext::associations.push_back(trgraphFeatAssociation);
         if (m1.data_transformations[0].first == COL_TILE){ // only one data transform for now for gcn
             TransformData* tileTransformation = new TransformData(COL_TILE_DOPT);
             /* tileTransformation->addParam(m1.data_transformations[0].second); */
             tileTransformation->addParam("65000"); // why is it a string parameter?
             TransformEdge* graphTrgraph = new TransformEdge(graphData, transformedGraph);
             graphTrgraph->addTransformation(tileTransformation);
-            transformsVec.push_back(graphTrgraph);
+            GALAFEContext::transforms.push_back(graphTrgraph);
         }
 
         graph = transformedGraph;
@@ -544,7 +545,7 @@ void generate_ir(){
         connectNode = addLayer(i, connectNode, graph, featData, trainingLoop);
         //std::cout << connectNode->getName() << std::endl;
     }
-    programVec.push_back(trainingLoop);
+    GALAFEContext::program.push_back(trainingLoop);
 
     cout << "IR Generated!\n";
 }
