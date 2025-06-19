@@ -1,8 +1,0 @@
-//
-// Created by damitha on 4/23/24.
-//
-
-#ifndef GNN_ACCELERATION_LANGUAGE_CPU_H
-#define GNN_ACCELERATION_LANGUAGE_CPU_H
-
-#endif //GNN_ACCELERATION_LANGUAGE_CPU_H

@@ -773,7 +773,6 @@ torch::Tensor bounds, int nrows, int segments) {\n\
             "#include \"../src/formats/csrc_matrix.h\"\n"
             "#include \"../src/formats/dense_matrix.h\"\n"
             "#include \"../src/ops/aggregators.h\"\n"
-            "#include \"../src/ops/sparse_matrix_ops.h\"\n"
             "#include \"../src/ops/tiling.h\"\n"
             "#include \"../src/utils/mtx_io.h\"\n"
             "#include \"../tests/common.h\"\n";
