@@ -16,10 +16,6 @@
 class GALATransformations
 {
 public:
-    // TODO Training aware subgraph creation
-    //  Changes to the IR - Create the transformed graphs and change the outputs
-    //  Changes to the code generation - Should change based on the input, create the code for the transformed data
-
     /**
      * Assumptions / Rules
      *  - The dense input would always be written to res (so you can use that directly for codegen)
@@ -40,18 +36,7 @@ public:
         return -1;
     }
 
-    // DataNode *createGraphCopyWithIndex(ComputeNode* cNode, int index)
-    // {
-    //     auto graphInput =  cNode->getInput(1);
-    //     auto graphInfo = graphInput->getDataInfo();
-    //     auto newInfo = DataInfo(graphInfo->getFormat(), graphInfo->getDirected(), graphInfo->getWeighted());
-    //     // Add all the existing optimizations
-    //     for (auto opt: graphInfo->getOpts())
-    //     {
-    //         newInfo.addOpt(opt.first, opt.second);
-    //     }
-    // }
-
+    // Create and map training invariant sub-graphs
     static void trainingSubGraph(std::vector<CIRNode*>& program,
         std::vector<RelationEdge*>& dependencies,
         std::vector<RelationEdge*>& associations,
@@ -223,8 +208,7 @@ public:
         }
     }
 
-    // TODO have a commong way to write re-write rules.
-    // TODO Sparsity aware re-write
+    // Sparsity aware rewrites
     static void sparsityAwareRewrites(std::vector<CIRNode*>& program,
         std::vector<RelationEdge*>& dependencies,
         std::vector<RelationEdge*>& associations,
@@ -363,7 +347,7 @@ public:
 
     }
 
-    // TODO Training invariant code motion
+    // Middle-end pass for training invariant code motion
     static void trainingInvariantCodeMotion (std::vector<CIRNode*>& program,
         std::vector<RelationEdge*>& dependencies,
         std::vector<RelationEdge*>& associations,
@@ -436,7 +420,8 @@ public:
     }
 
     // Complexity aware operator reordering
-    // Reorder adjacent operations till no changes 
+    // Reorder adjacent operations till no changes
+    // Has an additional parameter for reordering with Training Invariant code Motion (TIM) in mind.
     static void complexityOperatorReordering (std::vector<CIRNode*>& program,
         std::vector<RelationEdge*>& dependencies,
         std::vector<RelationEdge*>& associations,
