@@ -15,7 +15,7 @@ L1 = layer(G, hs, nonln_fn, aggregate_fn, edge_fn) {
 
 M1 = model(G, non_ln) {
 	l1 = L1(G, 32, non_ln, aggrFn, edgeFn);
-	l2 = L1(l1, G.labels.size(), non_ln, aggrFn, edgeFn);
+	l2 = L1(l1, G.labels.size(), null, aggrFn, edgeFn);
 }
 
 m1 = M1(G, dsl.non_ln.ReLU);
