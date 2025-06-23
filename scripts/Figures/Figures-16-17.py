@@ -38,7 +38,7 @@ def compile_and_get_time(args):
 
     for dset in dataset_list:
         for model in models:
-            curr = f">>>Exporting [{dset}] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+            curr = f">>>Running [{dset} dataset with {model} model] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
             print(curr)
             logfile.write(curr+"\n")
             errfile.write(curr+"\n")
