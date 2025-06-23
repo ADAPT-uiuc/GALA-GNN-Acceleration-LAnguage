@@ -8,7 +8,7 @@ BISON_TARGET(Parser ../src/frontend/frontend.y ${CMAKE_CURRENT_BINARY_DIR}/parse
 FLEX_TARGET(Lexer ../src/frontend/frontend.l ${CMAKE_CURRENT_BINARY_DIR}/lexer.cpp)
 ADD_FLEX_BISON_DEPENDENCY(Lexer Parser)
 
-add_executable(gcn_ir gala_gcn_IR.cpp ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS})
+#add_executable(gcn_ir gala_gcn_IR.cpp ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS})
 #add_executable(gin_ir gala_gin_IR.cpp ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS})
 #add_executable(gat_ir gala_gat_IR.cpp ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS})
 
