@@ -13,7 +13,7 @@ import torch as th
 import dgl
 import os
 
-def load_ogb(name, root="/shared/damitha2/ogb"):
+def load_ogb(name, root="ogb/"):
     from ogb.nodeproppred import DglNodePropPredDataset
 
     print("load", name)
@@ -65,13 +65,14 @@ def main(args):
     graph = dgl.remove_self_loop(graph)
     graph = dgl.add_self_loop(graph)
 
-    output_path = r"/shared/damitha2/gala_npy/" + args.dataset
+    output_path = r"../../Data/" + args.dataset
 
     print("Exporting", args.dataset, "to", output_path)
 
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
+    n_nodes = graph.num_nodes()
     n_edges = graph.number_of_edges()
 
     # Export adjacency matrix
@@ -95,30 +96,59 @@ def main(args):
     print("complete labels")
 
     # Saving the Graph's masks.
-    train_mask_data = graph.ndata['train_mask'].numpy().astype(np.int32)
-    train_mask_data = train_mask_data.reshape((train_mask_data.shape[0], 1))
-    export_dense_mm(train_mask_data, "/TnMsk.npy", output_path)
-    val_mask_data = graph.ndata['val_mask'].numpy().astype(np.int32)
-    val_mask_data = val_mask_data.reshape((val_mask_data.shape[0], 1))
-    export_dense_mm(val_mask_data, "/VlMsk.npy", output_path)
-    test_mask_data = graph.ndata['test_mask'].numpy().astype(np.int32)
-    test_mask_data = test_mask_data.reshape((test_mask_data.shape[0], 1))
-    export_dense_mm(test_mask_data, "/TsMsk.npy", output_path)
-    print("complete masks")
+    if (str(args.dataset) == "CoraFullDataset"):
+        train_ratio = 0.7
+        val_ratio = 0.15
+        # test_ratio = 0.15
+
+        # Create indices for the dataset
+        indices = torch.randperm(n_nodes)
+
+        # Calculate the sizes of each split
+        train_size = int(train_ratio * n_nodes)
+        val_size = int(val_ratio * n_nodes)
+        # test_size = n_nodes - train_size - val_size
+
+        # Split the indices
+        train_indices = indices[:train_size]
+        val_indices = indices[train_size:train_size + val_size]
+        test_indices = indices[train_size + val_size:]
+
+        # Create masks for each split
+        train_mask = torch.zeros(n_nodes, dtype=torch.bool)
+        val_mask = torch.zeros(n_nodes, dtype=torch.bool)
+        test_mask = torch.zeros(n_nodes, dtype=torch.bool)
+
+        # Assign True to the corresponding indices for each split
+        train_mask[train_indices] = True
+        val_mask[val_indices] = True
+        test_mask[test_indices] = True
+
+        train_mask_data = train_mask.numpy().astype(np.int32)
+        train_mask_data = train_mask_data.reshape((train_mask_data.shape[0], 1))
+        export_dense_mm(train_mask_data, "/TnMsk.npy", output_path)
+        val_mask_data = val_mask.numpy().astype(np.int32)
+        val_mask_data = val_mask_data.reshape((val_mask_data.shape[0], 1))
+        export_dense_mm(val_mask_data, "/VlMsk.npy", output_path)
+        test_mask_data = test_mask.numpy().astype(np.int32)
+        test_mask_data = test_mask_data.reshape((test_mask_data.shape[0], 1))
+        export_dense_mm(test_mask_data, "/TsMsk.npy", output_path)
+        print("complete masks")
+    else:
+        train_mask_data = graph.ndata['train_mask'].numpy().astype(np.int32)
+        train_mask_data = train_mask_data.reshape((train_mask_data.shape[0], 1))
+        export_dense_mm(train_mask_data, "/TnMsk.npy", output_path)
+        val_mask_data = graph.ndata['val_mask'].numpy().astype(np.int32)
+        val_mask_data = val_mask_data.reshape((val_mask_data.shape[0], 1))
+        export_dense_mm(val_mask_data, "/VlMsk.npy", output_path)
+        test_mask_data = graph.ndata['test_mask'].numpy().astype(np.int32)
+        test_mask_data = test_mask_data.reshape((test_mask_data.shape[0], 1))
+        export_dense_mm(test_mask_data, "/TsMsk.npy", output_path)
+        print("complete masks")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GCN')
     parser.add_argument("--dataset", type=str, default="RedditDataset",
                         help="Dataset name")
-    parser.add_argument("--path", type=str, default="../matrix_data/",
-                        help="Destination path for output mtx.")
-    parser.add_argument("--export", action='store_true',
-                        help="export dgl data to .mtx files (default=False)")
-    parser.set_defaults(export=False)
-    parser.add_argument("--no_adj", action='store_true',
-                        help="when exporting dgl data skip the adj matrix(default=False)")
-    parser.set_defaults(no_adj=False)
-    parser.add_argument("--device", type=str, default="cpu",
-                        help="Select device to perform computations on")
     args = parser.parse_args()
     main(args)

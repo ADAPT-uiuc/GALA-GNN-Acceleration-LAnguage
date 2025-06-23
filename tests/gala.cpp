@@ -41,8 +41,9 @@ ModelConfig m1;
 int main(int argc, char **argv) {
 	const char* graph = argv[1];
 	const char* model = argv[2];
+	const char* hw = argv[3];
 
-	const char* inputGALAFrontEnd =
+	const char* inputGALAFrontEnd = "../tests/GALA-DSL/" + model + "/" + graph + "/" + hw + ".txt";
 
 	m1 = ModelConfig();
 
