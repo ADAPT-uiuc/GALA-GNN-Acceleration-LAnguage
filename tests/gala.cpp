@@ -43,11 +43,11 @@ int main(int argc, char **argv) {
 	const char* model = argv[2];
 	const char* hw = argv[3];
 
-	const char* inputGALAFrontEnd = "../tests/GALA-DSL/" + model + "/" + graph + "/" + hw + ".txt";
+	std::string inputGALAFrontEnd = "../tests/GALA-DSL/" + model + "/" + graph + "/" + hw + ".txt";
 
 	m1 = ModelConfig();
 
-	FILE *myfile = fopen(fileName, "r");
+	FILE *myfile = fopen(inputGALAFrontEnd.c_str(), "r");
 	if (!myfile) {
 		std::cout << "Invalid File" << std::endl;
 		return -1;
