@@ -4,10 +4,10 @@ import os
 
 build_path = r"../../build/"
 
-dataset_list = ["CoraGraphDataset",
-                "PubmedGraphDataset",
-                "CoraFullDataset",
-                "RedditDataset",
+dataset_list = ["Cora",
+                "Pubmed",
+                "CoraFull",
+                "Reddit",
                 "ogbn-arxiv",
                 "ogbn-products"]
 models = ["gcn",
@@ -15,7 +15,7 @@ models = ["gcn",
           "gin",
           "sage"]
 
-dataset_list = ["CoraGraphDataset"]
+dataset_list = ["Cora"]
 models = ["gcn"]
 
 def run(args, logfile, errfile):
@@ -44,7 +44,7 @@ def compile_and_get_time(args):
             errfile.write(curr+"\n")
 
             job_args = ['../../build/tests/gala',
-                        dset, model, args.hw]
+                        '../../tests/GALA-DSL/' + model + '/' + dset + '/' + args.hw + '.txt']
 
             run(job_args, logfile, errfile)
 

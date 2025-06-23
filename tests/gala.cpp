@@ -53,15 +53,11 @@ typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM_t;
 
 /** RULES -- res input is always the 1st input for a computaiton op */
 int main(int argc, char **argv) {
-	std::string graph = argv[1];
-	std::string model = argv[2];
-	std::string hw = argv[3];
-
-	std::string inputGALAFrontEnd = "../tests/GALA-DSL/" + model + "/" + graph + "/" + hw + ".txt";
+	std::string inputFile = argv[1];
 
 	m1 = ModelConfig();
 
-	FILE *myfile = fopen(inputGALAFrontEnd.c_str(), "r");
+	FILE *myfile = fopen(inputFile.c_str(), "r");
 	if (!myfile) {
 		std::cout << "Invalid File" << std::endl;
 		return -1;
