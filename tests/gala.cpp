@@ -39,6 +39,18 @@ extern FILE* yyin;
 extern int yyparse();
 ModelConfig m1;
 
+std::vector<CIRNode*> GALAFEContext::program;
+std::vector<RelationEdge*> GALAFEContext::dependencies;
+std::vector<RelationEdge*> GALAFEContext::associations;
+std::vector<TransformEdge*> GALAFEContext::transforms;
+
+//Dense matrix with double values.
+typedef DenseMatrix<ind1_t, ind2_t, val_t> DMd_t;
+//Dense matrix with integer values.
+typedef DenseMatrix<ind1_t, ind2_t, val_int_t> DMi_t;
+// Sparse matrix (graph)
+typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM_t;
+
 /** RULES -- res input is always the 1st input for a computaiton op */
 int main(int argc, char **argv) {
 	std::string graph = argv[1];
