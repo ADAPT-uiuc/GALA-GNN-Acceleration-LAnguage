@@ -1,5 +1,8 @@
 import argparse
 import subprocess
+import os
+
+build_path = r"../../build/"
 
 dataset_list = ["CoraGraphDataset",
                 "PubmedGraphDataset",
@@ -7,11 +10,13 @@ dataset_list = ["CoraGraphDataset",
                 "RedditDataset",
                 "ogbn-arxiv",
                 "ogbn-products"]
-
 models = ["gcn",
           "gat",
           "gin",
           "sage"]
+
+dataset_list = ["CoraGraphDataset"]
+models = ["gcn"]
 
 def run(args, logfile, errfile):
     proc = subprocess.Popen(args, stdout=logfile, stderr=errfile)
@@ -23,6 +28,14 @@ def get_npy(args):
     logfile = open(args.stdout_log, 'a+')
     errfile = open(args.stderr_log, 'a+')
 
+    # TODO add build
+    # if not os.path.exists(build_path):
+    #     os.makedirs(build_path)
+    #     job_args = ['cmake', "../.."]
+    #
+    #
+    # print("Exporting", args.dataset, "to", output_path)
+
     for dset in dataset_list:
         for model in models:
             curr = f">>>Exporting [{dset}] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
@@ -31,7 +44,7 @@ def get_npy(args):
             errfile.write(curr+"\n")
 
             job_args = ['../../build/gala',
-                        dset, models, args.hw]
+                        dset, model, args.hw]
 
             run(job_args, logfile, errfile)
 
