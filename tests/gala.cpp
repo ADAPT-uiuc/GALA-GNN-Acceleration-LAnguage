@@ -31,6 +31,8 @@ typedef int val_int_t;
 // Frontend
 #include "../src/frontend/context.h"
 
+#include "../src/middle-end/middle-end.h"
+
 extern void generate_ir();
 
 extern FILE* yyin;
