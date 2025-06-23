@@ -8,8 +8,8 @@ dataset_list = ["CoraGraphDataset",
                 "ogbn-arxiv",
                 "ogbn-products"]
 
-def run(args, logfile, errfile):
-    proc = subprocess.Popen(args, stdout=logfile, stderr=errfile)
+def run(args, logfile, errfile, inp):
+    proc = subprocess.Popen(args, stdin=inp, stdout=logfile, stderr=errfile)
     proc.wait()
     logfile.flush()
     errfile.flush()
@@ -24,16 +24,14 @@ def get_npy(args):
         logfile.write(curr+"\n")
         errfile.write(curr+"\n")
 
-        if dset != "ogbn-products":
-            job_args = ['python',
-                        'gala_export_npy.py',
-                        '--dataset', dset]
-        else:
-            job_args = ['yes | python',
-                        'gala_export_npy.py',
-                        '--dataset', dset]
+        job_args = ['python',
+                    'gala_export_npy.py',
+                    '--dataset', dset]
 
-        run(job_args, logfile, errfile)
+        if dset != "ogbn-products":
+            run(job_args, logfile, errfile, "")
+        else:
+            run(job_args, logfile, errfile, "yes")
 
         logfile.write(("<"*100)+"\n")
         errfile.write(("<"*100)+"\n")
