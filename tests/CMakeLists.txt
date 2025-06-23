@@ -12,8 +12,4 @@ add_executable(gcn_ir gala_gcn_IR.cpp ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPU
 #add_executable(gin_ir gala_gin_IR.cpp ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS})
 #add_executable(gat_ir gala_gat_IR.cpp ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS})
 
-#add_executable(gcn_test_ir gcn_test_IR.cpp)
-#add_executable(gcn_ir gala_gcn_IR.cpp)
-#add_executable(gcn_ir_sparse gala_gcn_IR_sparse.cpp)
-#add_executable(gin_ir gala_gin_IR.cpp)
-#add_executable(gat_ir gala_gat_IR.cpp)
+add_executable(gala gala.cpp ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS})
