@@ -41,9 +41,9 @@ ModelConfig m1;
 
 /** RULES -- res input is always the 1st input for a computaiton op */
 int main(int argc, char **argv) {
-	const char* graph = argv[1];
-	const char* model = argv[2];
-	const char* hw = argv[3];
+	std::string graph = argv[1];
+	std::string model = argv[2];
+	std::string hw = argv[3];
 
 	std::string inputGALAFrontEnd = "../tests/GALA-DSL/" + model + "/" + graph + "/" + hw + ".txt";
 
