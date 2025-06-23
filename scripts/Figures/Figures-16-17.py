@@ -24,7 +24,7 @@ def run(args, logfile, errfile):
     logfile.flush()
     errfile.flush()
 
-def get_npy(args):
+def compile_and_get_time(args):
     logfile = open(args.stdout_log, 'a+')
     errfile = open(args.stderr_log, 'a+')
 
@@ -43,7 +43,7 @@ def get_npy(args):
             logfile.write(curr+"\n")
             errfile.write(curr+"\n")
 
-            job_args = ['../../build/gala',
+            job_args = ['../../build/tests/gala',
                         dset, model, args.hw]
 
             run(job_args, logfile, errfile)
@@ -55,7 +55,7 @@ def get_npy(args):
     errfile.close()
 
 def main(args):
-    get_npy(args)
+    compile_and_get_time(args)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Graph Benchmark Runner')
