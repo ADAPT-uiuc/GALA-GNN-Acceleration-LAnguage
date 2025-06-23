@@ -9,7 +9,8 @@ dataset_list = ["CoraGraphDataset",
                 "ogbn-products"]
 
 def run(args, logfile, errfile, inp):
-    proc = subprocess.Popen(args, stdin=inp, stdout=logfile, stderr=errfile)
+    proc = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=logfile, stderr=errfile, text=True)
+    proc.communicate(input=inp)
     proc.wait()
     logfile.flush()
     errfile.flush()
@@ -31,7 +32,7 @@ def get_npy(args):
         if dset != "ogbn-products":
             run(job_args, logfile, errfile, "")
         else:
-            run(job_args, logfile, errfile, "yes")
+            run(job_args, logfile, errfile, "y")
 
         logfile.write(("<"*100)+"\n")
         errfile.write(("<"*100)+"\n")
