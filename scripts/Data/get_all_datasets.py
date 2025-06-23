@@ -24,7 +24,7 @@ def get_npy(args):
         logfile.write(curr+"\n")
         errfile.write(curr+"\n")
 
-        if dset == "ogbn-products":
+        if dset != "ogbn-products":
             job_args = ['python',
                         'gala_export_npy.py',
                         '--dataset', dset]
