@@ -54,6 +54,7 @@ typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM_t;
 /** RULES -- res input is always the 1st input for a computaiton op */
 int main(int argc, char **argv) {
 	std::string inputFile = argv[1];
+	std::string outputPath = argv[2];
 
 	m1 = ModelConfig();
 
@@ -101,7 +102,6 @@ int main(int argc, char **argv) {
 	}
 
 	auto ctx = new GALAContext(GPU_DEVICE, SINGLE_NODE_SINGLE);
-	std::string outputPath = "../test-codegen/";
 	auto genCode = CUDAGenerator(ctx, outputPath);
 	GALATransformations::complexityOperatorReordering(GALAFEContext::program, GALAFEContext::dependencies,
 		GALAFEContext::associations, GALAFEContext::transforms);
