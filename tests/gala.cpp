@@ -115,12 +115,12 @@ int main(int argc, char **argv) {
 
 	auto ctx = new GALAContext(GPU_DEVICE, SINGLE_NODE_SINGLE);
 	auto genCode = CUDAGenerator(ctx, outputPath);
-	// GALATransformations::complexityOperatorReordering(GALAFEContext::program, GALAFEContext::dependencies,
-	// 	GALAFEContext::associations, GALAFEContext::transforms);
-	// GALATransformations::trainingInvariantCodeMotion(GALAFEContext::program, GALAFEContext::dependencies,
-	// 	GALAFEContext::associations, GALAFEContext::transforms);
-	// GALATransformations::trainingSubGraph(GALAFEContext::program, GALAFEContext::dependencies,
-	// 	GALAFEContext::associations, GALAFEContext::transforms);
+	GALATransformations::complexityOperatorReordering(GALAFEContext::program, GALAFEContext::dependencies,
+		GALAFEContext::associations, GALAFEContext::transforms);
+	GALATransformations::trainingInvariantCodeMotion(GALAFEContext::program, GALAFEContext::dependencies,
+		GALAFEContext::associations, GALAFEContext::transforms);
+	GALATransformations::trainingSubGraph(GALAFEContext::program, GALAFEContext::dependencies,
+		GALAFEContext::associations, GALAFEContext::transforms);
 	genCode.writeCode(GALAFEContext::program, GALAFEContext::dependencies,
 		GALAFEContext::associations, GALAFEContext::transforms);
 
