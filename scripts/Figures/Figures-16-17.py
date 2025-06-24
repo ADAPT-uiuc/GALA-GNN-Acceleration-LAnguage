@@ -37,7 +37,7 @@ def compile_and_get_time(args):
     #
     # print("Exporting", args.dataset, "to", output_path)
 
-    output_path = args.stderr_log + "codegen/"
+    output_path = args.out_path + "codegen/"
 
     if not os.path.exists(output_path):
         os.makedirs(output_path)
