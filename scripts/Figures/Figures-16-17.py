@@ -52,7 +52,22 @@ def compile_and_get_time(args):
             job_args = ['../../build/tests/gala',
                         '../../tests/GALA-DSL/' + model + '/' + dset + '/' + args.hw + '.txt',
                         output_path]
+            run(job_args, logfile, errfile)
 
+            curr = f">>>Building the code for [{dset} dataset with {model} model] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+            print(curr)
+            logfile.write(curr+"\n")
+            errfile.write(curr+"\n")
+
+            job_args = ['cmake',
+                        '-DCMAKE_PREFIX_PATH="/home/damitha2/new_torch/libtorch"',
+                        '-DCAFFE2_USE_CUDNN=True',
+                        '..']
+            run(job_args, logfile, errfile)
+            job_args = ['make',
+                        '-DCMAKE_PREFIX_PATH="/home/damitha2/new_torch/libtorch"',
+                        '-DCAFFE2_USE_CUDNN=True',
+                        '..']
             run(job_args, logfile, errfile)
 
             logfile.write(("<"*100)+"\n")

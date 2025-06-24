@@ -7,6 +7,7 @@
 #include <string>
 #include <string>
 #include <vector>
+#include <map>
 #include "../ir/compute.h"
 #include <fstream>
 #include <iostream>
@@ -517,9 +518,17 @@ public:
                 }
             }
 
+            std::map<std::string, std::string> graphNamePathMap;
+            graphNamePathMap["Reddit"] = "RedditDataset";
+            graphNamePathMap["Cora"] = "CoraGraphDataset";
+            graphNamePathMap["CoraFull"] = "CoraFullDataset";
+            graphNamePathMap["Pubmed"] = "PubmedGraphDataset";
+            graphNamePathMap["ogbn-arxiv"] = "ogbn-arxiv";
+            graphNamePathMap["ogbn-products"] = "ogbn-products";
+
             // This doesn't need to change
             std::string fileLoadCode = "    SM adj0;\n\
-    std::string filename = \"" + cNode->getParam(0) +  "\";\n\
+    std::string filename = \"/shared/damitha2/gala_npy/" + graphNamePathMap[cNode->getParam(0)] +  "/\";\n\
     readSM_npy32<SM>(filename, &adj0);\n\
 \n\
     // Adj info\n\
