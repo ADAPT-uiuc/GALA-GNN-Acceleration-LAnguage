@@ -82,6 +82,8 @@ int main(int argc, char **argv) {
 	for (int i = 0; i < GALAFEContext::program.size(); i++){
 		cout << "        program node " << i << "\n";
 	}
+	auto loadNode = dynamic_cast<ComputeNode*>(GALAFEContext::program[0]);
+	std::cout << loadNode->getInput(0)->getDataInfo()->getDirected() << loadNode->getInput(0)->getDataInfo()->getWeighted() << std::endl;
 	cout << "DEPENDENCIES " << GALAFEContext::dependencies.size() << '\n';
 	for (int i = 0; i < GALAFEContext::dependencies.size(); i++){
 		cout << "     dependency edge " << i << " with nodes " <<
