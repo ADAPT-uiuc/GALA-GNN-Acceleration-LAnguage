@@ -282,7 +282,7 @@ C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +\n\
                 kernelCodeStr += "float *__restrict__ B,\n\
                     int *__restrict__ J_indices_data, int nrows,\n\
                     int dcols, int offset";
-                if (isColTile){
+                if (isKernelSample){
                     kernelCodeStr += ", int ra, int rb";
                 }
                 kernelCodeStr += ") {\n\
