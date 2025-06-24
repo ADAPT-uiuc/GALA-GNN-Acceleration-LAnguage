@@ -165,6 +165,7 @@ public:
     {
         if (cNode->getOpType() == AGGREGATE_NODE)
         {
+            
             // Get the input
             auto graphInput = cNode->getInput(1);
             auto graphInfo =  graphInput->getDataInfo();
@@ -184,6 +185,7 @@ public:
                     maxCoarsening = (int)opt.second;
                 }
             }
+            std::cout << "AA: " << getKernelName(cNode) << " maxCourse: " << maxCoarsening << std::endl;
 
             bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);
             bool isKernelSample = hasCOpt(cNode, SAMPLE_COPT);
@@ -929,12 +931,13 @@ torch::Tensor bounds, int nrows, int segments) {\n\
                             // These are graphs for backprop
                             if (!inputInfo->getDefaultDirected())
                             {
+                                std::cout << "Running this1" << std::endl;
                                 inputTransferCode += "  global_offset_graph.push_back(t_offsets"+std::to_string(indexData)+");\n\
             global_columns_graph.push_back(t_cols"+std::to_string(indexData)+");\n\
             global_value_graph.push_back(t_vals"+std::to_string(indexData)+");\n";
                             } else
                             {
-                                std::cout << "Running this" << std::endl;
+                                std::cout << "Running this2" << std::endl;
                                 inputTransferCode += "  int *dA_csrOffsets"+std::to_string(indexData)+"_b, *dA_columns"+std::to_string(indexData)+"_b; \n\
         float *dA_values"+std::to_string(indexData)+"_b;\n\
         \n\

@@ -31,6 +31,10 @@ set_unweighted { return SET_UNWEIGHTED; }
 feature_size { return FEAT_SIZE_ASSIGN; }
 label_size { return LABEL_SIZE_ASSIGN; }
 coarsen { return COARSEN; }
+operator_reordering { return OP_REORD; }
+sparse_rewrites { return SPARSE_REWRITES; }
+training_subgraph { return TRAIN_SUBGRAPH; }
+train_code_motion { return TRAIN_CODE_MOTION; }
 dsl.reorder.rabbit { return RABBIT_REORDER_OP; }
 dsl.sample.random  { return SAMPLE_RANDOM_OP; }
 nn.ffn { return FFN; }

@@ -43,9 +43,10 @@ class ModelConfig {
     public:
         string dataset_name;
         int iterations;
-        int output_input_classes; // output of first layer fed into second layer
+        vector<int> output_input_classes; // output of first layer fed into second layer
         int num_layers;
         int validation_step;
+        float normalization_value;
         vector<LayerOpType> layer_operations;
         vector<bool> nonln_present;
         map<GraphTransformType, float> graph_transformations;
@@ -64,8 +65,9 @@ class ModelConfig {
         ModelConfig(){
             dataset_name = "\0";
             iterations = 0;
-            output_input_classes = 0;
             num_layers = 0;
+            normalization_value = 0;
+            output_input_classes.clear();
             layer_operations.clear();
             graph_transformations.clear();
             graph_transformations[UNDIRECTED] = true;
@@ -122,10 +124,13 @@ class ModelConfig {
             string a = "Model Configuration:\n";
             a += "Dataset Name: " + dataset_name + "\n";
             a += "Iterations: " + std::to_string(iterations) + "\n";
-            a += "Output Input Classes: " + std::to_string(output_input_classes) + "\n";
+            // a += "Output Input Classes: " + std::to_string(output_input_classes) + "\n";
             a += "Number of Layers: " + std::to_string(num_layers) + "\n";
             a += "NonLn Vector: ";
             for (int b : nonln_present) a += std::to_string(b) + ' ';
+            a += '\n';
+            a += "Output Input Classes Vector: ";
+            for (int b : output_input_classes) a += std::to_string(b) + ' ';
             a += '\n';
             a += "Layer Operations:\n";
             for (const auto& op : layer_operations) {
