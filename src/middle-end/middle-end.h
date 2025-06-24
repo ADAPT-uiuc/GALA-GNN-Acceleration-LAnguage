@@ -154,6 +154,8 @@ public:
                 graphTrSubgraph->addTransformation(subTrGraphCopyTransformation);
                 transforms.push_back(graphTrSubgraph);
                 finalGraphs.push_back(newTransformedGraph);
+            } else {
+                finalGraphs.push_back(newGraph);
             }
         }
 
