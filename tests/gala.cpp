@@ -23,6 +23,7 @@ typedef int val_int_t;
 #include "../src/ir/compute.h"
 #include "../src/ir/frontend_metadata.h"
 #include "../src/codegen/cuda.h"
+#include "../src/codegen/common.h"
 
 // Matrix classes
 #include "../src/formats/dense_matrix.h"
@@ -82,18 +83,29 @@ int main(int argc, char **argv) {
 	for (int i = 0; i < GALAFEContext::program.size(); i++){
 		cout << "        program node " << i << "\n";
 	}
+	auto p1 = dynamic_cast<ComputeNode*>(GALAFEContext::program[0]);
+	std::cout << p1->getOutput(1)->getName() << " " << p1->getOutput(1)->getDataInfo()->getDirected() << std::endl;
+	std::cout << p1->getOutput(1)->getName() << " " << p1->getOutput(1)->getDataInfo()->getWeighted() << std::endl;
+
+	auto l1 = dynamic_cast<TrainingLoopNode*>(GALAFEContext::program[1]);
+	auto o1 = l1->getNode(4);
+	std::cout << "bb: " << o1->getOp() << " " << o1->getNumOpts() << std::endl;
+
 	cout << "DEPENDENCIES " << GALAFEContext::dependencies.size() << '\n';
 	for (int i = 0; i < GALAFEContext::dependencies.size(); i++){
 		cout << "     dependency edge " << i << " with nodes " <<
 			GALAFEContext::dependencies[i]->getNode1()->getName() <<
 				", " << GALAFEContext::dependencies[i]->getNode2()->getName() << '\n';
 	}
+	std::cout << GALAFEContext::dependencies[1]->getNode1()->getName() << " " << GALAFEContext::dependencies[1]->getNode1()->getDataInfo()->getDirected() << std::endl;
 	cout << "ASSOCIATIONS " << GALAFEContext::associations.size() << '\n';
 	for (int i = 0; i < GALAFEContext::associations.size(); i++){
 		cout << "     associations edge " << i << " with nodes " <<
 			GALAFEContext::associations[i]->getNode1()->getName() <<
 				", " << GALAFEContext::associations[i]->getNode2()->getName() << '\n';
 	}
+	std::cout << GALAFEContext::associations[0]->getNode1()->getName() << " " << GALAFEContext::associations[0]->getNode1()->getDataInfo()->getDirected() << std::endl;
+	std::cout << GALAFEContext::associations[1]->getNode1()->getName() << " " << GALAFEContext::associations[1]->getNode1()->getDataInfo()->getDirected() << std::endl;
 	cout << "TRANSFORMS " << GALAFEContext::transforms.size() << '\n';
 	for (int i = 0; i < GALAFEContext::transforms.size(); i++){
 		cout << "     transform edge " << i << " with nodes " <<
@@ -103,12 +115,12 @@ int main(int argc, char **argv) {
 
 	auto ctx = new GALAContext(GPU_DEVICE, SINGLE_NODE_SINGLE);
 	auto genCode = CUDAGenerator(ctx, outputPath);
-	GALATransformations::complexityOperatorReordering(GALAFEContext::program, GALAFEContext::dependencies,
-		GALAFEContext::associations, GALAFEContext::transforms);
-	GALATransformations::trainingInvariantCodeMotion(GALAFEContext::program, GALAFEContext::dependencies,
-		GALAFEContext::associations, GALAFEContext::transforms);
-	GALATransformations::trainingSubGraph(GALAFEContext::program, GALAFEContext::dependencies,
-		GALAFEContext::associations, GALAFEContext::transforms);
+	// GALATransformations::complexityOperatorReordering(GALAFEContext::program, GALAFEContext::dependencies,
+	// 	GALAFEContext::associations, GALAFEContext::transforms);
+	// GALATransformations::trainingInvariantCodeMotion(GALAFEContext::program, GALAFEContext::dependencies,
+	// 	GALAFEContext::associations, GALAFEContext::transforms);
+	// GALATransformations::trainingSubGraph(GALAFEContext::program, GALAFEContext::dependencies,
+	// 	GALAFEContext::associations, GALAFEContext::transforms);
 	genCode.writeCode(GALAFEContext::program, GALAFEContext::dependencies,
 		GALAFEContext::associations, GALAFEContext::transforms);
 

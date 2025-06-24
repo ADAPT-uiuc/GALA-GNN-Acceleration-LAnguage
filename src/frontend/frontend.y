@@ -26,6 +26,11 @@ DataNode* reluDataPrevLayer;
 // extern vector<RelationEdge*> dependenciesVec;
 // extern vector<RelationEdge*> associationsVec;
 // extern vector<TransformEdge*> transformsVec;
+
+bool operator_reordering = true;
+bool sparse_rewrites = true;
+bool training_subgraph = true;
+bool train_code_motion = true;
 %}
 
 %union {
@@ -46,7 +51,7 @@ DataNode* reluDataPrevLayer;
 %token<sval> COLTILE FEAT_SIZE_ASSIGN LABEL_SIZE_ASSIGN COARSEN SRC_ATTR DST_ATTR;
 %token<sval> INTEGER FLOAT SOFTMAX INIT_WEIGHT;
 %token<sval> LBRACE RBRACE DOT COMMA;
-%token<sval> TR FA;
+%token<sval> TR FA OP_REORD SPARSE_REWRITES TRAIN_SUBGRAPH TRAIN_CODE_MOTION;
 %token<sval> PLUS MINUS MULTIPLY DIVIDE;
 %token<sval> FFN NULL_KEY EDGE_AGGR_INIT SUM EDGE_ATTR VAL_ATTR
 %token<sval> LOSS OPTIMIZER RMSE_LOSS ADAM_T DSL_FN RELAXNLN QUANT RABBIT_REORDER_OP SAMPLE_RANDOM_OP AGGR LSQBRA RSQBRA IF ELSE DO WHILE NOT AND OR NOTEQ EQ GREATER LESS GREATEREQ LESSEQ DATASET NONLN SENSEI_OP INT NEW
@@ -261,7 +266,7 @@ update_op : FFN LPAREN data_var COMMA FFN_OUT data_var RPAREN
     | LEAKY_RELU LPAREN data_var op data_var RPAREN
     { $$ = LEAKY_RELU_OP; } 
     | POW LPAREN data_var COMMA FLOAT RPAREN
-    { $$ = GET_NORMALIZATION; }
+    { m1.normalization_value = stof($5); $$ = GET_NORMALIZATION; }
     | POW LPAREN data_var COMMA INTEGER RPAREN
     { $$ = GET_NORMALIZATION; }
     | SCALAR_INIT LPAREN INTEGER RPAREN
@@ -296,9 +301,15 @@ data_transform : data_var ASSIGN data_var DOT SET_UNDIRECTED LPAREN bool RPAREN 
 ;
 // this is where to do compute transform
 function_transform : data_var ASSIGN data_var DOT COARSEN LPAREN INTEGER RPAREN SEMICOLON
-    {
-        m1.addComputeTransformation(COARSE, atof($7));
-    }
+    {m1.addComputeTransformation(COARSE, atof($7)); }
+    | OP_REORD LPAREN bool RPAREN SEMICOLON
+    { operator_reordering = $3;}
+    | SPARSE_REWRITES LPAREN bool RPAREN SEMICOLON
+    { sparse_rewrites = $3; }
+    | TRAIN_SUBGRAPH LPAREN bool RPAREN SEMICOLON
+    { training_subgraph = $3; }
+    | TRAIN_CODE_MOTION LPAREN bool RPAREN SEMICOLON
+    { train_code_motion = $3; }
 ;
 feats_s : IDENTIFIER DOT NODE_ATTR DOT FEAT_ATTR {};
 edge_vals : IDENTIFIER DOT EDGE_ATTR DOT VAL_ATTR {};
@@ -386,7 +397,7 @@ train_arg : ITERS ASSIGN INTEGER
     | VAL_STEP ASSIGN INTEGER COMMA
     { m1.validation_step = atoi($3); free($3); }
 ;
-args : { $$ = 0; cout << $$ << '\n'; }
+args : { $$ = 0; }
     | args arg {
         if ($1 == 1 || $2 == 1){
             $$ = 1;
@@ -394,11 +405,10 @@ args : { $$ = 0; cout << $$ << '\n'; }
         else{
             $$ = 0;
         }
-        cout << $$ << '\n';
     }
 ;
-arg : INTEGER COMMA { m1.output_input_classes = atof($1); } | INTEGER
-    { m1.output_input_classes = atof($1); }
+arg : INTEGER COMMA { m1.output_input_classes.push_back(atof($1)); } | INTEGER
+    { m1.output_input_classes.push_back(atof($1)); }
     | NULL_KEY COMMA { $$ = 1;} | NULL_KEY {
         $$ = 1; // if arg == 1 then no nonln in this layer
     } // not matching if its same arg number as nonln, but for now its okay
@@ -452,7 +462,7 @@ DataNode* addDegrees_CIR(DataNode* graphData, TrainingLoopNode* trainingLoop){
 DataNode* addNormalization_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop){
     if (debug == 2) cout << "normalization setup\n";
     ForwardNode* powerOp = new ForwardNode(POINTWISE, POWER_OP);
-	powerOp->addParam("-0.5"); // hardcoded for now
+	powerOp->addParam(to_string(m1.normalization_value)); 
     DataNode* normData = createDataNode(RM_DTYPE, false, false, {-1, 1}, true, "norm", INT32, INT32, F32);
 	powerOp->addInputData(prevData);
 	powerOp->addOutputData(normData);
@@ -465,7 +475,7 @@ DataNode* addNormCalc_CIR(DataNode* normData, DataNode* prevData, TrainingLoopNo
     if (debug == 2) cout << "normalization-calculation\n";
 	// 1st normalization calculation (or "Mean Calculation")
 	ForwardNode* normFeat1 = new ForwardNode(UPDATE_NODE, ROW_BROADCAST_OP);
-    pair<int,int> normFeat1Data_inputDim = {-1, featInput ? m1.graph_transformations[FEAT_SIZE] : m1.output_input_classes};
+    pair<int,int> normFeat1Data_inputDim = {-1, featInput ? m1.graph_transformations[FEAT_SIZE] : m1.output_input_classes[layerNum]};
     string name = sage ? "res_n" : "res";
     DataNode* normFeat1Data = createDataNode(RM_DTYPE, false, false, normFeat1Data_inputDim, true, name, INT32, INT32, F32);
 	normFeat1->addInputData(normData);
@@ -484,8 +494,11 @@ DataNode* addNormCalc_CIR(DataNode* normData, DataNode* prevData, TrainingLoopNo
 DataNode* addAggregate_CIR(DataNode* prevData, DataNode* graphData, TrainingLoopNode* trainingLoop, int layerNum, int gin, int sage){
     if (debug == 2) cout << "aggregate" << '\n';
     ForwardNode* aggregate = new ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
-    pair<int,int> outputData_inputDim = {-1, (layerNum == 0) ? m1.graph_transformations[FEAT_SIZE] : m1.output_input_classes};
+    pair<int,int> outputData_inputDim = {-1, (layerNum == 0) ? m1.graph_transformations[FEAT_SIZE] : m1.output_input_classes[layerNum]};
     DataNode* outputData = createDataNode(RM_DTYPE, false, false, outputData_inputDim, true, gin || sage ? "res_n" : "res", INT32, INT32, F32);
+
+    // TODO Temp fix
+    aggregate->addOpt(COARSE_COPT, 2);
     
     aggregate->addInputData(prevData);
     aggregate->addInputData(graphData); 
@@ -508,11 +521,11 @@ DataNode* addFFN_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int lay
     pair<int,int> weightInputDim;
     pair<int,int> resInputDim;
     if (layerNum == 0){
-        weightInputDim = {m1.graph_transformations[FEAT_SIZE], m1.output_input_classes};
-        resInputDim = {-1, m1.output_input_classes};
+        weightInputDim = {m1.graph_transformations[FEAT_SIZE], m1.output_input_classes[layerNum]};
+        resInputDim = {-1, m1.output_input_classes[layerNum]};
     }
     else{
-        weightInputDim = {m1.output_input_classes, m1.graph_transformations[LABEL_SIZE]};
+        weightInputDim = {m1.output_input_classes[layerNum], m1.graph_transformations[LABEL_SIZE]};
         resInputDim = {-1, m1.graph_transformations[LABEL_SIZE]};
     }
     DataNode* weightData = createDataNode(RM_DTYPE, false, false, weightInputDim, true, weightNum, INT32, INT32, F32);
@@ -537,7 +550,7 @@ DataNode* addReLU_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int la
     if (debug == 2) cout << "relu\n";
     // ReLU operation
 	ForwardNode* reluOp = new ForwardNode(POINTWISE, NON_LNR_OP_RELU);
-    pair<int,int> reluData_inputDim = {-1, (layerNum == 0) ? m1.output_input_classes : m1.graph_transformations[LABEL_SIZE]};
+    pair<int,int> reluData_inputDim = {-1, (layerNum == 0) ? m1.output_input_classes[layerNum] : m1.graph_transformations[LABEL_SIZE]};
     DataNode* reluData = createDataNode(RM_DTYPE, false, false, reluData_inputDim, true, "res", INT32, INT32, F32);
 	reluOp->addInputData(prevData);
 	reluOp->addOutputData(reluData);
@@ -547,7 +560,7 @@ DataNode* addReLU_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int la
     return reluData;
 }
 DataNode* addAttentionWeight_L(DataNode* prevData, TrainingLoopNode* trainingLoop, int layerNum){
-    if (debug) cout << "add attention weight left\n";
+    if (debug == 2) cout << "add attention weight left\n";
     // Add attention weight operation (L side)
 	// L side
 	ForwardNode* atten_l = new ForwardNode(UPDATE_NODE, FFN_OP);
@@ -556,11 +569,11 @@ DataNode* addAttentionWeight_L(DataNode* prevData, TrainingLoopNode* trainingLoo
     pair<int,int> weightInputDim;
     pair<int,int> resInputDim;
     if (layerNum == 0){
-        weightInputDim = {m1.graph_transformations[FEAT_SIZE], m1.output_input_classes};
-        resInputDim = {-1, m1.output_input_classes};
+        weightInputDim = {m1.graph_transformations[FEAT_SIZE], m1.output_input_classes[layerNum]};
+        resInputDim = {-1, m1.output_input_classes[layerNum]};
     }
     else{
-        weightInputDim = {m1.output_input_classes, m1.graph_transformations[LABEL_SIZE]};
+        weightInputDim = {m1.output_input_classes[layerNum], m1.graph_transformations[LABEL_SIZE]};
         resInputDim = {-1, m1.graph_transformations[LABEL_SIZE]};
     }
 	attenLWeightInfo->setDims(weightInputDim.first, weightInputDim.second); // -2=input embedding dimension, -3=output classes
@@ -592,18 +605,18 @@ DataNode* addAttentionWeight_L(DataNode* prevData, TrainingLoopNode* trainingLoo
     return attenLData;
 }
 DataNode* addAttentionWeight_R(DataNode* prevData, DataNode* resData, TrainingLoopNode* trainingLoop, int layerNum){
-    if (debug) cout << "add attention weight right\n";
+    if (debug == 2) cout << "add attention weight right\n";
     // R side
 	ForwardNode* atten_r = new ForwardNode(UPDATE_NODE, FFN_OP);
     pair<int,int> weightInputDim;
     pair<int,int> resInputDim;
 	DataInfo* attenRWeightInfo = new DataInfo(CM_DTYPE);
     if (layerNum == 0){
-        weightInputDim = {m1.graph_transformations[FEAT_SIZE], m1.output_input_classes};
-        resInputDim = {-1, m1.output_input_classes};
+        weightInputDim = {m1.graph_transformations[FEAT_SIZE], m1.output_input_classes[layerNum]};
+        resInputDim = {-1, m1.output_input_classes[layerNum]};
     }
     else{
-        weightInputDim = {m1.output_input_classes, m1.graph_transformations[LABEL_SIZE]};
+        weightInputDim = {m1.output_input_classes[layerNum], m1.graph_transformations[LABEL_SIZE]};
         resInputDim = {-1, m1.graph_transformations[LABEL_SIZE]};
     }
     std::string attenLWeightName = "attenRWeight" + to_string(layerNum+1);
@@ -635,6 +648,7 @@ DataNode* addAttentionWeight_R(DataNode* prevData, DataNode* resData, TrainingLo
     return attenRData;
 }
 DataNode* addAttn(DataNode* attenLData, DataNode* attenRData, DataNode* graphData, TrainingLoopNode* trainingLoop, int layerNum){
+    if (debug == 2) cout << "general attention\n";
 	// Edge aggregation
 	auto aggregateEdge = new ForwardNode(AGGREGATE_EDGE, AGGREGATE_EDGE_SUM_OP);
 	auto aggrEdgeInfo = new DataInfo(CSR_STYPE, !m1.graph_transformations[UNDIRECTED], true);
@@ -665,7 +679,7 @@ DataNode* addAttn(DataNode* attenLData, DataNode* attenRData, DataNode* graphDat
     return aggrEdgeData;
 }
 DataNode* addSoftmax_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int layerNum){
-    cout << "softmax\n";
+    if (debug == 2) cout << "softmax\n";
     ForwardNode* softmaxOp = new ForwardNode(UPDATE_EDGE, NON_LNR_OP_SOFTMAX);
 	DataInfo* softmaxInfo = new DataInfo(CSR_STYPE, m1.graph_transformations[UNDIRECTED], true);
     softmaxInfo->addOpt(COL_TILE_DOPT, "300000");
@@ -681,9 +695,8 @@ DataNode* addSoftmax_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int
 	GALAFEContext::dependencies.push_back(softmaxOpOnesDependency);
     return softmaxData;
 }
-
 DataNode* addLeakyReLU(DataNode* prevData, TrainingLoopNode* trainingLoop, int layerNum){
-    cout << "leakyRelu\n"; 
+    if (debug == 2) cout << "leakyRelu\n"; 
 	// Leaky ReLU operation
 	ForwardNode* leakyReluOp = new ForwardNode(UPDATE_EDGE, NON_LNR_OP_LEAKY_RELU);
 	leakyReluOp->addParam("0.2"); // TODO: avoid hardcoding
@@ -699,11 +712,11 @@ DataNode* addLeakyReLU(DataNode* prevData, TrainingLoopNode* trainingLoop, int l
     return leakyReluData;
 }
 DataNode* add_mulScalarEPS_CIR(DataNode* featData, TrainingLoopNode* trainingLoop, int layerNum){
-    cout << "mul-scalar-eps\n";
+    if (debug == 2) cout << "mul-scalar-eps\n";
     // Scalar multiply res
 	ForwardNode* scalarEps = new ForwardNode(POINTWISE, SCALAR_ADD_EPS_MULTIPLY_OP);
 	scalarEps->addParam("1"); // TODO: change this to user input instead of hardcode
-    pair<int,int> outputData_inputDim = {-1, (layerNum == 0) ? m1.graph_transformations[FEAT_SIZE] : m1.output_input_classes};
+    pair<int,int> outputData_inputDim = {-1, (layerNum == 0) ? m1.graph_transformations[FEAT_SIZE] : m1.output_input_classes[layerNum]};
     DataNode* scalarEpsData = createDataNode(RM_DTYPE, false, false, outputData_inputDim, true, "res", INT32, INT32, F32);
 	scalarEps->addInputData(featData);
 	scalarEps->addOutputData(scalarEpsData);
@@ -713,11 +726,11 @@ DataNode* add_mulScalarEPS_CIR(DataNode* featData, TrainingLoopNode* trainingLoo
     return scalarEpsData;
 }
 DataNode* add_addScalarFeats_CIR(DataNode* prevData, DataNode* aggrOutput, TrainingLoopNode* trainingLoop, int layerNum){
-    if (debug) cout << "add-scalar-eps\n";
+    if (debug == 2) cout << "add-scalar-eps\n";
     // Add epsilon mult and scalar mults
 	ForwardNode* normFeat = new ForwardNode(UPDATE_NODE, ADD_OP);
     /* DataNode* scalarEpsData = createDataNode(RM_DTYPE, false, false, outputData_inputDim, true, "res", INT32, INT32, F32); */
-    pair<int,int> outputData_inputDim = {-1, (layerNum == 0) ? m1.graph_transformations[FEAT_SIZE] : m1.output_input_classes};
+    pair<int,int> outputData_inputDim = {-1, (layerNum == 0) ? m1.graph_transformations[FEAT_SIZE] : m1.output_input_classes[layerNum]};
     DataNode* normFeatData = createDataNode(RM_DTYPE, false, false, outputData_inputDim, true, "res", INT32, INT32, F32);
 	normFeat->addInputData(prevData);
 	normFeat->addInputData(aggrOutput);
@@ -732,18 +745,18 @@ DataNode* add_addScalarFeats_CIR(DataNode* prevData, DataNode* aggrOutput, Train
     return normFeatData;
 }
 DataNode* add_addTwoFFN_CIR(DataNode* prevData, DataNode* featData, TrainingLoopNode* trainingLoop, int layerNum) {
-    
+    if (debug == 2) cout << "double ffn and add (only for sage)\n";
     // Add weight operation (res_n)
     auto* ffn = new ForwardNode(UPDATE_NODE, FFN_OP);
     
     pair<int,int> weightInputDim;
     pair<int,int> resInputDim;
     if (layerNum == 0){
-        weightInputDim = {m1.graph_transformations[FEAT_SIZE], m1.output_input_classes};
-        resInputDim = {-1, m1.output_input_classes};
+        weightInputDim = {m1.graph_transformations[FEAT_SIZE], m1.output_input_classes[layerNum]};
+        resInputDim = {-1, m1.output_input_classes[layerNum]};
     }
     else{
-        weightInputDim = {m1.output_input_classes, m1.graph_transformations[LABEL_SIZE]};
+        weightInputDim = {m1.output_input_classes[layerNum], m1.graph_transformations[LABEL_SIZE]};
         resInputDim = {-1, m1.graph_transformations[LABEL_SIZE]};
     }
     // Weight as a matrix in the DIR
@@ -884,8 +897,7 @@ DataNode* addLayer(int layerNum, DataNode* connectNode, DataNode* graphData, Dat
                 break;
             case ATTEN_L:
                 prevData = addAttentionWeight_L(prevData, trainingLoop, layerNum);
-                attenLData = prevData;
-                prevData = addAttentionWeight_R(prevData, resData, trainingLoop, layerNum);
+                attenLData = prevData; prevData = addAttentionWeight_R(prevData, resData, trainingLoop, layerNum);
                 attenRData = prevData;
                 if (attenLData && attenRData){
                     prevData = addAttn(attenLData, attenRData, graphData, trainingLoop, layerNum);
@@ -936,7 +948,8 @@ void generate_ir(){
         if (debug == 2) cout << "load dataset section with name " << m1.dataset_name << "\n";
         auto loadDataset = new ForwardNode(POINTWISE, LOAD_OP);
         loadDataset->addParam(m1.dataset_name);
-        graphData = createDataNode(CSR_STYPE, true, true, {0,0}, true, "adj0", INT32, INT32, F32);
+        // TODO Temp fix
+        graphData = createDataNode(CSR_STYPE, false, false, {0,0}, true, "adj0", INT32, INT32, F32);
         featData = createDataNode(RM_DTYPE, false, false, {-1, -2}, true, "t_iden", INT32, INT32, F32);
 
         // association between graph and features
@@ -951,7 +964,7 @@ void generate_ir(){
     DataNode* graph;
     if (m1.data_transformations.size() > 0){ // need a transformed graph to be made
         DataInfo* originalGraphInfo = dynamic_cast<DataInfo*>(graphData->getData()->next());
-        DataInfo* transformedGraphInfo = new DataInfo(CSR_STYPE, !m1.graph_transformations[UNDIRECTED], !m1.graph_transformations[UNWEIGHTED]);
+        DataInfo* transformedGraphInfo = new DataInfo(CSR_STYPE, m1.graph_transformations[UNDIRECTED], m1.graph_transformations[UNWEIGHTED]);
         if (m1.data_transformations[0].first == COL_TILE){ // only one data transform for now for gcn
             transformedGraphInfo->addOpt(COL_TILE_DOPT, to_string(m1.data_transformations[0].second));
         }
@@ -963,8 +976,8 @@ void generate_ir(){
         GALAFEContext::associations.push_back(trgraphFeatAssociation);
         if (m1.data_transformations[0].first == COL_TILE){ // only one data transform for now for gcn
             TransformData* tileTransformation = new TransformData(COL_TILE_DOPT);
-            /* tileTransformation->addParam(m1.data_transformations[0].second); */
-            tileTransformation->addParam("65000"); // why is it a string parameter?
+            tileTransformation->addParam(to_string(m1.data_transformations[0].second));
+            /* tileTransformation->addParam("65000"); // why is it a string parameter? */
             TransformEdge* graphTrgraph = new TransformEdge(graphData, transformedGraph);
             graphTrgraph->addTransformation(tileTransformation);
             GALAFEContext::transforms.push_back(graphTrgraph);
@@ -975,8 +988,8 @@ void generate_ir(){
     else{ // then make sure to modify the original graph with the schedule transformations!
         
         DataInfo* graphInfo = dynamic_cast<DataInfo*>(graphData->getData()->next());
-        graphInfo->setDirected(!m1.graph_transformations[UNDIRECTED]);
-        graphInfo->setWeighted(!m1.graph_transformations[UNWEIGHTED]);
+        graphInfo->setDirected(m1.graph_transformations[UNDIRECTED]);
+        graphInfo->setWeighted(m1.graph_transformations[UNWEIGHTED]);
         graph = graphData;
     }
 

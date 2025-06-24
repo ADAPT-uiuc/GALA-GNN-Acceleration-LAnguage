@@ -431,6 +431,8 @@ public:
 
                     resString += "  global_segments.push_back(segments_" + dNode->getName() + ");\n";
                     resString += "  global_bounds.push_back(total_bounds_" + dNode->getName() + ");\n";
+                    // std::cout << transform->getNode1()->getName() << " " << transform->getNode2()->getName() << std::endl;
+                    // std::cout << transform->getNode1()->getDataInfo()->getDirected() << " " << transform->getNode2()->getDataInfo()->getDirected() << std::endl;
                     if (!dNode->getDataInfo()->getDirected())
                     {
                         resString += "  global_segments.push_back(segments_" + dNode->getName() + ");\n";
