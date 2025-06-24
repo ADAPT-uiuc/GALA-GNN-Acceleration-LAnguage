@@ -12,7 +12,16 @@ typedef enum {
     MULT_NORM_RES,
     MESSAGE_PASSING_AGGREGATE,
     FEED_FORWARD_NN,
-    NON_LINEARITY
+    ADD_TWO_FFN,
+    NON_LINEARITY,
+    ATTEN_L,
+    ATTEN_R,
+    ATTN,
+    LEAKY_RELU_OP,
+    SAGE_OPS,
+    SOFTMAX_OP,
+    MULT_SCALAR_FEATS,
+    ADD_SCALAR_AGGR
 } LayerOpType;
 
 typedef enum {
@@ -38,6 +47,7 @@ class ModelConfig {
         int num_layers;
         int validation_step;
         vector<LayerOpType> layer_operations;
+        vector<bool> nonln_present;
         map<GraphTransformType, float> graph_transformations;
         vector<pair<ComputeTransformType, float>> compute_transformations;
         vector<pair<DataTransformType, float>> data_transformations;
@@ -73,6 +83,14 @@ class ModelConfig {
                 case MESSAGE_PASSING_AGGREGATE: return "MESSAGE_PASSING_AGGREGATE";
                 case FEED_FORWARD_NN: return "FEED_FORWARD_NN";
                 case NON_LINEARITY: return "NON_LINEARITY";
+                case ATTEN_L: return "ATTEN_L";
+                case ATTEN_R: return "ATTEN_R";
+                case LEAKY_RELU_OP: return "LEAKY_RELU_OP";
+                case SOFTMAX_OP: return "SOFTMAX_OP";
+                case MULT_SCALAR_FEATS: return "MULT_SCALAR_FEATS";
+                case ADD_SCALAR_AGGR: return "ADD_SCALAR_AGGR";
+                case SAGE_OPS: return "SAGE_OPS";
+                case ADD_TWO_FFN: return "ADD_TWO_FFN";
                 default: return "UNKNOWN_LAYER_OP";
             }
         }
@@ -106,6 +124,9 @@ class ModelConfig {
             a += "Iterations: " + std::to_string(iterations) + "\n";
             a += "Output Input Classes: " + std::to_string(output_input_classes) + "\n";
             a += "Number of Layers: " + std::to_string(num_layers) + "\n";
+            a += "NonLn Vector: ";
+            for (int b : nonln_present) a += std::to_string(b) + ' ';
+            a += '\n';
             a += "Layer Operations:\n";
             for (const auto& op : layer_operations) {
                 a += "  - " + to_string(op) + "\n";

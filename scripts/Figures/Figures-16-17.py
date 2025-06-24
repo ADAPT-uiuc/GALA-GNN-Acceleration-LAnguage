@@ -15,6 +15,7 @@ models = ["gcn",
           "gin",
           "sage"]
 
+dataset_list = ["Reddit"]
 dataset_list = ["Cora"]
 models = ["gcn"]
 
@@ -36,6 +37,11 @@ def compile_and_get_time(args):
     #
     # print("Exporting", args.dataset, "to", output_path)
 
+    output_path = args.stderr_log + "codegen/"
+
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
     for dset in dataset_list:
         for model in models:
             curr = f">>>Running [{dset} dataset with {model} model] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
@@ -44,7 +50,8 @@ def compile_and_get_time(args):
             errfile.write(curr+"\n")
 
             job_args = ['../../build/tests/gala',
-                        '../../tests/GALA-DSL/' + model + '/' + dset + '/' + args.hw + '.txt']
+                        '../../tests/GALA-DSL/' + model + '/' + dset + '/' + args.hw + '.txt',
+                        output_path]
 
             run(job_args, logfile, errfile)
 
@@ -63,6 +70,8 @@ if __name__ == '__main__':
                         default="timing_info.csv", help="File to store timing data")
     parser.add_argument("--hw", type=str,
                         default="h100", help="Target hardware")
+    parser.add_argument("--out-path", type=str,
+                        default="../../", help="Output path for the generated code")
     parser.add_argument("--stdout-log", type=str,
                         default="output.log", help="File to log outputs")
     parser.add_argument("--stderr-log", type=str,
