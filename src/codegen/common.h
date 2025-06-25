@@ -944,6 +944,10 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
             }
         } else if (cNode->getOp() == POWER_OP)
         {
+            if (cNode->getParam(0) == "0.000000")
+            {
+                cNode->setParam(0, "-1");
+            }
             if (outOfLoop)
             {
                 std::string powerCall = "   " + generateOutputString(cNode, outOfLoop) + " = torch::pow(" + cNode->getInput(0)->getName() + ", " + cNode->getParam(0) + ").detach();";

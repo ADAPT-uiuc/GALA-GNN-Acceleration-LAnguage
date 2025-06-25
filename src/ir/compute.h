@@ -120,6 +120,7 @@ public:
     void addParam(std::string new_param) { this->params.push_back(new_param); }
     // At Nihility's(IX) end
     std::string getParam(int ix) { return this->params.at(ix); }
+    void setParam(int ix, std::string new_val) { this->params.at(ix) = new_val; }
 
     // Data items should be constant once added (No need to remove elements)
     //  TODO it can change if any data transformations are done on it.
