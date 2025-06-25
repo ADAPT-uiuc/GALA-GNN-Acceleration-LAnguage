@@ -78,13 +78,14 @@ def compile_and_get_time(args):
                         '-DCMAKE_PREFIX_PATH="/home/damitha2/new_torch/libtorch"',
                         '-DCAFFE2_USE_CUDNN=True',
                         '..']
-            run_at(job_args, logfile, errfile, output_path)
+            run_at(job_args, logfile, errfile, output_path + "build/")
             job_args = ['make',
                         '-j56']
-            run_at(job_args, logfile, errfile, output_path)
+            run_at(job_args, logfile, errfile, output_path + "build/")
             job_args = ['./gala_model']
-            outfile.write(dset + "," + model + "," + args.hw + "," + args.train + ",")
-            run_at(job_args, outfile, errfile, output_path)
+            intTrain = int(args.train == 'true')
+            outfile.write(dset + "," + model + "," + args.hw + "," + str(intTrain) + ",")
+            run_at(job_args, outfile, errfile, output_path + "build/")
 
             logfile.write(("<"*100)+"\n")
             errfile.write(("<"*100)+"\n")
