@@ -650,7 +650,7 @@ public:\n\
                 } else
                 {
                     std::cout << "This unsup: NON_LNR_OP_SOFTMAX" << std::endl;
-                    autoGradFunction += "unsupported\n";
+                    autoGradFunction += "unsupported(NON_LNR_OP_SOFTMAX)\n";
                 }
 
                 autoGradFunction += "    torch::Tensor val_exp = torch::exp(value_graph);\n\

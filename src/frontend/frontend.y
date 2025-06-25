@@ -566,7 +566,7 @@ DataNode* addAttentionWeight_L(DataNode* prevData, TrainingLoopNode* trainingLoo
     if (debug == 2) cout << "add attention weight left\n";
     // Add attention weight operation (L side)
 	// L side
-	ForwardNode* atten_l = new ForwardNode(UPDATE_NODE, FFN_OP);
+	ForwardNode* atten_l = new ForwardNode(UPDATE_NODE, FFN_OP_EDGE);
 	// Weight as a matrix in the DIR
 	DataInfo* attenLWeightInfo = new DataInfo(CM_DTYPE);
     pair<int,int> weightInputDim;
@@ -610,7 +610,7 @@ DataNode* addAttentionWeight_L(DataNode* prevData, TrainingLoopNode* trainingLoo
 DataNode* addAttentionWeight_R(DataNode* prevData, DataNode* resData, TrainingLoopNode* trainingLoop, int layerNum){
     if (debug == 2) cout << "add attention weight right\n";
     // R side
-	ForwardNode* atten_r = new ForwardNode(UPDATE_NODE, FFN_OP);
+	ForwardNode* atten_r = new ForwardNode(UPDATE_NODE, FFN_OP_EDGE);
     pair<int,int> weightInputDim;
     pair<int,int> resInputDim;
 	DataInfo* attenRWeightInfo = new DataInfo(CM_DTYPE);
