@@ -33,7 +33,10 @@ def run_at(args, logfile, errfile, path):
 def compile_and_get_time(args):
     logfile = open(args.stdout_log, 'w+')
     errfile = open(args.stderr_log, 'w+')
-    outfile = open(args.stat_log, 'w+')
+    if args.train:
+        outfile = open(args.stat_log + "_" + args.hw + "_train.txt", 'w+')
+    else:
+        outfile = open(args.stat_log + "_" + args.hw + "_inf.txt", 'w+')
     outfile.write("dataset,model,hw,train,inference_time,total_time\n")
     outfile.flush()
 
@@ -103,7 +106,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Graph Benchmark Runner')
     parser.add_argument("--stat-log", type=str,
-                        default="timing_info.txt", help="File to store timing data")
+                        default="timing_info", help="File to store timing data")
     parser.add_argument("--hw", type=str,
                         default="h100", help="Target hardware")
     parser.add_argument("--train", action='store_true',
