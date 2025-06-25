@@ -24,7 +24,7 @@ res = m1.eval();
 # schedule
 G=G.set_unweighted(true); // false by default
 // Compute transformations
-aggrFn=aggrFn.coarsen(4);
+aggrFn=aggrFn.coarsen(2);
 // Data transformations
 G=G.col_tile(1400000);
 operator_reordering(false);
