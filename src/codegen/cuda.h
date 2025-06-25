@@ -859,7 +859,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
             {
                 auto inputInfo =  inputData->getDataInfo();
 
-                // std::cout << inputData->getName() << " :a: " << inputInfo->getDefaultName()  << " " << inputInfo->getDefaultIndex() << " " << inputInfo->getIndex() << std::endl;
+                std::cout << inputData->getName() << " :a: " << inputInfo->getDefaultName()  << " " << inputInfo->getDefaultIndex() << " " << inputInfo->getIndex() << std::endl;
 
                 if (!(inputInfo->getIndex() <= 0)){
                     std::string dataName;
@@ -874,7 +874,6 @@ torch::Tensor bounds, int nrows, int segments) {\n\
 
                     if (encounteredStrings.find(dataName) == encounteredStrings.end())
                     {
-
                         if (inputInfo->getFormat() == CSR_STYPE)
                         {
                             // std::cout << inputData->getName() << " cas" << std::endl;
