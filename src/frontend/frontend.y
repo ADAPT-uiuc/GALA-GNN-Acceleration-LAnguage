@@ -289,9 +289,9 @@ schedule : data_transform
 ;
 // this is where todo all graph transform, data transform 
 data_transform : data_var ASSIGN data_var DOT SET_UNDIRECTED LPAREN bool RPAREN SEMICOLON
-    {  m1.addGraphTransformation(UNDIRECTED, (float) !$7);  }
+    {  m1.addGraphTransformation(UNDIRECTED, (float) $7);  }
     | data_var ASSIGN data_var DOT SET_UNWEIGHTED LPAREN bool RPAREN SEMICOLON
-    {  m1.addGraphTransformation(UNWEIGHTED, (float) !$7); }
+    {  m1.addGraphTransformation(UNWEIGHTED, (float) $7); }
     | FEAT_SIZE_ASSIGN LPAREN INTEGER RPAREN SEMICOLON
     {  m1.addGraphTransformation(FEAT_SIZE, atof($3));  }
     | LABEL_SIZE_ASSIGN LPAREN INTEGER RPAREN SEMICOLON 
@@ -451,7 +451,8 @@ DataNode* addDegrees_CIR(DataNode* graphData, TrainingLoopNode* trainingLoop){
 	degreesOp->addInputData(onesData);
 	degreesOp->addInputData(graphData);
 	degreesOp->addOutputData(degreesData);
-	degreesOp->addOpt(COARSE_COPT, 2);
+	if (m1.compute_transformations.size() > 0)
+	    degreesOp->addOpt(COARSE_COPT, m1.compute_transformations[0].second);
 	trainingLoop->addLoopNode(degreesOp);
 	RelationEdge* degreesOpOnesDependency = new RelationEdge(onesData, ALL_RELATION, degreesData, ALL_RELATION);
 	GALAFEContext::dependencies.push_back(degreesOpOnesDependency);
@@ -497,12 +498,14 @@ DataNode* addAggregate_CIR(DataNode* prevData, DataNode* graphData, TrainingLoop
     pair<int,int> outputData_inputDim = {-1, (layerNum == 0) ? m1.graph_transformations[FEAT_SIZE] : m1.output_input_classes[layerNum]};
     DataNode* outputData = createDataNode(RM_DTYPE, false, false, outputData_inputDim, true, gin || sage ? "res_n" : "res", INT32, INT32, F32);
 
-    // TODO Temp fix
-    aggregate->addOpt(COARSE_COPT, 2);
+    // // TODO Temp fix
+    // aggregate->addOpt(COARSE_COPT, 2);
     
     aggregate->addInputData(prevData);
     aggregate->addInputData(graphData); 
     aggregate->addOutputData(outputData);
+    if (m1.compute_transformations.size() > 0)
+	    aggregate->addOpt(COARSE_COPT, m1.compute_transformations[0].second);
     trainingLoop->addLoopNode(aggregate);
 
     // Relation (dependency) between features and aggregated output
@@ -681,7 +684,7 @@ DataNode* addAttn(DataNode* attenLData, DataNode* attenRData, DataNode* graphDat
 DataNode* addSoftmax_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int layerNum){
     if (debug == 2) cout << "softmax\n";
     ForwardNode* softmaxOp = new ForwardNode(UPDATE_EDGE, NON_LNR_OP_SOFTMAX);
-	DataInfo* softmaxInfo = new DataInfo(CSR_STYPE, m1.graph_transformations[UNDIRECTED], true);
+	DataInfo* softmaxInfo = new DataInfo(CSR_STYPE, !m1.graph_transformations[UNDIRECTED], true);
     softmaxInfo->addOpt(COL_TILE_DOPT, "300000");
 	softmaxInfo->setIndex(0);
 	softmaxInfo->setDerived(true);
@@ -700,7 +703,7 @@ DataNode* addLeakyReLU(DataNode* prevData, TrainingLoopNode* trainingLoop, int l
 	// Leaky ReLU operation
 	ForwardNode* leakyReluOp = new ForwardNode(UPDATE_EDGE, NON_LNR_OP_LEAKY_RELU);
 	leakyReluOp->addParam("0.2"); // TODO: avoid hardcoding
-	DataInfo* leakyReluInfo = new DataInfo(CSR_STYPE, m1.graph_transformations[UNDIRECTED], true);
+	DataInfo* leakyReluInfo = new DataInfo(CSR_STYPE, !m1.graph_transformations[UNDIRECTED], true);
 	// leakyReluInfo.setDims(-4, 1);
 	DataLevel* rootLeakyReluLevel = new DataLevel(leakyReluInfo, true);
 	DataNode* leakyReluData = new DataNode("attn", INT32, INT32, F32, rootLeakyReluLevel);
@@ -964,7 +967,7 @@ void generate_ir(){
     DataNode* graph;
     if (m1.data_transformations.size() > 0){ // need a transformed graph to be made
         DataInfo* originalGraphInfo = dynamic_cast<DataInfo*>(graphData->getData()->next());
-        DataInfo* transformedGraphInfo = new DataInfo(CSR_STYPE, m1.graph_transformations[UNDIRECTED], m1.graph_transformations[UNWEIGHTED]);
+        DataInfo* transformedGraphInfo = new DataInfo(CSR_STYPE, !m1.graph_transformations[UNDIRECTED], !m1.graph_transformations[UNWEIGHTED]);
         if (m1.data_transformations[0].first == COL_TILE){ // only one data transform for now for gcn
             transformedGraphInfo->addOpt(COL_TILE_DOPT, to_string(m1.data_transformations[0].second));
         }
@@ -988,8 +991,8 @@ void generate_ir(){
     else{ // then make sure to modify the original graph with the schedule transformations!
         
         DataInfo* graphInfo = dynamic_cast<DataInfo*>(graphData->getData()->next());
-        graphInfo->setDirected(m1.graph_transformations[UNDIRECTED]);
-        graphInfo->setWeighted(m1.graph_transformations[UNWEIGHTED]);
+        graphInfo->setDirected(!m1.graph_transformations[UNDIRECTED]);
+        graphInfo->setWeighted(!m1.graph_transformations[UNWEIGHTED]);
         graph = graphData;
     }
 
