@@ -697,7 +697,10 @@ public:\n\
 };\n";
                 kernelCallCode.addCode(autoGradFunction);
             }
-            auto inGraphIndx = cNode->getInput(0)->getDataInfo()->getIndex();
+            // auto inGraphIndx = cNode->getInput(0)->getDataInfo()->getIndex();
+            // TODO Temp fix
+            cNode->getInput(0)->getDataInfo()->setIndex(0);
+            auto inGraphIndx = 0;
             std::string tempForwardAggrCall = generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
             + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");";
             model.getForward()->addCode(tempForwardAggrCall);
