@@ -29,4 +29,4 @@ label_size(41); // -3 if not given
 // Compute transformations
 aggrFn=aggrFn.coarsen(4);
 // Data transformations
-G=G.col_tile(370000);
+G=G.col_tile(37000);
