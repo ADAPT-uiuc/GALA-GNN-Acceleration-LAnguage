@@ -523,8 +523,8 @@ public:
             graphNamePathMap["Cora"] = "CoraGraphDataset";
             graphNamePathMap["CoraFull"] = "CoraFullDataset";
             graphNamePathMap["Pubmed"] = "PubmedGraphDataset";
-            graphNamePathMap["ogbn-arxiv"] = "ogbn-arxiv";
-            graphNamePathMap["ogbn-products"] = "ogbn-products";
+            graphNamePathMap["Arxiv"] = "ogbn-arxiv";
+            graphNamePathMap["Products"] = "ogbn-products";
 
             // This doesn't need to change
             std::string fileLoadCode = "    SM adj0;\n\
