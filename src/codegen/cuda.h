@@ -991,7 +991,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
                 auto inputInfo =  inputData->getDataInfo();
                 if (inputInfo->getFormat() == CSR_STYPE && !inputInfo->getDerived())
                 {
-                    // std::cout << inputData->getName() << " bas" << std::endl;
+                    std::cout << inputData->getName() << " bas" << std::endl;
 
                     // TODO Check if this is a dependant of an exising graph
                     

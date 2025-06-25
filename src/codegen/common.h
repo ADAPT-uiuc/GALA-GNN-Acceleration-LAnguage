@@ -1402,7 +1402,7 @@ forward(torch::Tensor t_iden";
     {
     };
 
-    void commonPerCode(std::vector<CIRNode*>& program)
+    void commonPerCode()
     {
         // Will not change for now
         // TODO need to change the types based on the data
@@ -1461,7 +1461,7 @@ std::vector<torch::Tensor> global_bounds;\n";
         // std::cout << "Works0" << std::endl;
         initKernels(program);
         // std::cout << "Works1" << std::endl;
-        commonPerCode(program);
+        commonPerCode();
 
         generateCode(program, transforms);
 
