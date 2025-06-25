@@ -1058,8 +1058,8 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
             model.getDef()->addCode(fcDef);
 
             std::string fcInit = "sfc" + std::to_string(fcSelfCount) + " = register_module(\"sfc"
-            + std::to_string(fcSelfCount) + "\", torch::nn::Linear(size" + std::to_string(fcCount)
-             + ", size" + std::to_string(fcCount + 1) + "));";
+            + std::to_string(fcSelfCount) + "\", torch::nn::Linear(size" + std::to_string(fcCount - 1)
+             + ", size" + std::to_string(fcCount) + "));";
             model.getInit()->addCode(fcInit);
 
             // TODO add the inputs to the forward call based on the actual inputs
