@@ -1249,6 +1249,37 @@ forward(torch::Tensor t_iden";
     torch::Tensor prediction =\n\
         net->forward(t_iden";
 
+  //               std::string tempTrainLoopPostCall = ", epoch, mod_v)[0];\n\
+  //   cudaDeviceSynchronize();\n\
+  //   end = get_time();\n\
+  //   cudaDeviceSynchronize();\n\
+  //   start_train = get_time();\n\
+  //   torch::Tensor prediction_train = prediction.index({t_train_mask});\n\
+  //   torch::Tensor labels_train = t_labs.index({t_train_mask});\n\
+  //   auto criterion = torch::nn::CrossEntropyLoss();\n\
+  //   torch::Tensor d_loss = criterion(prediction_train, labels_train);\n\
+  //   d_loss.backward();\n\
+  //   optimizer.step();\n\
+  //   cudaDeviceSynchronize();\n\
+  //   end_train = get_time();\n\
+  //   if (epoch % mod_v == 0) {\n\
+  //     torch::Tensor prediction_test = prediction.index({t_test_mask});\n\
+  //     torch::Tensor labels_test = t_labs.index({t_test_mask});\n\
+  //     auto [pred_val, pred_idx] = torch::max({prediction_test}, 1);\n\
+  //     auto correct = torch::sum(pred_idx == labels_test);\n\
+  //     std::cout << \"Epoch \" << epoch << \" Loss: \" << d_loss.item<val_t>()\n\
+  //               << \" Accuracy: \"\n\
+  //               << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])\n\
+  //               << std::endl;\n\
+  //   } else {\n\
+  //     std::cout << \"Epoch \" << epoch << \" Loss: \" << d_loss.item<val_t>()\n\
+  //               << std::endl;\n\
+  //   }\n\
+  //   if (epoch >= skip_cache_warmup) {\n\
+  //     times_arr.push_back(end - start);\n\
+  //     times_arr_train.push_back(end_train - start_train);\n\
+  //   }\n\
+  // }";
                 std::string tempTrainLoopPostCall = ", epoch, mod_v)[0];\n\
     cudaDeviceSynchronize();\n\
     end = get_time();\n\
@@ -1262,19 +1293,6 @@ forward(torch::Tensor t_iden";
     optimizer.step();\n\
     cudaDeviceSynchronize();\n\
     end_train = get_time();\n\
-    if (epoch % mod_v == 0) {\n\
-      torch::Tensor prediction_test = prediction.index({t_test_mask});\n\
-      torch::Tensor labels_test = t_labs.index({t_test_mask});\n\
-      auto [pred_val, pred_idx] = torch::max({prediction_test}, 1);\n\
-      auto correct = torch::sum(pred_idx == labels_test);\n\
-      std::cout << \"Epoch \" << epoch << \" Loss: \" << d_loss.item<val_t>()\n\
-                << \" Accuracy: \"\n\
-                << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])\n\
-                << std::endl;\n\
-    } else {\n\
-      std::cout << \"Epoch \" << epoch << \" Loss: \" << d_loss.item<val_t>()\n\
-                << std::endl;\n\
-    }\n\
     if (epoch >= skip_cache_warmup) {\n\
       times_arr.push_back(end - start);\n\
       times_arr_train.push_back(end_train - start_train);\n\
@@ -1302,11 +1320,13 @@ forward(torch::Tensor t_iden";
             }
         }
 
-        std::string printTimes = "  std::cout << \"Inference: \" << calc_mean(times_arr) << \",\"\n\
-            << calc_std(times_arr) << std::endl;\n\
-  std::cout << \"Train: \" << calc_mean(times_arr_train) << \",\"\n\
-            << calc_std(times_arr_train) << std::endl;\n\
-  std::cout << \"Total: \" << calc_mean(times_arr) + calc_mean(times_arr_train) << std::endl;\n";
+  //       std::string printTimes = "  std::cout << \"Inference: \" << calc_mean(times_arr) << \",\"\n\
+  //           << calc_std(times_arr) << std::endl;\n\
+  // std::cout << \"Train: \" << calc_mean(times_arr_train) << \",\"\n\
+  //           << calc_std(times_arr_train) << std::endl;\n\
+  // std::cout << \"Total: \" << calc_mean(times_arr) + calc_mean(times_arr_train) << std::endl;\n";
+        std::string printTimes = "  std::cout << \"calc_mean(times_arr) << \",\"\n\
+            << calc_mean(times_arr) + calc_mean(times_arr_train) << std::endl;\n";
         postCode.addCode(printTimes);
 
         std::string closeMain = "}";

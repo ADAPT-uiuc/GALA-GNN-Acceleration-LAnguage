@@ -16,7 +16,6 @@ models = ["gcn",
           "sage"]
 
 dataset_list = ["Reddit"]
-dataset_list = ["Cora"]
 models = ["gcn"]
 
 def run(args, logfile, errfile):
@@ -25,9 +24,17 @@ def run(args, logfile, errfile):
     logfile.flush()
     errfile.flush()
 
+def run_at(args, logfile, errfile, path):
+    proc = subprocess.Popen(args, stdout=logfile, stderr=errfile, cwd=path)
+    proc.wait()
+    logfile.flush()
+    errfile.flush()
+
 def compile_and_get_time(args):
     logfile = open(args.stdout_log, 'a+')
     errfile = open(args.stderr_log, 'a+')
+    outfile = open(args.stat-log, 'a+')
+    outfile.write("dataset,model,hw,train,inference_time,total_time\n")
 
     # TODO add build
     # if not os.path.exists(build_path):
@@ -42,6 +49,9 @@ def compile_and_get_time(args):
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
+    if not os.path.exists(output_path + "build/"):
+        os.makedirs(output_path + "build/")
+
     for dset in dataset_list:
         for model in models:
             curr = f">>>Running [{dset} dataset with {model} model] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
@@ -49,9 +59,14 @@ def compile_and_get_time(args):
             logfile.write(curr+"\n")
             errfile.write(curr+"\n")
 
-            job_args = ['../../build/tests/gala',
-                        '../../tests/GALA-DSL/' + model + '/' + dset + '/' + args.hw + '.txt',
-                        output_path]
+            if args.train:
+                job_args = ['../../build/tests/gala_train',
+                            '../../tests/GALA-DSL/' + model + '/' + dset + '/' + args.hw + '.txt',
+                            output_path]
+            else:
+                job_args = ['../../build/tests/gala_inference',
+                            '../../tests/GALA-DSL/' + model + '/' + dset + '/' + args.hw + '.txt',
+                            output_path]
             run(job_args, logfile, errfile)
 
             curr = f">>>Building the code for [{dset} dataset with {model} model] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
@@ -63,12 +78,13 @@ def compile_and_get_time(args):
                         '-DCMAKE_PREFIX_PATH="/home/damitha2/new_torch/libtorch"',
                         '-DCAFFE2_USE_CUDNN=True',
                         '..']
-            run(job_args, logfile, errfile)
+            run_at(job_args, logfile, errfile, output_path)
             job_args = ['make',
-                        '-DCMAKE_PREFIX_PATH="/home/damitha2/new_torch/libtorch"',
-                        '-DCAFFE2_USE_CUDNN=True',
-                        '..']
-            run(job_args, logfile, errfile)
+                        '-j56']
+            run_at(job_args, logfile, errfile, output_path)
+            job_args = ['./gala_model']
+            outfile.write(dset + "," + model + "," + args.hw + "," + args.train + ",")
+            run_at(job_args, outfile, errfile, output_path)
 
             logfile.write(("<"*100)+"\n")
             errfile.write(("<"*100)+"\n")
@@ -82,9 +98,12 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Graph Benchmark Runner')
     parser.add_argument("--stat-log", type=str,
-                        default="timing_info.csv", help="File to store timing data")
+                        default="timing_info.txt", help="File to store timing data")
     parser.add_argument("--hw", type=str,
                         default="h100", help="Target hardware")
+    parser.add_argument("--train", action='store_true',
+                        help="Train the model")
+    parser.set_defaults(train=False)
     parser.add_argument("--out-path", type=str,
                         default="../../", help="Output path for the generated code")
     parser.add_argument("--stdout-log", type=str,
