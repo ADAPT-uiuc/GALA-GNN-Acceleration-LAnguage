@@ -365,7 +365,7 @@ public:
             kernelName += "ones_op";
         } else
         {
-            kernelName += "unsupported";
+            kernelName += kernelName + " is unsupported";
         }
         // TODO add other kernel optimizations
         for (std::pair<CompOptimization, float> optPair: *cNode->getOpts())
@@ -599,6 +599,7 @@ public:\n\
                             value_graph, bounds, global_nrows, segments);";
                 } else
                 {
+                    std::cout << "This unsup: AGGREGATE_EDGE_SUM_OP" << std::endl;
                     autoGradFunction += "unsupported\n";
                 }
                 autoGradFunction += "}\n";
@@ -648,6 +649,7 @@ public:\n\
         int segments = global_segments[2 * li];\n";
                 } else
                 {
+                    std::cout << "This unsup: NON_LNR_OP_SOFTMAX" << std::endl;
                     autoGradFunction += "unsupported\n";
                 }
 
