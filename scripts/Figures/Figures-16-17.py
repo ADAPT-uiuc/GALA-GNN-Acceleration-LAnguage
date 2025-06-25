@@ -35,14 +35,17 @@ def compile_and_get_time(args):
     errfile = open(args.stderr_log, 'w+')
     outfile = open(args.stat_log, 'w+')
     outfile.write("dataset,model,hw,train,inference_time,total_time\n")
+    outfile.flush()
 
     # TODO add build
-    # if not os.path.exists(build_path):
-    #     os.makedirs(build_path)
-    #     job_args = ['cmake', "../.."]
-    #
-    #
-    # print("Exporting", args.dataset, "to", output_path)
+    if not os.path.exists(build_path):
+        os.makedirs(build_path)
+        job_args = ['cmake',
+                    '..']
+        run_at(job_args, logfile, errfile, build_path)
+        job_args = ['make',
+                    '-j56']
+        run_at(job_args, logfile, errfile, build_path)
 
     output_path = args.out_path + "codegen/"
 
@@ -85,6 +88,7 @@ def compile_and_get_time(args):
             job_args = ['./gala_model']
             intTrain = int(args.train == 'true')
             outfile.write(dset + "," + model + "," + args.hw + "," + str(intTrain) + ",")
+            outfile.flush()
             run_at(job_args, outfile, errfile, output_path + "build/")
 
             logfile.write(("<"*100)+"\n")
