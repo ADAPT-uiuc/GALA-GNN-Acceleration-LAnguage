@@ -1325,7 +1325,7 @@ forward(torch::Tensor t_iden";
   // std::cout << \"Train: \" << calc_mean(times_arr_train) << \",\"\n\
   //           << calc_std(times_arr_train) << std::endl;\n\
   // std::cout << \"Total: \" << calc_mean(times_arr) + calc_mean(times_arr_train) << std::endl;\n";
-        std::string printTimes = "  std::cout << \"calc_mean(times_arr) << \",\"\n\
+        std::string printTimes = "  std::cout << calc_mean(times_arr) << \",\"\n\
             << calc_mean(times_arr) + calc_mean(times_arr_train) << std::endl;\n";
         postCode.addCode(printTimes);
 
