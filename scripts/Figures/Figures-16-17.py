@@ -15,7 +15,7 @@ models = ["gcn",
           "gin",
           "sage"]
 
-dataset_list = ["Reddit"]
+# dataset_list = ["Reddit"]
 models = ["gcn"]
 
 def run(args, logfile, errfile):
