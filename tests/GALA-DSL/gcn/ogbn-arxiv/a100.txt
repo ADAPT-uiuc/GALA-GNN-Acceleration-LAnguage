@@ -1,5 +1,5 @@
 // Init data
-G = load_dataset("ogbn-arixv");
+G = load_dataset("Arxiv");
 
 aggrFn = dsl.get_aggregate(fn = dsl.fn.mul_sum);
 L1 = layer(G, hs, nonln_fn, aggregate_fn) {

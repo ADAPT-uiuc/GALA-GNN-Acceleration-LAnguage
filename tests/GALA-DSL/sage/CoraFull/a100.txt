@@ -25,3 +25,5 @@ feature_size(8710); // -2 if not given
 label_size(70); // -3 if not given
 // Compute transformations
 aggrFn=aggrFn.coarsen(4);
+// Data transformations
+G=G.col_tile(100000);

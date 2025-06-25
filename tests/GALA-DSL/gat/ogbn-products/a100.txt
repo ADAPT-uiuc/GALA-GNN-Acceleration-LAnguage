@@ -1,5 +1,5 @@
 // Init data
-G = load_dataset("ogbn-products");
+G = load_dataset("Products");
 
 aggrFn = dsl.get_aggregate(fn = dsl.fn.mul_sum);
 edgeFn = dsl.get_edge_aggregate(fn = dsl.fn.sum);
@@ -30,3 +30,5 @@ feature_size(100); // -2 if not given
 label_size(47); // -3 if not given
 // Compute transformations
 aggrFn=aggrFn.coarsen(4);
+// Data transformations
+G=G.col_tile(10000000);
