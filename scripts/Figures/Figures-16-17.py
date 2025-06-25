@@ -33,7 +33,7 @@ def run_at(args, logfile, errfile, path):
 def compile_and_get_time(args):
     logfile = open(args.stdout_log, 'a+')
     errfile = open(args.stderr_log, 'a+')
-    outfile = open(args.stat-log, 'a+')
+    outfile = open(args.stat_log, 'a+')
     outfile.write("dataset,model,hw,train,inference_time,total_time\n")
 
     # TODO add build
