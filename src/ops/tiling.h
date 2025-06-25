@@ -5,6 +5,7 @@
 #ifndef SPARSE_ACCELERATOR_TILING_H
 #define SPARSE_ACCELERATOR_TILING_H
 
+#include <random>
 #include <torch/torch.h>
 
 // TODO -  This WILL work with CSR, but not sure of others at the moment
