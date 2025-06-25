@@ -859,7 +859,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
             {
                 auto inputInfo =  inputData->getDataInfo();
 
-                std::cout << inputData->getName() << " :a: " << inputInfo->getDefaultName()  << " " << inputInfo->getDefaultIndex() << " " << inputInfo->getIndex() << std::endl;
+                // std::cout << inputData->getName() << " :a: " << inputInfo->getDefaultName()  << " " << inputInfo->getDefaultIndex() << " " << inputInfo->getIndex() << std::endl;
 
                 if (!(inputInfo->getIndex() <= 0)){
                     std::string dataName;
@@ -991,8 +991,6 @@ torch::Tensor bounds, int nrows, int segments) {\n\
                 auto inputInfo =  inputData->getDataInfo();
                 if (inputInfo->getFormat() == CSR_STYPE && !inputInfo->getDerived())
                 {
-                    std::cout << inputData->getName() << " bas" << std::endl;
-
                     // TODO Check if this is a dependant of an exising graph
                     
                     int indexData = (int)encounteredStrings.size();
@@ -1001,6 +999,12 @@ torch::Tensor bounds, int nrows, int segments) {\n\
                         indexData = inputInfo->getIndex();
                     }
                     encounteredStrings.insert(inputData->getName());
+
+                    // TODO Temp fix
+                    if (inputData->getName() == "attn")
+                    {
+                        continue;
+                    }
 
                     inputInfo->setIndex(indexData);
 
