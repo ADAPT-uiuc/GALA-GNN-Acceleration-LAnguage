@@ -790,7 +790,7 @@ DataNode* add_addTwoFFN_CIR(DataNode* prevData, DataNode* featData, TrainingLoop
     GALAFEContext::associations.push_back(inOutWeightAssociation);
     
     // Add weight operation (res)
-    auto* ffn2 = new ForwardNode(UPDATE_NODE, FFN_OP);
+    auto* ffn2 = new ForwardNode(UPDATE_NODE, FFN_OP_SELF);
     
     // Weight as a matrix in the DIR
     auto* weightInfo2 = new DataInfo(CM_DTYPE);

@@ -500,7 +500,7 @@ public:
 
     }
 
-    void generateOpCode(ComputeNode* cNode, int& fcCount, int& fcEdgeCount, int& epCount, bool outOfLoop, bool& hasFFNEdgeUpdate,
+    void generateOpCode(ComputeNode* cNode, int& fcCount, int& fcEdgeCount, int& fcSelfCount,int& epCount, bool outOfLoop, bool& hasFFNEdgeUpdate,
         std::unordered_set<std::string> &encounteredAutograds,
         std::vector<int> &inputSizes,
         std::vector<TransformEdge*>& transforms)
@@ -1052,6 +1052,22 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
             std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = efc" + std::to_string(fcEdgeCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
             model.getForward()->addCode(forwardCall);
             fcEdgeCount++;
+        }  else if (cNode->getOp() == FFN_OP_SELF)
+        {
+            std::string fcDef = "torch::nn::Linear sfc" + std::to_string(fcSelfCount) + "{nullptr};";
+            model.getDef()->addCode(fcDef);
+
+            std::string fcInit = "sfc" + std::to_string(fcSelfCount) + " = register_module(\"sfc"
+            + std::to_string(fcSelfCount) + "\", torch::nn::Linear(size" + std::to_string(fcCount)
+             + ", size" + std::to_string(fcCount + 1) + "));";
+            model.getInit()->addCode(fcInit);
+
+            // TODO add the inputs to the forward call based on the actual inputs
+            // TODO Temp fix
+            // std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = sfc" + std::to_string(fcEdgeCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
+            std::string forwardCall = "res = sfc" + std::to_string(fcEdgeCount) + "->forward(res);";
+            model.getForward()->addCode(forwardCall);
+            fcSelfCount++;
         } else if (cNode->getOp() == SCALAR_ADD_EPS_MULTIPLY_OP)
         {
             std::string epDef = "torch::Tensor eps" + std::to_string(epCount) + "{nullptr};";
@@ -1125,6 +1141,7 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
         std::vector<int> inputSizes;
         int fcCount = 0;
         int fcEdgeCount = 0;
+        int fcSelfCount = 0;
         int epCount = 0;
         bool hasFFNEdgeUpdate = false;
 
@@ -1137,7 +1154,8 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
             auto oNode = dynamic_cast<ComputeNode*>(outNode);
             if (oNode)
             {
-                generateOpCode(oNode, fcCount, fcEdgeCount, epCount, true, hasFFNEdgeUpdate, encounteredAutograds, inputSizes, transforms);
+                generateOpCode(oNode, fcCount, fcEdgeCount, fcSelfCount,
+                    epCount, true, hasFFNEdgeUpdate, encounteredAutograds, inputSizes, transforms);
 
                 // Generate the transfer code after the load operation
                 if (oNode->getOp() == LOAD_OP)
@@ -1178,7 +1196,8 @@ forward(torch::Tensor t_iden";
                         model.getForwardCallPost()->addCode(initTensor);
                     }
 
-                    generateOpCode(cNode, fcCount, fcEdgeCount, epCount, false, hasFFNEdgeUpdate, encounteredAutograds, inputSizes, transforms);
+                    generateOpCode(cNode, fcCount, fcEdgeCount, fcSelfCount,
+                        epCount, false, hasFFNEdgeUpdate, encounteredAutograds, inputSizes, transforms);
                 }
                 CIRNode* inNode = loopNode->getNode(loopNode->getLoopNodeNum()-1);
                 auto cNode = dynamic_cast<ComputeNode*>(inNode);

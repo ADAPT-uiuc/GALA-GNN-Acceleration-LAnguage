@@ -41,6 +41,7 @@ enum ComputeOp {
     AGGREGATE_MUL_SUM_DIRECT, // No autograd
     FFN_OP, // Can also be UPDATE
     FFN_OP_EDGE,
+    FFN_OP_SELF,
     BIAS_OP,
     NON_LNR_OP_RELU,
     NON_LNR_OP_LOG_SOFTMAX,
