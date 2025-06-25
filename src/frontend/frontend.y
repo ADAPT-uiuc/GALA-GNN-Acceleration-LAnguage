@@ -690,7 +690,7 @@ DataNode* addSoftmax_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int
 	softmaxInfo->setDerived(true);
 	// leakyReluInfo.setDims(-4, 1);
 	// TODO Temp fix
-	prevData->getDataIndo()->addOpt(COL_TILE_DOPT, "300000");
+	prevData->getDataInfo()->addOpt(COL_TILE_DOPT, "300000");
 	DataLevel* rootSoftmaxLevel = new DataLevel(softmaxInfo, true);
 	DataNode* softmaxData = new DataNode("attn", INT32, INT32, F32, rootSoftmaxLevel);
 	softmaxOp->addInputData(prevData);
