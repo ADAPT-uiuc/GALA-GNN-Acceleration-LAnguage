@@ -630,6 +630,21 @@ public:\n\
             model.getForward()->addCode(tempForwardAggrCall);
         } else if (cNode->getOp() == AGGREGATE_EDGE_MUL_OP)
         {
+            std::string normCall = "auto options_ones = torch::TensorOptions()\n\
+                       .dtype(torch::kFloat)\n\
+                       .requires_grad(false)\n\
+                       .device(torch::kCUDA, 0);\n\
+            torch::Tensor ones = torch::ones({global_nrows, 1}, options_ones);\n\
+            torch::Tensor offset_graph_ones = global_offset_graph[2 * 0];\n\
+            torch::Tensor columns_graph_ones = global_columns_graph[2 * 0];\n\
+            torch::Tensor value_graph_ones = global_value_graph[2 * 0];\n\
+            torch::Tensor bounds_ones = global_bounds[2 * 0];\n\
+            int segments_ones = global_segments[2 * 0];\n\
+            torch::Tensor degrees = aggregate_node_mul_sum_direct_coarse2_call(ones, offset_graph_ones, columns_graph_ones,\n\
+                                value_graph_ones, bounds_ones, segments_ones);\n\
+            torch::Tensor norm = torch::pow(degrees, -0.500000)\n";
+            model.getInv()->addCode(normCall);
+
             bool isColTile = hasDOpt(cNode->getInput(2), COL_TILE_DOPT);
 
             auto inGraphIndx = cNode->getInput(2)->getDataInfo()->getIndex();
@@ -649,10 +664,10 @@ public:\n\
 
             tempForwardAggrCall += generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
             + "(" + cNode->getInput(0)->getName() + ", " + cNode->getInput(1)->getName() + ", offset_graph_vals, columns_graph_vals, value_graph_vals, bounds_vals, segments_vals);";
-            model.getForward()->addCode(tempForwardAggrCall);
+            model.getInv()->addCode(tempForwardAggrCall);
 
             std::string resetVal = "global_value_graph[2 * " + std::to_string(inGraphIndx) + "] = " + generateOutputString(cNode, outOfLoop) + ";";
-            model.getForward()->addCode(resetVal);
+            model.getInv()->addCode(resetVal);
         } else if (cNode->getOp() == NON_LNR_OP_SOFTMAX)
         {
             bool isColTile = hasDOpt(cNode->getInput(0), COL_TILE_DOPT);
