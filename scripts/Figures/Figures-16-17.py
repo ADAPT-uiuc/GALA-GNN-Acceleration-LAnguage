@@ -22,8 +22,8 @@ dgl_map = {"Cora":"CoraGraphDataset",
            "ogbn-arxiv":"ogbn-arxiv",
            "ogbn-products":"ogbn-products"}
 
-dataset_list = ["Cora"]
-models = ["gcn"]
+# dataset_list = ["Cora"]
+# models = ["gcn"]
 
 def run(args, logfile, errfile):
     proc = subprocess.Popen(args, stdout=logfile, stderr=errfile)
