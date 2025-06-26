@@ -287,19 +287,6 @@ public:
                                 associations.push_back(graphEdgeAggrLAssociation);
                                 associations.push_back(graphEdgeAggrRAssociation);
                                 addedSDDMM = true;
-
-                                int ixy = 0;
-                                while (ixy < lNode->getLoopNodeNum())
-                                {
-                                    auto rNode = dynamic_cast<ComputeNode*>(lNode->getNode(ixy));
-                                    if(rNode->getOp() == DEGREES_OP || rNode->getOp() == ONES_OP || rNode->getOp() == POWER_OP || rNode->getOp() == AGGREGATE_MUL_SUM_DIRECT)
-                                    {
-                                        lNode->eraseFirstNLoopNodes(1, ixy);
-                                    } else
-                                    {
-                                        ixy++;
-                                    }
-                                }
                             }
 
                             // Add aggregate operation
@@ -408,7 +395,30 @@ public:
                 // TODO Ignore this part for now. Assume all computations come from the main function
             }
         }
-        // std::cout << "works4" << std::endl;
+        if (addedSDDMM)
+        {
+            for (int i = 0; i < program.size(); i++)
+            {
+                CIRNode* outNode = program[i];
+                auto lNode = dynamic_cast<TrainingLoopNode*>(outNode);
+                // Do this transformation only if you have
+                if (lNode)
+                {
+                    int ixy = 0;
+                    while (ixy < lNode->getLoopNodeNum())
+                    {
+                        auto rNode = dynamic_cast<ComputeNode*>(lNode->getNode(ixy));
+                        if(rNode->getOp() == DEGREES_OP || rNode->getOp() == ONES_OP || rNode->getOp() == POWER_OP || rNode->getOp() == AGGREGATE_MUL_SUM_DIRECT)
+                        {
+                            lNode->eraseFirstNLoopNodes(1, ixy);
+                        } else
+                        {
+                            ixy++;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // Middle-end pass for training invariant code motion
