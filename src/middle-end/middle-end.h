@@ -260,6 +260,7 @@ public:
                             {
                                 aggrEdgeInfo->addOpt(opt.first, opt.second);
                             }
+                            aggrEdgeInfo->setIndex(0);
                             auto rootAggrEdgeLevel = new DataLevel(aggrEdgeInfo, true);
                             auto aggrEdgeData = new DataNode("val", INT32, INT32, F32, rootAggrEdgeLevel);
                             aggregateEdge->addInputData(cNodeRb1->getInput(0));
