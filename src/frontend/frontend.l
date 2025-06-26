@@ -32,6 +32,7 @@ feature_size { return FEAT_SIZE_ASSIGN; }
 label_size { return LABEL_SIZE_ASSIGN; }
 coarsen { return COARSEN; }
 operator_reordering { return OP_REORD; }
+is_sparser { return IS_SPARSE; }
 sparse_rewrites { return SPARSE_REWRITES; }
 training_subgraph { return TRAIN_SUBGRAPH; }
 train_code_motion { return TRAIN_CODE_MOTION; }

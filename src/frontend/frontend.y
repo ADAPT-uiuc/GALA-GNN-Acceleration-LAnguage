@@ -47,6 +47,7 @@ bool train_code_motion = true;
 %token<sval> MODEL_W EVAL TRAIN LAYER ITERS VAL_STEP 
 %token<sval> AGGR_INIT FN_ARG MUL_SUM MUL_MEAN DSL_DOT FFN_OUT SIZE_FN 
 %token<sval> GRAPH_ATTR FEAT_ATTR RELU LABEL_ATTR DEGREE_ATTR NODE_ATTR LEAKY_RELU
+%token<sval> POW SCALAR_INIT IS_SPARSE
 %token<sval> POW SCALAR_INIT
 %token<sval> COLTILE FEAT_SIZE_ASSIGN LABEL_SIZE_ASSIGN COARSEN SRC_ATTR DST_ATTR;
 %token<sval> INTEGER FLOAT SOFTMAX INIT_WEIGHT;
@@ -266,7 +267,7 @@ update_op : FFN LPAREN data_var COMMA FFN_OUT data_var RPAREN
     | LEAKY_RELU LPAREN data_var op data_var RPAREN
     { $$ = LEAKY_RELU_OP; } 
     | POW LPAREN data_var COMMA FLOAT RPAREN
-    { m1.normalization_value = stof($5); $$ = GET_NORMALIZATION; }
+    {  m1.normalization_value = stof($5); $$ = GET_NORMALIZATION; }
     | POW LPAREN data_var COMMA INTEGER RPAREN
     { $$ = GET_NORMALIZATION; }
     | SCALAR_INIT LPAREN INTEGER RPAREN
@@ -298,6 +299,8 @@ data_transform : data_var ASSIGN data_var DOT SET_UNDIRECTED LPAREN bool RPAREN 
     {  m1.addGraphTransformation(LABEL_SIZE, atof($3));  }
     | data_var ASSIGN data_var DOT COLTILE LPAREN INTEGER RPAREN SEMICOLON 
     {  m1.addDataTransformation(COL_TILE, atof($7));  }
+    | data_var ASSIGN data_var DOT IS_SPARSE LPAREN bool RPAREN SEMICOLON
+    {  m1.addGraphTransformation(SPARSE, (float) $7); }
 ;
 // this is where to do compute transform
 function_transform : data_var ASSIGN data_var DOT COARSEN LPAREN INTEGER RPAREN SEMICOLON
@@ -655,7 +658,7 @@ DataNode* addAttn(DataNode* attenLData, DataNode* attenRData, DataNode* graphDat
 	// Edge aggregation
 	auto aggregateEdge = new ForwardNode(AGGREGATE_EDGE, AGGREGATE_EDGE_SUM_OP);
 	auto aggrEdgeInfo = new DataInfo(CSR_STYPE, !m1.graph_transformations[UNDIRECTED], true);
-	aggrEdgeInfo->addOpt(COL_TILE_DOPT, "300000");
+	aggrEdgeInfo->addOpt(COL_TILE_DOPT, m1.data_transformations[0].second);
 	aggrEdgeInfo->setIndex(0);
 	aggrEdgeInfo->setDerived(true);
 	// aggrEdgeInfo.setDims(-4, 1); //-4=E=114M (E = Edges)
@@ -685,7 +688,7 @@ DataNode* addSoftmax_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int
     if (debug == 2) cout << "softmax\n";
     ForwardNode* softmaxOp = new ForwardNode(UPDATE_EDGE, NON_LNR_OP_SOFTMAX);
 	DataInfo* softmaxInfo = new DataInfo(CSR_STYPE, !m1.graph_transformations[UNDIRECTED], true);
-    softmaxInfo->addOpt(COL_TILE_DOPT, "300000");
+    softmaxInfo->addOpt(COL_TILE_DOPT, m1.data_transformations[0].second);
 	softmaxInfo->setIndex(0);
 	softmaxInfo->setDerived(true);
 	// leakyReluInfo.setDims(-4, 1);
@@ -970,6 +973,7 @@ void generate_ir(){
     if (m1.data_transformations.size() > 0){ // need a transformed graph to be made
         DataInfo* originalGraphInfo = dynamic_cast<DataInfo*>(graphData->getData()->next());
         DataInfo* transformedGraphInfo = new DataInfo(CSR_STYPE, !m1.graph_transformations[UNDIRECTED], !m1.graph_transformations[UNWEIGHTED]);
+        transformedGraphInfo->setSparse(m1.graph_transformations[SPARSE]);
         if (m1.data_transformations[0].first == COL_TILE){ // only one data transform for now for gcn
             transformedGraphInfo->addOpt(COL_TILE_DOPT, to_string(m1.data_transformations[0].second));
         }
@@ -995,6 +999,7 @@ void generate_ir(){
         DataInfo* graphInfo = dynamic_cast<DataInfo*>(graphData->getData()->next());
         graphInfo->setDirected(!m1.graph_transformations[UNDIRECTED]);
         graphInfo->setWeighted(!m1.graph_transformations[UNWEIGHTED]);
+        graphInfo->setSparse(m1.graph_transformations[SPARSE]);
         graph = graphData;
     }
 
