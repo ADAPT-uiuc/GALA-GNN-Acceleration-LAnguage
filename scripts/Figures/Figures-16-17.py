@@ -139,7 +139,7 @@ def evalDGL(args):
             outfile = open(args.stat_log + "_" + args.hw + "_DGL.txt", 'a+')
             outfile.write(dset + "," + model + "," + args.hw + ",")
             outfile.close()
-            run_(job_args, logfile, errfile)
+            run(job_args, logfile, errfile)
 
             logfile.write(("<"*100)+"\n")
             errfile.write(("<"*100)+"\n")
