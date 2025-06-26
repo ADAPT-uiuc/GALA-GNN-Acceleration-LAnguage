@@ -256,6 +256,10 @@ public:
                             // Edge aggregation
                             auto aggregateEdge = new ForwardNode(AGGREGATE_EDGE, AGGREGATE_EDGE_MUL_OP);
                             auto aggrEdgeInfo = new DataInfo(CSR_STYPE, inputGraph->getDataInfo()->getDirected(), true);
+                            for (auto opt: *inputGraph->getDataInfo()->getOpts())
+                            {
+                                aggrEdgeInfo->addOpt(opt.first, opt.second);
+                            }
                             auto rootAggrEdgeLevel = new DataLevel(aggrEdgeInfo, true);
                             auto aggrEdgeData = new DataNode("val", INT32, INT32, F32, rootAggrEdgeLevel);
                             aggregateEdge->addInputData(cNodeRb1->getInput(0));
@@ -285,7 +289,18 @@ public:
                             aggregate->addInputData(cNodeRb1->getInput(1));
                             aggregate->addInputData(aggrEdgeData);
                             aggregate->addOutputData(outputData);
-                            aggregate->addOpt(COARSE_COPT, 2);
+                            int coarsening = 0;
+                            for (auto opt: *cNodeAggr->getOpts())
+                            {
+                                if (opt.first == COARSE_COPT)
+                                {
+                                    coarsening = (int)opt.second;
+                                }
+                            }
+                            if (coarsening != 0)
+                            {
+                                aggregate->addOpt(COARSE_COPT, coarsening);
+                            }
                             lNode->insertToLoopNodes( ix + 1, aggregate);
                             //* Dependencies
                             // Dependency relation between the features and the aggregated output
