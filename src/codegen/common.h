@@ -628,6 +628,28 @@ public:\n\
             std::string tempForwardAggrCall = generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
             + "_AutoGrad::apply(" + cNode->getInput(0)->getName() + ", " + cNode->getInput(1)->getName() + ", " + std::to_string(inGraphIndx) + ");";
             model.getForward()->addCode(tempForwardAggrCall);
+        } else if (cNode->getOp() == AGGREGATE_EDGE_MUL_OP)
+        {
+            bool isColTile = hasDOpt(cNode->getInput(2), COL_TILE_DOPT);
+
+            auto inGraphIndx = cNode->getInput(2)->getDataInfo()->getIndex();
+
+            std::string tempForwardAggrCall = "        torch::Tensor offset_graph = global_offset_graph[2 * li];\n\
+        torch::Tensor columns_graph = global_columns_graph[2 * li];\n\
+        torch::Tensor value_graph = global_value_graph[2 * li];\n";
+
+            if (isColTile){
+                tempForwardAggrCall += "        torch::Tensor bounds = global_bounds[2 * li];\n\
+        int segments = global_segments[2 * li];\n";
+            } else
+            {
+                std::cout << "This unsup: AGGREGATE_EDGE_SUM_OP" << std::endl;
+                tempForwardAggrCall += "unsupported\n";
+            }
+
+            tempForwardAggrCall = generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
+            + "(" + cNode->getInput(0)->getName() + ", " + cNode->getInput(1)->getName() + ", offset_graph, columns_graph, value_graph, bounds, segments);";
+            model.getForward()->addCode(tempForwardAggrCall);
         } else if (cNode->getOp() == NON_LNR_OP_SOFTMAX)
         {
             bool isColTile = hasDOpt(cNode->getInput(0), COL_TILE_DOPT);

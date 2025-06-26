@@ -755,7 +755,78 @@ torch::Tensor bounds, int nrows, int segments) {\n\
     return output_sparse;\n\
 }\n";
             kernelCallCode.addCode(kernelCallCodeStr);
+        } else if (cNode->getOp() == AGGREGATE_EDGE_MUL_OP) {
+            std::string kernelCodeStr = "extern \"C\" __global__ void __launch_bounds__(256)\n\
+    default_function_kernel_sddvv_mult_undir(\n\
+        float *__restrict__ C,           // output\n\
+        int *__restrict__ J_indptr_data, // index pointer\n\
+        float *__restrict__ A,           // input A\n\
+        float *__restrict__ B,           // Input B\n\
+        int *__restrict__ J_indices_data, int nrows) {\n\
+                if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) { // This is fine\n\
+                    for (int j = (int)threadIdx.x; // Not fine. This should increase by 32\n\
+                         j <\n\
+                         (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -\n\
+                          J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);\n\
+                         j += 32) {\n\
+                        C[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] =\n\
+                            ((A[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))] *\n\
+                              B[(J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +\n\
+                                                                    ((int)threadIdx.y))])])]));\n\
+                         }\n\
+                }\n\
+            }\n";
+            kernelCode.addCode(kernelCodeStr);
 
+            std::string kernelCallCodeStr = "torch::Tensor edge_forward_gcn(torch::Tensor input_dense1,\n\
+                               torch::Tensor input_dense2,\n\
+                               torch::Tensor offset_graph,\n\
+                               torch::Tensor columns_graph,\n\
+                               torch::Tensor value_graph, torch::Tensor bounds,\n\
+                               int segments) {\n\
+  auto nvals = columns_graph.numel();\n\
+  auto nrows = global_nrows;\n\
+  auto full_iden = input_dense1.numel();\n\
+  auto dcols = full_iden / nrows;\n\
+  // // Dense\n\
+  // Input\n\
+  float *iden_ptr1 = input_dense1.data_ptr<float>();\n\
+  float *iden_ptr2 = input_dense2.data_ptr<float>();\n\
+  // Output\n\
+  auto options = torch::TensorOptions()\n\
+                     .dtype(torch::kFloat)\n\
+                     .requires_grad(true)\n\
+                     .device(torch::kCUDA, 0);\n\
+  auto output_sparse = torch::zeros({nvals}, options);\n\
+  float *oden_array = output_sparse.data_ptr<float>();\n\
+  // Sparse\n\
+  int *offset_ptr = offset_graph.data_ptr<int>();\n\
+  int *col_ptr = columns_graph.data_ptr<int>();\n\
+  float *val_ptr = value_graph.data_ptr<float>();\n\
+  int *bounds_ptr = bounds.data_ptr<int>();\n\
+  // cudaStream_t stream1;\n\
+  // cudaStreamCreate(&stream1);\n\
+  // dim3 gridDim(((int)(nrows - 1) / 8) + 1);\n\
+  // dim3 blockDim(32, 8);\n\
+  // default_function_kernel_sddvv_plus<<<gridDim, blockDim, 0, stream1>>>(\n\
+  //     oden_array, offset_ptr, iden_ptr1, iden_ptr2, col_ptr, nrows);\n\
+  for (int i = 0; i < segments; i++) {\n\
+    int i1 = i;\n\
+    int start_vals = bounds_ptr[i1 * 2];\n\
+    int end_vals = bounds_ptr[i1 * 2 + 1];\n\
+    int nvals = end_vals - start_vals;\n\
+    cudaStream_t stream1, stream2, stream3;\n\
+      cudaStreamCreate(&stream1);\n\
+      dim3 gridDim(((int)(nrows - 1) / 8) + 1);\n\
+      dim3 blockDim(32, 8);\n\
+      default_function_kernel_sddvv_mult_undir<<<gridDim, blockDim, 0,\n\
+                                                 stream1>>>(\n\
+          &oden_array[start_vals], &offset_ptr[i1 * (nrows + 1)], iden_ptr1,\n\
+          iden_ptr2, &col_ptr[start_vals], nrows);\n\
+  }\n\
+  return output_sparse;\n\
+}\n";
+            kernelCallCode.addCode(kernelCallCodeStr);
         }
     }
 
