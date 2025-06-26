@@ -650,6 +650,8 @@ public:\n\
             tempForwardAggrCall += generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
             + "(" + cNode->getInput(0)->getName() + ", " + cNode->getInput(1)->getName() + ", offset_graph, columns_graph, value_graph, bounds, segments);";
             model.getForward()->addCode(tempForwardAggrCall);
+            std::string resetVal = "global_value_graph[2 * li] = " + generateOutputString(cNode, outOfLoop) + ";";
+            model.getForward()->addCode(resetVal);
         } else if (cNode->getOp() == NON_LNR_OP_SOFTMAX)
         {
             bool isColTile = hasDOpt(cNode->getInput(0), COL_TILE_DOPT);
