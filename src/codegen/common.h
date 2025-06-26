@@ -968,8 +968,14 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
         {
             if (outOfLoop)
             {
-                std::cout << "AAAAA: " << cNode->getInput(1)->getName() << std::endl;
-                std::string rbCall = "  t_iden = (" + cNode->getInput(0)->getName() + " * t_iden).detach();";
+                if (cNode->getInput(1)->getName() == "res_n")
+                {
+                    std::string rbCall = "  t_iden_n = (" + cNode->getInput(0)->getName() + " * t_iden_n).detach();";
+                } else
+                {
+                    std::string rbCall = "  t_iden = (" + cNode->getInput(0)->getName() + " * t_iden).detach();";
+                }
+
                 model.getInv()->addCode(rbCall);
             } else
             {

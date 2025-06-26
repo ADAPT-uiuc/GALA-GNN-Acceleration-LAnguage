@@ -386,6 +386,7 @@ public:
                         {
                             if (cNode->getOp() == AGGREGATE_MUL_SUM_OP)
                             {
+                                bool has_self_ffn = false;
                                 inputName = cNode->getInput(0)->getName();
                                 std::string outputName = cNode->getOutput(0)->getName();
                                 // Change this later on
@@ -394,11 +395,21 @@ public:
                                     int ixx = ix + 1;
                                     while (ixx < lNode->getLoopNodeNum())
                                     {
-                                        auto cNode = dynamic_cast<ComputeNode*>(lNode->getNode(ixx));
-                                        if (cNode->getOp() == ADD_OP)
+                                        auto cNodeInt = dynamic_cast<ComputeNode*>(lNode->getNode(ixx));
+                                        if (cNodeInt->getOp() == ADD_OP)
                                         {
-                                            cNode->getInput(1)->setName("t_iden_n");
+                                            if (has_self_ffn)
+                                            {
+                                                cNodeInt->getInput(1)->setName("res");
+                                            } else
+                                            {
+                                                cNodeInt->getInput(1)->setName("t_iden_n");
+                                            }
+
                                             break;
+                                        } else if (cNodeInt->getOp() == FFN_OP_SELF)
+                                        {
+                                            has_self_ffn = true;
                                         }
                                         ixx ++;
                                     }
