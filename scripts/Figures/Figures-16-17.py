@@ -34,9 +34,9 @@ def compile_and_get_time(args):
     logfile = open(args.stdout_log, 'w+')
     errfile = open(args.stderr_log, 'w+')
     if args.train:
-        outfile = open(args.stat_log + "_" + args.hw + "_train.txt", 'w+')
+        outfile = open(args.stat_log + "_" + args.hw + "_GALA_train.txt", 'w+')
     else:
-        outfile = open(args.stat_log + "_" + args.hw + "_inf.txt", 'w+')
+        outfile = open(args.stat_log + "_" + args.hw + "_GALA_inf.txt", 'w+')
     outfile.write("dataset,model,hw,train,inference_time,total_time\n")
     outfile.flush()
 
