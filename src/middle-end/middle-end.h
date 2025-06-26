@@ -229,22 +229,26 @@ public:
                 // TODO Create the initial input graph.
                 //  i.e. add computations to the IR to create these results
 
-                for (int ix = 0; ix < lNode->getLoopNodeNum(); ix++)
-                {
+                int ix = 0;
+                while (ix < lNode->getLoopNodeNum()){
                     // TODO Change this to a stringed set of aggregations not just aggregation
                     //  i.e. result of aggregation 1 is used by aggregation 2
                     //  if the aggregations are separate then they can still be independent
                     if (ix + 2 < lNode->getLoopNodeNum())
                     {
+                        // std::cout << "works" << std::endl;
                         auto cNodeRb1 = dynamic_cast<ComputeNode*>(lNode->getNode(ix));
                         auto cNodeAggr = dynamic_cast<ComputeNode*>(lNode->getNode(ix + 1));
                         auto cNodeRb2 = dynamic_cast<ComputeNode*>(lNode->getNode(ix + 2));
 
-                        if(cNodeAggr->getInput(1)->getDataInfo()->getSparse() &&
-                            cNodeRb1->getOp() == ROW_BROADCAST_OP &&
-                            cNodeRb2->getOp() == ROW_BROADCAST_OP &&
-                            cNodeAggr->getOp() == AGGREGATE_MUL_SUM_OP)
+                        // std::cout << "works1" << std::endl;
+
+                        if(cNodeRb1->getOp() == ROW_BROADCAST_OP &&
+                           cNodeRb2->getOp() == ROW_BROADCAST_OP &&
+                           cNodeAggr->getOp() == AGGREGATE_MUL_SUM_OP && 
+                           cNodeAggr->getInput(1)->getDataInfo()->getSparse())
                         {
+
                             // TODO remove dependencies
                             lNode->eraseFirstNLoopNodes(3, ix);
 
@@ -290,7 +294,8 @@ public:
                             auto inOutAggrRelationGraph = RelationEdge(&aggrEdgeData, ALL_RELATION, &outputData, ROWS_RELATION);
                             dependencies.push_back(&inOutAggrRelationFeat);
                             dependencies.push_back(&inOutAggrRelationGraph);
-                        }
+                            ix++; 
+                        } 
                     }
 
                     auto cNode = dynamic_cast<ComputeNode*>(lNode->getNode(ix));
@@ -307,6 +312,7 @@ public:
                         auto outputCols = output->getDataInfo()->getDimCol();
                         for (int iy = ix; iy < lNode->getLoopNodeNum(); iy++)
                         {
+                            // use data deppendenciey here
                             auto oNode = dynamic_cast<ComputeNode*>(lNode->getNode(iy));
                             if (outputUses > 0 &&
                                 oNode->getOp() == AGGREGATE_MUL_SUM_OP &&
@@ -341,6 +347,7 @@ public:
                             }
                         }
                     }
+                    ix++;
                 }
             } else {
                 // TODO Ignore this part for now. Assume all computations come from the main function
