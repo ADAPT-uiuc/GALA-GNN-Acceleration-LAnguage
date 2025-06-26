@@ -117,9 +117,8 @@ def evalDGL(args):
     errfile = open(args.stderr_log, 'a+')
 
     outfile = open(args.stat_log + "_" + args.hw + "_DGL.txt", 'w+')
-
     outfile.write("dataset,model,hw,inference_time,total_time\n")
-    outfile.flush()
+    outfile.close()
 
     for dset in dataset_list:
         for model in models:
@@ -137,8 +136,9 @@ def evalDGL(args):
                         "--logfile", "../../scripts/Figures/" + args.stat_log + "_" + args.hw + "_DGL.txt",
                         "--device", "cuda",
                         "--discard", str(5)]
+            outfile = open(args.stat_log + "_" + args.hw + "_DGL.txt", 'a+')
             outfile.write(dset + "," + model + "," + args.hw + ",")
-            outfile.flush()
+            outfile.close()
             run_at(job_args, logfile, errfile, dgl_working_path)
 
             logfile.write(("<"*100)+"\n")
