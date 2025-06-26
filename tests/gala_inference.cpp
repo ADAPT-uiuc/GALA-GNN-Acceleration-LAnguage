@@ -117,6 +117,8 @@ int main(int argc, char **argv) {
 	auto genCode = CUDAGenerator(ctx, outputPath);
 	GALATransformations::complexityOperatorReordering(GALAFEContext::program, GALAFEContext::dependencies,
 		GALAFEContext::associations, GALAFEContext::transforms);
+	GALATransformations::sparsityAwareRewrites(GALAFEContext::program, GALAFEContext::dependencies,
+		GALAFEContext::associations, GALAFEContext::transforms);
 	genCode.writeCode(GALAFEContext::program, GALAFEContext::dependencies,
 		GALAFEContext::associations, GALAFEContext::transforms);
 
