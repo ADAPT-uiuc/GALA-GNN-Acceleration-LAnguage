@@ -665,7 +665,7 @@ public:\n\
             }
 
             tempForwardAggrCall += "torch::Tensor " + generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
-            + "(" + cNode->getInput(0)->getName() + "_val, " + cNode->getInput(1)->getName() + "_val, offset_graph_vals, columns_graph_vals, value_graph_vals, bounds_vals, segments_vals);";
+            + "(" + cNode->getInput(0)->getName() + "_val, " + cNode->getInput(1)->getName() + "_val, offset_graph_vals, columns_graph_vals, value_graph_vals, bounds_vals, segments_vals).detach();";
             model.getInv()->addCode(tempForwardAggrCall);
 
             std::string resetVal = "global_value_graph[2 * " + std::to_string(inGraphIndx) + "] = " + generateOutputString(cNode, outOfLoop) + ";";
