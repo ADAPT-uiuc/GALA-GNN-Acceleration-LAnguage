@@ -287,6 +287,7 @@ public:
                                 associations.push_back(graphEdgeAggrLAssociation);
                                 associations.push_back(graphEdgeAggrRAssociation);
                                 addedSDDMM = true;
+                                ix++;
                             }
 
                             // Add aggregate operation
@@ -318,7 +319,6 @@ public:
                             auto inOutAggrRelationGraph = new RelationEdge(aggrEdgeData, ALL_RELATION, outputData, ROWS_RELATION);
                             dependencies.push_back(inOutAggrRelationFeat);
                             dependencies.push_back(inOutAggrRelationGraph);
-                            ix++; 
                         } 
                     }
 
