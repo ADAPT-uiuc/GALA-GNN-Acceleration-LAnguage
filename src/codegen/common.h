@@ -640,7 +640,7 @@ public:\n\
             torch::Tensor value_graph_ones_val = global_value_graph[2 * 0];\n\
             torch::Tensor bounds_ones_val = global_bounds[2 * 0];\n\
             int segments_ones_val = global_segments[2 * 0];\n\
-            torch::Tensor degrees_val = aggregate_node_mul_sum_direct_coarse2_call(ones_val, offset_graph_ones_val, columns_graph_ones_val,\n\
+            torch::Tensor degrees_val = aggregate_node_mul_sum_coarse2_call::apply(ones_val, offset_graph_ones_val, columns_graph_ones_val,\n\
                                 value_graph_ones_val, bounds_ones_val, segments_ones_val);\n\
             torch::Tensor norm_val = torch::pow(degrees_val, -0.500000).detach();\n";
             model.getInv()->addCode(normCall);
