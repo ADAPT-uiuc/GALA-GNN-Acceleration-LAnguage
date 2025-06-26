@@ -292,7 +292,7 @@ public:
                                 while (ixy < lNode->getLoopNodeNum())
                                 {
                                     auto rNode = dynamic_cast<ComputeNode*>(lNode->getNode(ixy));
-                                    if(rNode->getOp() == DEGREES_OP || rNode->getOp() == ONES_OP || rNode->getOp() == POWER_OP)
+                                    if(rNode->getOp() == DEGREES_OP || rNode->getOp() == ONES_OP || rNode->getOp() == POWER_OP || rNode->getOp() == AGGREGATE_MUL_SUM_DIRECT)
                                     {
                                         lNode->eraseFirstNLoopNodes(1, ixy);
                                     } else
