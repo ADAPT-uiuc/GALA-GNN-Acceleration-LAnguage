@@ -1057,6 +1057,12 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
             std::string fcDef = "torch::nn::Linear sfc" + std::to_string(fcSelfCount) + "{nullptr};";
             model.getDef()->addCode(fcDef);
 
+            if (fcSelfCount == 0)
+            {
+                std::string resInit = "res = t_iden;";
+                model.getInit()->addCode(resInit);
+            }
+
             std::string fcInit = "sfc" + std::to_string(fcSelfCount) + " = register_module(\"sfc"
             + std::to_string(fcSelfCount) + "\", torch::nn::Linear(size" + std::to_string(fcCount - 1)
              + ", size" + std::to_string(fcCount) + "));";
@@ -1065,7 +1071,7 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
             // TODO add the inputs to the forward call based on the actual inputs
             // TODO Temp fix
             // std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = sfc" + std::to_string(fcEdgeCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
-            std::string forwardCall = "res = sfc" + std::to_string(fcEdgeCount) + "->forward(res);";
+            std::string forwardCall = "res = sfc" + std::to_string(fcSelfCount) + "->forward(res);";
             model.getForward()->addCode(forwardCall);
             fcSelfCount++;
         } else if (cNode->getOp() == SCALAR_ADD_EPS_MULTIPLY_OP)
