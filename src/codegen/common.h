@@ -1053,7 +1053,12 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
   
             }
             fcCount++;
-        }  else if (cNode->getOp() == FFN_OP_EDGE)
+        }  else if (cNode->getOp() == FFN_OP_REPEAT)
+        {
+            // TODO add the inputs to the forward call based on the actual inputs
+            std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = fc" + std::to_string(fcCount - 1) + "->forward(" + cNode->getInput(0)->getName() + ");";
+            model.getForward()->addCode(forwardCall);
+        } else if (cNode->getOp() == FFN_OP_EDGE)
         {
             std::string fcDef = "torch::nn::Linear efc" + std::to_string(fcEdgeCount) + "{nullptr};";
             model.getDef()->addCode(fcDef);
