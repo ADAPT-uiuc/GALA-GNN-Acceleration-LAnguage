@@ -27,6 +27,7 @@ typedef enum {
 typedef enum {
     UNDIRECTED,
     UNWEIGHTED,
+    SPARSE,
     FEAT_SIZE,
     LABEL_SIZE
 } GraphTransformType;
@@ -66,6 +67,7 @@ class ModelConfig {
             dataset_name = "\0";
             iterations = 0;
             num_layers = 0;
+            normalization_value = -1;
             normalization_value = 0;
             output_input_classes.clear();
             layer_operations.clear();
