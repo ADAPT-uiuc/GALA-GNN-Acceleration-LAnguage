@@ -29,3 +29,4 @@ label_size(41); // -3 if not given
 // Compute transformations
 aggrFn=aggrFn.coarsen(2);
 aggrFn=aggrFn.sample(20).dynamic();
+print_accuracy(true);

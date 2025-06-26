@@ -28,3 +28,7 @@ feature_size(602); // -2 if not given
 label_size(41); // -3 if not given
 // Data transformations
 G=G.col_tile(37000);
+operator_reordering(false);
+sparse_rewrites(false);
+training_subgraph(false);
+train_code_motion(false);

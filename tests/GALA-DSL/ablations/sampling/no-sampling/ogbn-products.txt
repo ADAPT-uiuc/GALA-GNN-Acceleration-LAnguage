@@ -28,3 +28,4 @@ feature_size(100); // -2 if not given
 label_size(47); // -3 if not given
 // Compute transformations
 aggrFn=aggrFn.coarsen(2);
+print_accuracy(true);

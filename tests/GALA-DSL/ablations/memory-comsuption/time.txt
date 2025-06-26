@@ -30,3 +30,4 @@ label_size(41); // -3 if not given
 aggrFn=aggrFn.coarsen(2);
 // Data transformations
 G=G.col_tile(37000);
+print_memory(true);
