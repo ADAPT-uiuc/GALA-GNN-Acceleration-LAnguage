@@ -374,7 +374,7 @@ def main(args):
                       discard_k=args.discard,
                       use_opt=False)
     log_file_ptr = open(args.logfile, 'a+')
-    log_file_ptr.write(str(np.mean(r1['iter'])) + "," + str(r1['time_mean']))
+    log_file_ptr.write(str(np.mean(r1['iter'])) + "," + str(r1['time_mean']) + "\n")
     log_file_ptr.close()
 
     # print(str(r1['time_mean']),",",str(np.mean(r1['iter'])))
