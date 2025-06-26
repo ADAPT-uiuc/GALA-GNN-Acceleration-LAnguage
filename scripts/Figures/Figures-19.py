@@ -4,23 +4,9 @@ import os
 
 build_path = r"../../build/"
 
-dataset_list = ["Cora",
-                "Pubmed",
-                "CoraFull",
-                "Reddit",
-                "ogbn-arxiv",
-                "ogbn-products"]
-models = ["gcn",
-          "gat",
-          "gin",
-          "sage"]
-
-dgl_map = {"Cora":"CoraGraphDataset",
-           "Pubmed":"PubmedGraphDataset",
-           "CoraFull":"CoraFullDataset",
-           "Reddit":"RedditDataset",
-           "ogbn-arxiv":"ogbn-arxiv",
-           "ogbn-products":"ogbn-products"}
+dataset_list = ["Reddit"]
+models = ["gcn"]
+dgl_map = {"Reddit":"RedditDataset"}
 
 # dataset_list = ["Cora"]
 # models = ["gcn"]
@@ -113,8 +99,8 @@ def evalDGL(args):
     logfile = open(args.stdout_log, 'a+')
     errfile = open(args.stderr_log, 'a+')
 
-    outfile = open(args.stat_log + "_" + args.hw + "_DGL.txt", 'w+')
-    outfile.write("dataset,model,hw,inference_time,total_time\n")
+    outfile = open(args.stat_log + "_" + args.hw + "_DGL_memory.txt", 'w+')
+    outfile.write("dataset,model,hw,inference_time,memory_use\n")
     outfile.close()
 
     for dset in dataset_list:
@@ -125,15 +111,15 @@ def evalDGL(args):
             errfile.write(curr+"\n")
 
             job_args = ['python',
-                        '../../tests/Baselines/DGL/benchmark_dgl_'+model+'.py',
+                        '../../tests/Baselines/DGL/benchmark_dgl_'+model+'_memory.py',
                         '--dataset', dgl_map[dset],
                         '--n-hidden', str(32),
                         '--layers', str(1),
                         '--n-epochs', str(100),
-                        "--logfile", args.stat_log + "_" + args.hw + "_DGL.txt",
+                        "--logfile", args.stat_log + "_" + args.hw + "_DGL_memory.txt",
                         "--device", "cuda",
                         "--discard", str(5)]
-            outfile = open(args.stat_log + "_" + args.hw + "_DGL.txt", 'a+')
+            outfile = open(args.stat_log + "_" + args.hw + "_DGL_memory.txt", 'a+')
             outfile.write(dset + "," + model + "," + args.hw + ",")
             outfile.close()
             run(job_args, logfile, errfile)
@@ -146,13 +132,6 @@ def evalDGL(args):
 
 def evalWise(args):
     print("WiseGraph: Empty for now")
-
-def evalSea(args):
-    print("SeaStar: Empty for now")
-
-def evalSTIR(args):
-    print("SparseTIR: Empty for now")
-
 def createFigure(args):
     print("Create Figure 16-17: Empty for now")
 
@@ -163,10 +142,6 @@ def main(args):
         evalDGL(args)
     elif (args.job == "wise"):
         evalWise(args)
-    elif (args.job == "sea"):
-        evalSea(args)
-    elif (args.job == "stir"):
-        evalSTIR(args)
     elif (args.job == "fig"):
         createFigure(args)
 
@@ -176,7 +151,7 @@ if __name__ == '__main__':
                         default="timing_info", help="File to store timing data")
     parser.add_argument("--hw", type=str,
                         default="h100", help="Target hardware")
-    parser.add_argument("--job", type=str, choices=['gala', 'dgl', 'wise', 'star', 'stir', 'fig'], default="gala",
+    parser.add_argument("--job", type=str, choices=['gala', 'dgl', 'wise', 'fig'], default="gala",
                         help="Task to generate Figures 16 to 17.")
     parser.add_argument("--train", action='store_true',
                         help="Train the model")
