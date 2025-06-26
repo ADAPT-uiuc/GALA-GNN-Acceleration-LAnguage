@@ -287,7 +287,6 @@ public:
                                 associations.push_back(graphEdgeAggrLAssociation);
                                 associations.push_back(graphEdgeAggrRAssociation);
                                 addedSDDMM = true;
-                                ix++;
                             }
 
                             // Add aggregate operation
