@@ -254,46 +254,46 @@ public:
 
                             auto inputGraph = cNodeAggr->getInput(1);
                             // Edge aggregation
-                            auto aggregateEdge = ForwardNode(AGGREGATE_EDGE, AGGREGATE_EDGE_MUL_OP);
-                            auto aggrEdgeInfo = DataInfo(CSR_STYPE, inputGraph->getDataInfo()->getDirected(), true);
-                            auto rootAggrEdgeLevel = DataLevel(&aggrEdgeInfo, true);
-                            auto aggrEdgeData = DataNode("val", INT32, INT32, F32, &rootAggrEdgeLevel);
-                            aggregateEdge.addInputData(cNodeRb1->getInput(0));
-                            aggregateEdge.addInputData(cNodeRb2->getInput(0));
-                            aggregateEdge.addInputData(inputGraph);
-                            aggregateEdge.addOutputData(&aggrEdgeData);
-                            lNode->insertToLoopNodes(ix, &aggregateEdge);
+                            auto aggregateEdge = new ForwardNode(AGGREGATE_EDGE, AGGREGATE_EDGE_MUL_OP);
+                            auto aggrEdgeInfo = new DataInfo(CSR_STYPE, inputGraph->getDataInfo()->getDirected(), true);
+                            auto rootAggrEdgeLevel = new DataLevel(aggrEdgeInfo, true);
+                            auto aggrEdgeData = new DataNode("val", INT32, INT32, F32, rootAggrEdgeLevel);
+                            aggregateEdge->addInputData(cNodeRb1->getInput(0));
+                            aggregateEdge->addInputData(cNodeRb2->getInput(0));
+                            aggregateEdge->addInputData(inputGraph);
+                            aggregateEdge->addOutputData(aggrEdgeData);
+                            lNode->insertToLoopNodes(ix, aggregateEdge);
                             //* Dependencies
                             // Dependency relation between the features and the aggregated output
-                            auto inOutEdgeAggrLRelationFeat = RelationEdge(cNodeRb1->getInput(0), ALL_RELATION, &aggrEdgeData, ROWS_RELATION);
-                            auto inOutEdgeAggrRRelationFeat = RelationEdge(cNodeRb2->getInput(0), ALL_RELATION, &aggrEdgeData, COLS_RELATION);
-                            auto inOutEdgeAggrRelationGraph = RelationEdge(inputGraph, ALL_RELATION, &aggrEdgeData, ALL_RELATION);
-                            dependencies.push_back(&inOutEdgeAggrLRelationFeat);
-                            dependencies.push_back(&inOutEdgeAggrRRelationFeat);
-                            dependencies.push_back(&inOutEdgeAggrRelationGraph);
-                            auto graphEdgeAggrLAssociation = RelationEdge(inputGraph, ROWS_RELATION, cNodeRb1->getInput(0), ALL_RELATION);
-                            auto graphEdgeAggrRAssociation = RelationEdge(inputGraph, COLS_RELATION, cNodeRb2->getInput(0), ALL_RELATION);
-                            associations.push_back(&graphEdgeAggrLAssociation);
-                            associations.push_back(&graphEdgeAggrRAssociation);
+                            auto inOutEdgeAggrLRelationFeat = new RelationEdge(cNodeRb1->getInput(0), ALL_RELATION, aggrEdgeData, ROWS_RELATION);
+                            auto inOutEdgeAggrRRelationFeat = new RelationEdge(cNodeRb2->getInput(0), ALL_RELATION, aggrEdgeData, COLS_RELATION);
+                            auto inOutEdgeAggrRelationGraph = new RelationEdge(inputGraph, ALL_RELATION, aggrEdgeData, ALL_RELATION);
+                            dependencies.push_back(inOutEdgeAggrLRelationFeat);
+                            dependencies.push_back(inOutEdgeAggrRRelationFeat);
+                            dependencies.push_back(inOutEdgeAggrRelationGraph);
+                            auto graphEdgeAggrLAssociation = new RelationEdge(inputGraph, ROWS_RELATION, cNodeRb1->getInput(0), ALL_RELATION);
+                            auto graphEdgeAggrRAssociation = new RelationEdge(inputGraph, COLS_RELATION, cNodeRb2->getInput(0), ALL_RELATION);
+                            associations.push_back(graphEdgeAggrLAssociation);
+                            associations.push_back(graphEdgeAggrRAssociation);
 
                             // Add aggregate operation
-                            auto aggregate = ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
-                            auto outputInfo = DataInfo(RM_DTYPE);
-                            outputInfo.setDims(-1, 32); // -1=N=232965, the number of nodes in the graph
-                            auto rootOutputLevel = DataLevel(&outputInfo, true);
-                            auto outputData = DataNode("res", INT32, INT32, F32, &rootOutputLevel);
-                            aggregate.addInputData(cNodeRb1->getInput(1));
-                            aggregate.addInputData(&aggrEdgeData);
-                            aggregate.addOutputData(&outputData);
-                            aggregate.addOpt(COARSE_COPT, 2);
-                            lNode->insertToLoopNodes( ix + 1, &aggregate);
+                            auto aggregate = new ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
+                            auto outputInfo = new DataInfo(RM_DTYPE);
+                            outputInfo->setDims(-1, 32); // -1=N=232965, the number of nodes in the graph
+                            auto rootOutputLevel = new DataLevel(outputInfo, true);
+                            auto outputData = new DataNode("res", INT32, INT32, F32, rootOutputLevel);
+                            aggregate->addInputData(cNodeRb1->getInput(1));
+                            aggregate->addInputData(aggrEdgeData);
+                            aggregate->addOutputData(outputData);
+                            aggregate->addOpt(COARSE_COPT, 2);
+                            lNode->insertToLoopNodes( ix + 1, aggregate);
                             //* Dependencies
                             // Dependency relation between the features and the aggregated output
-                            auto inOutAggrRelationFeat = RelationEdge(cNodeRb1->getInput(1), ALL_RELATION, &outputData, ALL_RELATION);
+                            auto inOutAggrRelationFeat = new RelationEdge(cNodeRb1->getInput(1), ALL_RELATION, outputData, ALL_RELATION);
                             // Dependency relation between the graph and the aggregated output
-                            auto inOutAggrRelationGraph = RelationEdge(&aggrEdgeData, ALL_RELATION, &outputData, ROWS_RELATION);
-                            dependencies.push_back(&inOutAggrRelationFeat);
-                            dependencies.push_back(&inOutAggrRelationGraph);
+                            auto inOutAggrRelationGraph = new RelationEdge(aggrEdgeData, ALL_RELATION, outputData, ROWS_RELATION);
+                            dependencies.push_back(inOutAggrRelationFeat);
+                            dependencies.push_back(inOutAggrRelationGraph);
                             ix++; 
                         } 
                     }
