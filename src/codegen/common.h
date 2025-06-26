@@ -1060,7 +1060,7 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
             if (fcSelfCount == 0)
             {
                 std::string resInit = "res = t_iden;";
-                model.getInit()->addCode(resInit);
+                model.getForward()->addCode(resInit);
             }
 
             std::string fcInit = "sfc" + std::to_string(fcSelfCount) + " = register_module(\"sfc"
