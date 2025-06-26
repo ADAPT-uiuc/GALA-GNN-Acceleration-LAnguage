@@ -634,15 +634,15 @@ public:\n\
                        .dtype(torch::kFloat)\n\
                        .requires_grad(false)\n\
                        .device(torch::kCUDA, 0);\n\
-            torch::Tensor ones_val = torch::ones({global_nrows, 1}, options_ones);\n\
+            torch::Tensor ones_val = torch::ones({global_nrows, 1}, options_ones_val);\n\
             torch::Tensor offset_graph_ones_val = global_offset_graph[2 * 0];\n\
             torch::Tensor columns_graph_ones_val = global_columns_graph[2 * 0];\n\
             torch::Tensor value_graph_ones_val = global_value_graph[2 * 0];\n\
             torch::Tensor bounds_ones_val = global_bounds[2 * 0];\n\
             int segments_ones_val = global_segments[2 * 0];\n\
-            torch::Tensor degrees_val = aggregate_node_mul_sum_direct_coarse2_call(ones, offset_graph_ones, columns_graph_ones,\n\
-                                value_graph_ones, bounds_ones, segments_ones);\n\
-            torch::Tensor norm_val = torch::pow(degrees, -0.500000).detach();\n";
+            torch::Tensor degrees_val = aggregate_node_mul_sum_direct_coarse2_call(ones_val, offset_graph_ones_val, columns_graph_ones_val,\n\
+                                value_graph_ones_val, bounds_ones_val, segments_ones_val);\n\
+            torch::Tensor norm_val = torch::pow(degrees_val, -0.500000).detach();\n";
             model.getInv()->addCode(normCall);
 
             bool isColTile = hasDOpt(cNode->getInput(2), COL_TILE_DOPT);
@@ -663,7 +663,7 @@ public:\n\
             }
 
             tempForwardAggrCall += "torch::Tensor " + generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
-            + "(" + cNode->getInput(0)->getName() + ", " + cNode->getInput(1)->getName() + ", offset_graph_vals, columns_graph_vals, value_graph_vals, bounds_vals, segments_vals);";
+            + "(" + cNode->getInput(0)->getName() + "_val, " + cNode->getInput(1)->getName() + "_val, offset_graph_vals, columns_graph_vals, value_graph_vals, bounds_vals, segments_vals);";
             model.getInv()->addCode(tempForwardAggrCall);
 
             std::string resetVal = "global_value_graph[2 * " + std::to_string(inGraphIndx) + "] = " + generateOutputString(cNode, outOfLoop) + ";";
