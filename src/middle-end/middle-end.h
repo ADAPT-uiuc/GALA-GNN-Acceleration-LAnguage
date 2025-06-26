@@ -305,47 +305,65 @@ public:
                         // If one of those places is a aggregate operation, if going from smaller to larger,
                         // and is sparse, then do recompute
                         // TODO add the computation that adds the dependency to the object?
+                        //  std::cout << "works3.9" << std::endl;
                         int outputUses = 0;
                         auto output = cNode->getOutput(0);
+                        // std::cout << "works3.9.1: " << cNode->getOutput(0)->getName() << std::endl;
+                        // std::cout << "works3.9.1: " << cNode->getInput(0)->getName() << std::endl;
                         auto inputDataInfo = cNode->getInput(0)->getDataInfo();
+                        // std::cout << "works3.9.2" << std::endl;
                         auto inputCols = inputDataInfo->getDimCol();
+                        // std::cout << "works3.9.3" << std::endl;
                         auto outputCols = output->getDataInfo()->getDimCol();
-                        for (int iy = ix; iy < lNode->getLoopNodeNum(); iy++)
+                        // std::cout << "works: " << output->getName() << " " << cNode->getInput(0)->getName() << std::endl;
+                        for (int iy = ix + 1; iy < lNode->getLoopNodeNum(); iy++)
                         {
                             // use data deppendenciey here
+                            // std::cout << "works3" << std::endl;
                             auto oNode = dynamic_cast<ComputeNode*>(lNode->getNode(iy));
+                            // std::cout << "works3.1" << std::endl;
+                            // if (oNode->getOp() == AGGREGATE_MUL_SUM_OP){
+                            //     std::cout << "works3.11" << std::endl;
+                            //     std::cout << "works3.2 " << oNode->getInput(1)->getName() << std::endl;
+                            // }
                             if (outputUses > 0 &&
                                 oNode->getOp() == AGGREGATE_MUL_SUM_OP &&
                                 inputCols < outputCols &&
                                 !oNode->getInput(1)->getDataInfo()->getSparse())
                             {
+                                // std::cout << "works1" << std::endl;
                                 oNode->setInputDataNode(0, cNode->getInput(0));
                                 oNode->getOutput(0)->getDataInfo()->setDims(inputDataInfo->getDimRow(), inputCols);
 
                                 // Add weight operation
-                                auto ffn = ForwardNode(UPDATE_NODE, FFN_OP);
+                                auto ffn = new ForwardNode(UPDATE_NODE, FFN_OP_REPEAT);
                                 // Res DIR
-                                auto resInfo = DataInfo(RM_DTYPE);
-                                resInfo.setDims(-1, outputCols); // -1=N=232965, the number of nodes in the graph, -3=output classes
-                                auto rootResLevel = DataLevel(&resInfo, true);
-                                auto resData = DataNode("res", INT32, INT32, F32, &rootResLevel);
-                                ffn.addInputData(oNode->getOutput(0));
-                                ffn.addInputData(cNode->getInput(1));
-                                ffn.addOutputData(&resData);
-                                lNode->insertToLoopNodes(iy + 1, &ffn);
+                                auto resInfo = new DataInfo(RM_DTYPE);
+                                resInfo->setDims(-1, outputCols); // -1=N=232965, the number of nodes in the graph, -3=output classes
+                                auto rootResLevel = new DataLevel(resInfo, true);
+                                auto resData = new DataNode("res", INT32, INT32, F32, rootResLevel);
+                                ffn->addInputData(cNode->getInput(0));
+                                ffn->addInputData(oNode->getInput(1));
+                                ffn->addOutputData(resData);
+                                lNode->insertToLoopNodes(iy + 1, ffn);
                                 //* Dependencies
-                                auto inOutWeightDepRelationFeat = RelationEdge(oNode->getOutput(0), ALL_RELATION, &resData, ALL_RELATION);
-                                auto inOutWeightDepRelationWeight = RelationEdge(cNode->getInput(1), COLS_RELATION, &resData, ROWS_RELATION);
-                                dependencies.push_back(&inOutWeightDepRelationFeat);
-                                dependencies.push_back(&inOutWeightDepRelationWeight);
-                                auto inOutWeightAssociation = RelationEdge(oNode->getOutput(0), ROWS_RELATION, cNode->getInput(1), COLS_RELATION);
-                                associations.push_back(&inOutWeightAssociation);
+                                auto inOutWeightDepRelationFeat = new RelationEdge(oNode->getOutput(0), ALL_RELATION, resData, ALL_RELATION);
+                                auto inOutWeightDepRelationWeight = new RelationEdge(cNode->getInput(1), COLS_RELATION, resData, ROWS_RELATION);
+                                dependencies.push_back(inOutWeightDepRelationFeat);
+                                dependencies.push_back(inOutWeightDepRelationWeight);
+                                auto inOutWeightAssociation = new RelationEdge(oNode->getOutput(0), ROWS_RELATION, cNode->getInput(1), COLS_RELATION);
+                                associations.push_back(inOutWeightAssociation);
+                                // std::cout << "works2" << std::endl;
+                                output->setName("res_f");
                             }
+                            // std::cout << "works3.5" << std::endl;
                             if (oNode->getInput(0) == output)
                             {
                                 outputUses++;
                             }
+                            // std::cout << "works3.6" << std::endl;
                         }
+                        // std::cout << "works3.8" << std::endl;
                     }
                     ix++;
                 }
@@ -353,7 +371,7 @@ public:
                 // TODO Ignore this part for now. Assume all computations come from the main function
             }
         }
-
+        // std::cout << "works4" << std::endl;
     }
 
     // Middle-end pass for training invariant code motion

@@ -42,6 +42,7 @@ enum ComputeOp {
     FFN_OP, // Can also be UPDATE
     FFN_OP_EDGE,
     FFN_OP_SELF,
+    FFN_OP_REPEAT,
     BIAS_OP,
     NON_LNR_OP_RELU,
     NON_LNR_OP_LOG_SOFTMAX,
