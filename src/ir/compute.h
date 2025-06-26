@@ -64,6 +64,7 @@ enum ComputeOp {
 enum CompOptimization {
     COARSE_COPT, // Thread coarsening
     SAMPLE_COPT, // Sample an aggregation kernel
+    SAMPLE_DYNAMIC_COPT // Dynamically sample in an aggregation kernel
 };
 
 // TODO - Add node / edge aggregation types.
