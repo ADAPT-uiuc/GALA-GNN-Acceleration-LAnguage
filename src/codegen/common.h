@@ -1023,7 +1023,14 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
                 inputSizes.push_back(cNode->getInput(1)->getDataInfo()->getDimCol());
 
                 // TODO add the inputs to the forward call based on the actual inputs
-                std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
+                if (generateOutputString(cNode, outOfLoop) == "res_n" && cNode->getInput(0)->getName() == "t_iden")
+                {
+                    std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
+                } else
+                {
+                    std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + "_n);";
+                }
+
                 model.getForward()->addCode(forwardCall);
             } else
             {
