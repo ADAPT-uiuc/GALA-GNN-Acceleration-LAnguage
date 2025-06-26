@@ -101,8 +101,6 @@ def compile_and_get_time(args):
     errfile.close()
 
 def evalDGL(args):
-    print("DGL: Empty for now")
-
     dgl_working_path = r"../../tests/Baselines/DGL"
 
     feat_combo = [32]
