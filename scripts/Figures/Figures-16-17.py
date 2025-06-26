@@ -134,7 +134,7 @@ def evalDGL(args):
                         '--n-hidden', str(32),
                         '--layers', str(1),
                         '--n-epochs', str(100),
-                        "--logfile", outfile,
+                        "--logfile", args.stat_log + "_" + args.hw + "_DGL.txt",
                         "--device", "cuda",
                         "--discard", str(5)]
             outfile.write(dset + "," + model + "," + args.hw + ",")
