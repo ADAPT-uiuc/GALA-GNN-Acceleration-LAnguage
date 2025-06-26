@@ -216,8 +216,8 @@ public:
         std::vector<RelationEdge*>& associations,
         std::vector<TransformEdge*>& transforms)
     {
-        // Do complexity aware re-ordering to make the learning parts away from the other graph computations
-        complexityOperatorReordering(program, dependencies, associations, transforms, false);
+        // // Do complexity aware re-ordering to make the learning parts away from the other graph computations
+        // complexityOperatorReordering(program, dependencies, associations, transforms, false);
         // Iterate through program to locate the training loop
         for (int i = 0; i < program.size(); i++)
         {
