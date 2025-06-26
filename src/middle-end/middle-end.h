@@ -219,6 +219,10 @@ public:
         // // Do complexity aware re-ordering to make the learning parts away from the other graph computations
         // complexityOperatorReordering(program, dependencies, associations, transforms, false);
         // Iterate through program to locate the training loop
+
+        bool addedSDDMM = false;
+        DataNode* aggrEdgeData;
+
         for (int i = 0; i < program.size(); i++)
         {
             CIRNode* outNode = program[i];
@@ -252,34 +256,38 @@ public:
                             // TODO remove dependencies
                             lNode->eraseFirstNLoopNodes(3, ix);
 
-                            auto inputGraph = cNodeAggr->getInput(1);
-                            // Edge aggregation
-                            auto aggregateEdge = new ForwardNode(AGGREGATE_EDGE, AGGREGATE_EDGE_MUL_OP);
-                            auto aggrEdgeInfo = new DataInfo(CSR_STYPE, inputGraph->getDataInfo()->getDirected(), true);
-                            for (auto opt: *inputGraph->getDataInfo()->getOpts())
+                            if (!addedSDDMM)
                             {
-                                aggrEdgeInfo->addOpt(opt.first, opt.second);
+                                auto inputGraph = cNodeAggr->getInput(1);
+                                // Edge aggregation
+                                auto aggregateEdge = new ForwardNode(AGGREGATE_EDGE, AGGREGATE_EDGE_MUL_OP);
+                                auto aggrEdgeInfo = new DataInfo(CSR_STYPE, inputGraph->getDataInfo()->getDirected(), true);
+                                for (auto opt: *inputGraph->getDataInfo()->getOpts())
+                                {
+                                    aggrEdgeInfo->addOpt(opt.first, opt.second);
+                                }
+                                aggrEdgeInfo->setIndex(0);
+                                auto rootAggrEdgeLevel = new DataLevel(aggrEdgeInfo, true);
+                                aggrEdgeData = new DataNode("val", INT32, INT32, F32, rootAggrEdgeLevel);
+                                aggregateEdge->addInputData(cNodeRb1->getInput(0));
+                                aggregateEdge->addInputData(cNodeRb2->getInput(0));
+                                aggregateEdge->addInputData(inputGraph);
+                                aggregateEdge->addOutputData(aggrEdgeData);
+                                lNode->insertToLoopNodes(ix, aggregateEdge);
+                                //* Dependencies
+                                // Dependency relation between the features and the aggregated output
+                                auto inOutEdgeAggrLRelationFeat = new RelationEdge(cNodeRb1->getInput(0), ALL_RELATION, aggrEdgeData, ROWS_RELATION);
+                                auto inOutEdgeAggrRRelationFeat = new RelationEdge(cNodeRb2->getInput(0), ALL_RELATION, aggrEdgeData, COLS_RELATION);
+                                auto inOutEdgeAggrRelationGraph = new RelationEdge(inputGraph, ALL_RELATION, aggrEdgeData, ALL_RELATION);
+                                dependencies.push_back(inOutEdgeAggrLRelationFeat);
+                                dependencies.push_back(inOutEdgeAggrRRelationFeat);
+                                dependencies.push_back(inOutEdgeAggrRelationGraph);
+                                auto graphEdgeAggrLAssociation = new RelationEdge(inputGraph, ROWS_RELATION, cNodeRb1->getInput(0), ALL_RELATION);
+                                auto graphEdgeAggrRAssociation = new RelationEdge(inputGraph, COLS_RELATION, cNodeRb2->getInput(0), ALL_RELATION);
+                                associations.push_back(graphEdgeAggrLAssociation);
+                                associations.push_back(graphEdgeAggrRAssociation);
+                                addedSDDMM = true;
                             }
-                            aggrEdgeInfo->setIndex(0);
-                            auto rootAggrEdgeLevel = new DataLevel(aggrEdgeInfo, true);
-                            auto aggrEdgeData = new DataNode("val", INT32, INT32, F32, rootAggrEdgeLevel);
-                            aggregateEdge->addInputData(cNodeRb1->getInput(0));
-                            aggregateEdge->addInputData(cNodeRb2->getInput(0));
-                            aggregateEdge->addInputData(inputGraph);
-                            aggregateEdge->addOutputData(aggrEdgeData);
-                            lNode->insertToLoopNodes(ix, aggregateEdge);
-                            //* Dependencies
-                            // Dependency relation between the features and the aggregated output
-                            auto inOutEdgeAggrLRelationFeat = new RelationEdge(cNodeRb1->getInput(0), ALL_RELATION, aggrEdgeData, ROWS_RELATION);
-                            auto inOutEdgeAggrRRelationFeat = new RelationEdge(cNodeRb2->getInput(0), ALL_RELATION, aggrEdgeData, COLS_RELATION);
-                            auto inOutEdgeAggrRelationGraph = new RelationEdge(inputGraph, ALL_RELATION, aggrEdgeData, ALL_RELATION);
-                            dependencies.push_back(inOutEdgeAggrLRelationFeat);
-                            dependencies.push_back(inOutEdgeAggrRRelationFeat);
-                            dependencies.push_back(inOutEdgeAggrRelationGraph);
-                            auto graphEdgeAggrLAssociation = new RelationEdge(inputGraph, ROWS_RELATION, cNodeRb1->getInput(0), ALL_RELATION);
-                            auto graphEdgeAggrRAssociation = new RelationEdge(inputGraph, COLS_RELATION, cNodeRb2->getInput(0), ALL_RELATION);
-                            associations.push_back(graphEdgeAggrLAssociation);
-                            associations.push_back(graphEdgeAggrRAssociation);
 
                             // Add aggregate operation
                             auto aggregate = new ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
