@@ -128,18 +128,18 @@ def evalDGL(args):
             errfile.write(curr+"\n")
 
             job_args = ['python',
-                        'benchmark_dgl_'+model+'.py',
+                        '../../tests/Baselines/DGL/benchmark_dgl_'+model+'.py',
                         '--dataset', dgl_map[dset],
                         '--n-hidden', str(32),
                         '--layers', str(1),
                         '--n-epochs', str(100),
-                        "--logfile", "scripts/Figures/" + args.stat_log + "_" + args.hw + "_DGL.txt",
+                        "--logfile", args.stat_log + "_" + args.hw + "_DGL.txt",
                         "--device", "cuda",
                         "--discard", str(5)]
             outfile = open(args.stat_log + "_" + args.hw + "_DGL.txt", 'a+')
             outfile.write(dset + "," + model + "," + args.hw + ",")
             outfile.close()
-            run_at(job_args, logfile, errfile, dgl_working_path)
+            run_(job_args, logfile, errfile)
 
             logfile.write(("<"*100)+"\n")
             errfile.write(("<"*100)+"\n")
