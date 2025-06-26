@@ -1026,10 +1026,10 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
                 std::string forwardCall;
                 if (generateOutputString(cNode, outOfLoop) == "res_n" && cNode->getInput(0)->getName() == "t_iden")
                 {
-                    forwardCall = generateOutputString(cNode, outOfLoop) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
+                    forwardCall = generateOutputString(cNode, outOfLoop) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + "_n);";
                 } else
                 {
-                    forwardCall = generateOutputString(cNode, outOfLoop) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + "_n);";
+                    forwardCall = generateOutputString(cNode, outOfLoop) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
                 }
                 model.getForward()->addCode(forwardCall);
             } else
