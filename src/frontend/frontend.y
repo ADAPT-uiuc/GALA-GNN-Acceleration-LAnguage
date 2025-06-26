@@ -657,7 +657,7 @@ DataNode* addAttn(DataNode* attenLData, DataNode* attenRData, DataNode* graphDat
 	// Edge aggregation
 	auto aggregateEdge = new ForwardNode(AGGREGATE_EDGE, AGGREGATE_EDGE_SUM_OP);
 	auto aggrEdgeInfo = new DataInfo(CSR_STYPE, !m1.graph_transformations[UNDIRECTED], true);
-	aggrEdgeInfo->addOpt(COL_TILE_DOPT, m1.data_transformations[0].second);
+	aggrEdgeInfo->addOpt(COL_TILE_DOPT, to_string(m1.data_transformations[0].second));
 	aggrEdgeInfo->setIndex(0);
 	aggrEdgeInfo->setDerived(true);
 	// aggrEdgeInfo.setDims(-4, 1); //-4=E=114M (E = Edges)
@@ -687,7 +687,7 @@ DataNode* addSoftmax_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int
     if (debug == 2) cout << "softmax\n";
     ForwardNode* softmaxOp = new ForwardNode(UPDATE_EDGE, NON_LNR_OP_SOFTMAX);
 	DataInfo* softmaxInfo = new DataInfo(CSR_STYPE, !m1.graph_transformations[UNDIRECTED], true);
-    softmaxInfo->addOpt(COL_TILE_DOPT, m1.data_transformations[0].second);
+    softmaxInfo->addOpt(COL_TILE_DOPT, to_string(m1.data_transformations[0].second));
 	softmaxInfo->setIndex(0);
 	softmaxInfo->setDerived(true);
 	// leakyReluInfo.setDims(-4, 1);
