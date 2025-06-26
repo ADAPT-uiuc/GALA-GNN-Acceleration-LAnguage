@@ -100,8 +100,27 @@ def compile_and_get_time(args):
     logfile.close()
     errfile.close()
 
+def evalDGL(args):
+    print("DGL: Empty for now")
+
+def evalWise(args):
+    print("WiseGraph: Empty for now")
+
+def evalSea(args):
+    print("SeaStar: Empty for now")
+
+def evalSTIR(args):
+    print("SparseTIR: Empty for now")
+
+def createFigure(args):
+    print("Create Figure 16-17: Empty for now")
+
 def main(args):
     compile_and_get_time(args)
+    evalDGL(args)
+    evalWise(args)
+    evalSea(args)
+    evalSTIR(args)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Graph Benchmark Runner')
