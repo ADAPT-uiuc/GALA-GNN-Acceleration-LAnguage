@@ -778,7 +778,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
             }\n";
             kernelCode.addCode(kernelCodeStr);
 
-            std::string kernelCallCodeStr = "torch::Tensor edge_forward_gcn(torch::Tensor input_dense1,\n\
+            std::string kernelCallCodeStr = "torch::Tensor aggregate_edge_mul(torch::Tensor input_dense1,\n\
                                torch::Tensor input_dense2,\n\
                                torch::Tensor offset_graph,\n\
                                torch::Tensor columns_graph,\n\
