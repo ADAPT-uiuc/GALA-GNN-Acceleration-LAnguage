@@ -287,6 +287,19 @@ public:
                                 associations.push_back(graphEdgeAggrLAssociation);
                                 associations.push_back(graphEdgeAggrRAssociation);
                                 addedSDDMM = true;
+
+                                int ixy = 0;
+                                while (ixy < lNode->getLoopNodeNum())
+                                {
+                                    auto rNode = dynamic_cast<ComputeNode*>(lNode->getNode(ixy));
+                                    if(rNode->getOp() == DEGREES_OP || rNode->getOp() == ONES_OP || rNode->getOp() == POWER_OP)
+                                    {
+                                        lNode->eraseFirstNLoopNodes(1, ixy);
+                                    } else
+                                    {
+                                        ixy++;
+                                    }
+                                }
                             }
 
                             // Add aggregate operation
