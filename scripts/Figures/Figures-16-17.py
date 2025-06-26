@@ -130,7 +130,7 @@ def evalDGL(args):
                         '--layers', str(1),
                         '--n-epochs', str(100),
                         "--logfile", args.stat_log,
-                        "--device", args.device,
+                        "--device", "cuda",
                         "--discard", str(5)]
             outfile.write(dset + "," + model + "," + args.hw + ",")
             outfile.flush()
