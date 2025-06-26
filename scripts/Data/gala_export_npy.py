@@ -13,7 +13,7 @@ import torch as th
 import dgl
 import os
 
-def load_ogb(name, root="ogb/"):
+def load_ogb(name, root="../../Data/ogb/"):
     from ogb.nodeproppred import DglNodePropPredDataset
 
     print("load", name)
@@ -65,7 +65,14 @@ def main(args):
     graph = dgl.remove_self_loop(graph)
     graph = dgl.add_self_loop(graph)
 
-    output_path = r"../../Data/" + args.dataset
+    dataset_list = {"CoraGraphDataset":"Cora",
+                    "PubmedGraphDataset":"Pubmed",
+                    "CoraFullDataset":"CoraFull",
+                    "RedditDataset":"Reddit",
+                    "ogbn-arxiv":"Arxiv",
+                    "ogbn-products":"Products"}
+
+    output_path = r"../../Data/" + dataset_list[args.dataset]
 
     print("Exporting", args.dataset, "to", output_path)
 

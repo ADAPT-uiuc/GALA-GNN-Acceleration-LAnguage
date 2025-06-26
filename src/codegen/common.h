@@ -500,7 +500,7 @@ public:
 
     }
 
-    void generateOpCode(ComputeNode* cNode, int& fcCount, int& fcEdgeCount, int& fcSelfCount,int& epCount, bool outOfLoop, bool& hasFFNEdgeUpdate,
+    void generateOpCode(ComputeNode* cNode, int& fcCount, int& fcEdgeCount, int& fcSelfCount,int& epCount, bool outOfLoop, bool& hasFFNEdgeUpdate, bool& hasEdgeMulAggr,
         std::unordered_set<std::string> &encounteredAutograds,
         std::vector<int> &inputSizes,
         std::vector<TransformEdge*>& transforms)
@@ -518,6 +518,7 @@ public:
                 }
             }
 
+            // TODO link this up correctly
             std::map<std::string, std::string> graphNamePathMap;
             graphNamePathMap["Reddit"] = "RedditDataset";
             graphNamePathMap["Cora"] = "CoraGraphDataset";
@@ -630,6 +631,7 @@ public:\n\
             model.getForward()->addCode(tempForwardAggrCall);
         } else if (cNode->getOp() == AGGREGATE_EDGE_MUL_OP)
         {
+            hasEdgeMulAggr = true;
             std::string normCall = "auto options_ones_val = torch::TensorOptions()\n\
                        .dtype(torch::kFloat)\n\
                        .requires_grad(false)\n\
@@ -747,6 +749,15 @@ public:\n\
         } else if (cNode->getOp() == AGGREGATE_MUL_SUM_OP)
         {
             if (hasCOpt(cNode, SAMPLE_COPT)){
+                if (encounteredAutograds.find("random_r_b") == encounteredAutograds.end())
+                {
+                    encounteredAutograds.insert("random_r_b");
+                    std::string forwardRandCall = "    global_ra = 5;\n\
+    global_rb = 7;\n";
+                    model.getForward()->addCode(forwardRandCall);
+                }
+            }
+            if (hasCOpt(cNode, SAMPLE_DYNAMIC_COPT)){
                 if (encounteredAutograds.find("random_r_b") == encounteredAutograds.end())
                 {
                     encounteredAutograds.insert("random_r_b");
@@ -937,6 +948,33 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
                     + "_AutoGrad::apply(" + cNode->getInput(0)->getName() +", " + std::to_string(inGraphIndx) + ");\n\
     }";
                     model.getForward()->addCode(tempForwardAggrCall);
+
+                    if (hasEdgeMulAggr &&  inGraphIndx != 0)
+                    {
+                        std::string tempForwardAggrCall_vals = "        torch::Tensor offset_graph_vals" + std::to_string(inGraphIndx) + " = global_offset_graph[2 * " + std::to_string(inGraphIndx) + "];\n\
+        torch::Tensor columns_graph_vals" + std::to_string(inGraphIndx) + " = global_columns_graph[2 * " + std::to_string(inGraphIndx) + "];\n\
+        torch::Tensor value_graph_vals" + std::to_string(inGraphIndx) + " = global_value_graph[2 * " + std::to_string(inGraphIndx) + "];\n";
+
+                        if (isColTile){
+                            tempForwardAggrCall += "        torch::Tensor bounds_vals" + std::to_string(inGraphIndx) + " = global_bounds[2 * " + std::to_string(inGraphIndx) + "];\n\
+        int segments_vals" + std::to_string(inGraphIndx) + " = global_segments[2 * " + std::to_string(inGraphIndx) + "];\n";
+                        } else
+                        {
+                            std::cout << "This unsup: AGGREGATE_EDGE_SUM_OP" << std::endl;
+                            tempForwardAggrCall += "unsupported\n";
+                        }
+
+                        tempForwardAggrCall += "torch::Tensor val" + std::to_string(inGraphIndx)
+                        + " = aggregate_edge_mul( norm_val, norm_val, offset_graph_vals" + std::to_string(inGraphIndx)
+                        + ", columns_graph_vals" + std::to_string(inGraphIndx) + ", value_graph_vals"
+                        + std::to_string(inGraphIndx) + ", bounds_vals" + std::to_string(inGraphIndx)
+                        + ", segments_vals" + std::to_string(inGraphIndx) + ");";
+                        model.getInv()->addCode(tempForwardAggrCall);
+
+                        std::string resetVal = "global_value_graph[2 * " + std::to_string(inGraphIndx) + "] = val" + std::to_string(inGraphIndx) + ";";
+                        model.getInv()->addCode(resetVal);
+                    }
+
                 }
             }
         } else if (cNode->getOp() == AGGREGATE_MUL_SUM_DIRECT)
@@ -1210,6 +1248,7 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
         int fcSelfCount = 0;
         int epCount = 0;
         bool hasFFNEdgeUpdate = false;
+        bool hasEdgeMulAggr = false;
 
         // TODO add data transformations before data preparation.
         //  Should come from a middle end transformation.
@@ -1221,7 +1260,7 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
             if (oNode)
             {
                 generateOpCode(oNode, fcCount, fcEdgeCount, fcSelfCount,
-                    epCount, true, hasFFNEdgeUpdate, encounteredAutograds, inputSizes, transforms);
+                    epCount, true, hasFFNEdgeUpdate, hasEdgeMulAggr, encounteredAutograds, inputSizes, transforms);
 
                 // Generate the transfer code after the load operation
                 if (oNode->getOp() == LOAD_OP)
@@ -1263,7 +1302,7 @@ forward(torch::Tensor t_iden";
                     }
 
                     generateOpCode(cNode, fcCount, fcEdgeCount, fcSelfCount,
-                        epCount, false, hasFFNEdgeUpdate, encounteredAutograds, inputSizes, transforms);
+                        epCount, false, hasFFNEdgeUpdate, hasEdgeMulAggr, encounteredAutograds, inputSizes, transforms);
                 }
                 CIRNode* inNode = loopNode->getNode(loopNode->getLoopNodeNum()-1);
                 auto cNode = dynamic_cast<ComputeNode*>(inNode);
