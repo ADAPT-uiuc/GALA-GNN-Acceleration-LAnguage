@@ -121,6 +121,7 @@ def main(args):
     evalWise(args)
     evalSea(args)
     evalSTIR(args)
+    createFigure(args)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Graph Benchmark Runner')
