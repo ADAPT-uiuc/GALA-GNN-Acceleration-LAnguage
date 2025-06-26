@@ -15,7 +15,7 @@ models = ["gcn",
           "gin",
           "sage"]
 
-# dataset_list = ["Reddit"]
+dataset_list = ["Cora"]
 models = ["gcn"]
 
 def run(args, logfile, errfile):
@@ -103,6 +103,45 @@ def compile_and_get_time(args):
 def evalDGL(args):
     print("DGL: Empty for now")
 
+    dgl_working_path = r"../../tests/Baselines/DGL"
+
+    feat_combo = [32]
+    layers = [1]
+
+    logfile = open(args.stdout_log, 'a+')
+    errfile = open(args.stderr_log, 'a+')
+
+    outfile = open(args.stat_log + "_" + args.hw + "_DGL.txt", 'w+')
+
+    outfile.write("dataset,model,hw,inference_time,total_time\n")
+    outfile.flush()
+
+    for dset in dataset_list:
+        for model in models:
+            curr = f">>>Testing [{dset} ; ({32},{1}) ] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+            print(curr)
+            logfile.write(curr+"\n")
+            errfile.write(curr+"\n")
+
+            job_args = ['python',
+                        'benchmark_dgl_'+model+'.py',
+                        '--dataset', dset,
+                        '--n-hidden', str(32),
+                        '--layers', str(1),
+                        '--n-epochs', str(100),
+                        "--logfile", args.stat_log,
+                        "--device", args.device,
+                        "--discard", str(5)]
+            outfile.write(dset + "," + model + "," + args.hw + ",")
+            outfile.flush()
+            run_at(job_args, outfile, errfile, dgl_working_path)
+
+            logfile.write(("<"*100)+"\n")
+            errfile.write(("<"*100)+"\n")
+            print("<"*100)
+    logfile.close()
+    errfile.close()
+
 def evalWise(args):
     print("WiseGraph: Empty for now")
 
@@ -116,12 +155,18 @@ def createFigure(args):
     print("Create Figure 16-17: Empty for now")
 
 def main(args):
-    compile_and_get_time(args)
-    evalDGL(args)
-    evalWise(args)
-    evalSea(args)
-    evalSTIR(args)
-    createFigure(args)
+    if (args.job == "gala"):
+        compile_and_get_time(args)
+    elif (args.job == "dgl"):
+        evalDGL(args)
+    elif (args.job == "wise"):
+        evalWise(args)
+    elif (args.job == "sea"):
+        evalSea(args)
+    elif (args.job == "stir"):
+        evalSTIR(args)
+    elif (args.job == "fig"):
+        createFigure(args)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Graph Benchmark Runner')
@@ -129,6 +174,8 @@ if __name__ == '__main__':
                         default="timing_info", help="File to store timing data")
     parser.add_argument("--hw", type=str,
                         default="h100", help="Target hardware")
+    parser.add_argument("--job", type=str, choices=['gala', 'dgl', 'wise', 'star', 'stir', 'fig'], default="gala",
+                        help="Task to generate Figures 16 to 17.")
     parser.add_argument("--train", action='store_true',
                         help="Train the model")
     parser.set_defaults(train=False)

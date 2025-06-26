@@ -139,9 +139,6 @@ class GCNOpt(nn.Module):
             self._time_stats[key] = self._time_stats[key] + 1
 
     def get_time_stats(self,):
-        if not self.log_e2e_time:
-            print('Logging time is disabled.')
-
         if self.needs_lazy_update:
             n = self._time_stats["call_count"]
 
@@ -303,22 +300,22 @@ def main(args):
         print("GPU is not available for benchmarking - switching to CPU")
         device_str = "cpu"
 
-    print("Selected device", device_str)
+    # print("Selected device", device_str)
 
     # Read and define params
     n_rows = graph.num_nodes()
     n_hidden = args.n_hidden
     n_epochs = args.n_epochs
 
-    print("Initialized features")
+    # print("Initialized features")
 
     n_edges = graph.number_of_edges()
 
-    print("""----Data statistics------'
-    #Edges %d
-    #Classes %d""" %
-          (n_edges, n_classes,
-           ))
+    # print("""----Data statistics------'
+    # #Edges %d
+    # #Classes %d""" %
+    #       (n_edges, n_classes,
+    #        ))
 
     ##########################################################################################
     device = torch.device(device_str)
@@ -346,48 +343,7 @@ def main(args):
                       train_model=train_model,
                       discard_k=args.discard,
                       use_opt=False)
-    # print(r2)
-
-    # Saving stats to file specified in args.logfile
-    log_file_ptr = open(args.logfile, 'a+')
-
-    log_file_ptr.write(str(args.dataset))
-
-    log_file_ptr.write(',')
-    log_file_ptr.write(device_str)
-
-    log_file_ptr.write(',')
-    log_file_ptr.write(str(r1['call_count']))
-
-    log_file_ptr.write(',')
-    log_file_ptr.write(str(args.layers))
-
-    log_file_ptr.write(',')
-    log_file_ptr.write(str(graph.ndata["feat"].shape[1]))
-
-    log_file_ptr.write(',')
-    log_file_ptr.write(str(n_hidden))
-
-    log_file_ptr.write(',')
-    log_file_ptr.write(str(n_classes))
-
-    log_file_ptr.write(',')
-    log_file_ptr.write(str(r1['time_mean']))
-    log_file_ptr.write(',')
-    log_file_ptr.write(str(r1['time_std']))
-    log_file_ptr.write(',')
-    log_file_ptr.write(str(np.mean(r1['iter'])))
-    log_file_ptr.write(',')
-    log_file_ptr.write(str(np.std(r1['iter'])))
-    log_file_ptr.write(',')
-    log_file_ptr.write(str(r1['acc']))
-    log_file_ptr.write(',')
-    log_file_ptr.write(str(r1['acc_epoch']))
-
-    log_file_ptr.write('\n')
-    log_file_ptr.close()
-
-    print('================Finished updating log ==============')
+    print(str(r1['time_mean']),",",str(np.mean(r1['iter'])))
 
 
 if __name__ == '__main__':

@@ -135,9 +135,6 @@ class GCNOpt(nn.Module):
             self._time_stats[key] = self._time_stats[key] + 1
 
     def get_time_stats(self,):
-        if not self.log_e2e_time:
-            print('Logging time is disabled.')
-
         if self.needs_lazy_update:
             n = self._time_stats["call_count"]
 
@@ -331,7 +328,7 @@ def main(args):
                       discard_k=args.discard,
                       use_opt=False)
     # print(r2)
-    print(str(r1['time_mean']), str(np.mean(r1['iter'])))
+    print(str(r1['time_mean']),",",str(np.mean(r1['iter'])))
 
 
 if __name__ == '__main__':
