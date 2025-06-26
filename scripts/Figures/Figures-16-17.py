@@ -134,12 +134,12 @@ def evalDGL(args):
                         '--n-hidden', str(32),
                         '--layers', str(1),
                         '--n-epochs', str(100),
-                        "--logfile", args.stat_log,
+                        "--logfile", outfile,
                         "--device", "cuda",
                         "--discard", str(5)]
             outfile.write(dset + "," + model + "," + args.hw + ",")
             outfile.flush()
-            run_at(job_args, outfile, errfile, dgl_working_path)
+            run_at(job_args, logfile, errfile, dgl_working_path)
 
             logfile.write(("<"*100)+"\n")
             errfile.write(("<"*100)+"\n")

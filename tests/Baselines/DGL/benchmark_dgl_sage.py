@@ -359,7 +359,11 @@ def main(args):
                       discard_k=args.discard,
                       use_opt=False)
     # print(r2)
-    print(str(r1['time_mean']),",",str(np.mean(r1['iter'])))
+    log_file_ptr = open(args.logfile, 'a+')
+    log_file_ptr.write(str(r1['time_mean']) +","+str(np.mean(r1['iter'])))
+    log_file_ptr.close()
+
+    # print(str(r1['time_mean']),",",str(np.mean(r1['iter'])))
 
 
 if __name__ == '__main__':
