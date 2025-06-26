@@ -648,7 +648,7 @@ public:\n\
             }
 
             tempForwardAggrCall += generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
-            + "(" + cNode->getInput(0)->getName() + ", " + cNode->getInput(1)->getName() + ", offset_graph, columns_graph, value_graph, bounds, segments);";
+            + "(" + cNode->getInput(0)->getName() + ", " + cNode->getInput(1)->getName() + ", offset_graph_vals, columns_graph_vals, value_graph_vals, bounds_vals, segments_vals);";
             model.getForward()->addCode(tempForwardAggrCall);
 
             std::string resetVal = "global_value_graph[2 * " + std::to_string(inGraphIndx) + "] = " + generateOutputString(cNode, outOfLoop) + ";";

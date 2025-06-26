@@ -1072,7 +1072,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
                     encounteredStrings.insert(inputData->getName());
 
                     // TODO Temp fix
-                    if (inputData->getName() == "attn")
+                    if (inputData->getName() == "attn" || inputData->getName() == "val")
                     {
                         continue;
                     }
