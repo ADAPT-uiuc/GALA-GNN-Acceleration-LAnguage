@@ -133,7 +133,7 @@ def evalDGL(args):
                         '--n-hidden', str(32),
                         '--layers', str(1),
                         '--n-epochs', str(100),
-                        "--logfile", "../../scripts/Figures/" + args.stat_log + "_" + args.hw + "_DGL.txt",
+                        "--logfile", "scripts/Figures/" + args.stat_log + "_" + args.hw + "_DGL.txt",
                         "--device", "cuda",
                         "--discard", str(5)]
             outfile = open(args.stat_log + "_" + args.hw + "_DGL.txt", 'a+')
