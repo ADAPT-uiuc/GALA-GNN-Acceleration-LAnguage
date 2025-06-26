@@ -951,6 +951,27 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
 
                     if (hasEdgeMulAggr &&  inGraphIndx != 0)
                     {
+                        if (inGraphIndx == 1)
+                        {
+                            std::string tempForwardAggrCall_vals = "        torch::Tensor offset_graph_vals_b = global_offset_graph[1];\n\
+        torch::Tensor columns_graph_vals_b = global_columns_graph[1];\n\
+        torch::Tensor value_graph_vals_b = global_value_graph[1];\n";
+
+                            if (isColTile){
+                                tempForwardAggrCall_vals += "        torch::Tensor bounds_vals_b = global_bounds[1];\n\
+        int segments_vals_b = global_segments[1];\n";
+                            } else
+                            {
+                                std::cout << "This unsup: AGGREGATE_EDGE_SUM_OP" << std::endl;
+                                tempForwardAggrCall_vals += "unsupported\n";
+                            }
+
+                            tempForwardAggrCall_vals += "torch::Tensor val_b = aggregate_edge_mul( norm_val, norm_val, offset_graph_vals_b, columns_graph_vals_b, value_graph_vals_b, bounds_vals_b, segments_vals_b).detach();";
+                            model.getInv()->addCode(tempForwardAggrCall_vals);
+
+                            std::string resetVal = "global_value_graph[1] = val_b;";
+                            model.getInv()->addCode(resetVal);
+                        }
                         std::string tempForwardAggrCall_vals = "        torch::Tensor offset_graph_vals" + std::to_string(inGraphIndx) + " = global_offset_graph[2 * " + std::to_string(inGraphIndx) + "];\n\
         torch::Tensor columns_graph_vals" + std::to_string(inGraphIndx) + " = global_columns_graph[2 * " + std::to_string(inGraphIndx) + "];\n\
         torch::Tensor value_graph_vals" + std::to_string(inGraphIndx) + " = global_value_graph[2 * " + std::to_string(inGraphIndx) + "];\n";
@@ -968,7 +989,7 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
                         + " = aggregate_edge_mul( norm_val, norm_val, offset_graph_vals" + std::to_string(inGraphIndx)
                         + ", columns_graph_vals" + std::to_string(inGraphIndx) + ", value_graph_vals"
                         + std::to_string(inGraphIndx) + ", bounds_vals" + std::to_string(inGraphIndx)
-                        + ", segments_vals" + std::to_string(inGraphIndx) + ");";
+                        + ", segments_vals" + std::to_string(inGraphIndx) + ").detach();";
                         model.getInv()->addCode(tempForwardAggrCall_vals);
 
                         std::string resetVal = "global_value_graph[2 * " + std::to_string(inGraphIndx) + "] = val" + std::to_string(inGraphIndx) + ";";
@@ -991,7 +1012,7 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
                         + "_b = aggregate_edge_mul( norm_val, norm_val, offset_graph_vals" + std::to_string(inGraphIndx)
                         + "_b, columns_graph_vals" + std::to_string(inGraphIndx) + "_b, value_graph_vals"
                         + std::to_string(inGraphIndx) + "_b, bounds_vals" + std::to_string(inGraphIndx)
-                        + "_b, segments_vals" + std::to_string(inGraphIndx) + "_b);";
+                        + "_b, segments_vals" + std::to_string(inGraphIndx) + "_b).detach();";
                         model.getInv()->addCode(tempForwardAggrCall_vals_b);
 
                         std::string resetVal_b = "global_value_graph[2 * " + std::to_string(inGraphIndx) + "+1] = val" + std::to_string(inGraphIndx) + "_b;";
