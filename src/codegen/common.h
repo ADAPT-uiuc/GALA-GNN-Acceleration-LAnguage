@@ -956,23 +956,46 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
         torch::Tensor value_graph_vals" + std::to_string(inGraphIndx) + " = global_value_graph[2 * " + std::to_string(inGraphIndx) + "];\n";
 
                         if (isColTile){
-                            tempForwardAggrCall += "        torch::Tensor bounds_vals" + std::to_string(inGraphIndx) + " = global_bounds[2 * " + std::to_string(inGraphIndx) + "];\n\
+                            tempForwardAggrCall_vals += "        torch::Tensor bounds_vals" + std::to_string(inGraphIndx) + " = global_bounds[2 * " + std::to_string(inGraphIndx) + "];\n\
         int segments_vals" + std::to_string(inGraphIndx) + " = global_segments[2 * " + std::to_string(inGraphIndx) + "];\n";
                         } else
                         {
                             std::cout << "This unsup: AGGREGATE_EDGE_SUM_OP" << std::endl;
-                            tempForwardAggrCall += "unsupported\n";
+                            tempForwardAggrCall_vals += "unsupported\n";
                         }
 
-                        tempForwardAggrCall += "torch::Tensor val" + std::to_string(inGraphIndx)
+                        tempForwardAggrCall_vals += "torch::Tensor val" + std::to_string(inGraphIndx)
                         + " = aggregate_edge_mul( norm_val, norm_val, offset_graph_vals" + std::to_string(inGraphIndx)
                         + ", columns_graph_vals" + std::to_string(inGraphIndx) + ", value_graph_vals"
                         + std::to_string(inGraphIndx) + ", bounds_vals" + std::to_string(inGraphIndx)
                         + ", segments_vals" + std::to_string(inGraphIndx) + ");";
-                        model.getInv()->addCode(tempForwardAggrCall);
+                        model.getInv()->addCode(tempForwardAggrCall_vals);
 
                         std::string resetVal = "global_value_graph[2 * " + std::to_string(inGraphIndx) + "] = val" + std::to_string(inGraphIndx) + ";";
                         model.getInv()->addCode(resetVal);
+
+                        std::string tempForwardAggrCall_vals_b = "        torch::Tensor offset_graph_vals" + std::to_string(inGraphIndx) + "_b = global_offset_graph[2 * " + std::to_string(inGraphIndx) + "+1];\n\
+        torch::Tensor columns_graph_vals" + std::to_string(inGraphIndx) + "_b = global_columns_graph[2 * " + std::to_string(inGraphIndx) + "+1];\n\
+        torch::Tensor value_graph_vals" + std::to_string(inGraphIndx) + "_b = global_value_graph[2 * " + std::to_string(inGraphIndx) + "+1];\n";
+
+                        if (isColTile){
+                            tempForwardAggrCall_vals_b += "        torch::Tensor bounds_vals" + std::to_string(inGraphIndx) + "_b = global_bounds[2 * " + std::to_string(inGraphIndx) + "+1];\n\
+        int segments_vals" + std::to_string(inGraphIndx) + "_b = global_segments[2 * " + std::to_string(inGraphIndx) + "+1];\n";
+                        } else
+                        {
+                            std::cout << "This unsup: AGGREGATE_EDGE_SUM_OP" << std::endl;
+                            tempForwardAggrCall_vals_b += "unsupported\n";
+                        }
+
+                        tempForwardAggrCall_vals_b += "torch::Tensor val" + std::to_string(inGraphIndx)
+                        + "_b = aggregate_edge_mul( norm_val, norm_val, offset_graph_vals" + std::to_string(inGraphIndx)
+                        + "_b, columns_graph_vals" + std::to_string(inGraphIndx) + "_b, value_graph_vals"
+                        + std::to_string(inGraphIndx) + "_b, bounds_vals" + std::to_string(inGraphIndx)
+                        + "_b, segments_vals" + std::to_string(inGraphIndx) + "_b);";
+                        model.getInv()->addCode(tempForwardAggrCall_vals_b);
+
+                        std::string resetVal_b = "global_value_graph[2 * " + std::to_string(inGraphIndx) + "+1] = val" + std::to_string(inGraphIndx) + "_b;";
+                        model.getInv()->addCode(resetVal_b);
                     }
 
                 }
