@@ -15,6 +15,13 @@ models = ["gcn",
           "gin",
           "sage"]
 
+dgl_map = {"Cora":"CoraGraphDataset",
+           "Pubmed":"PubmedGraphDataset",
+           "CoraFull":"CoraFullDataset",
+           "Reddit":"RedditDataset",
+           "ogbn-arxiv":"ogbn-arxiv",
+           "ogbn-products":"ogbn-products"}
+
 dataset_list = ["Cora"]
 models = ["gcn"]
 
@@ -123,7 +130,7 @@ def evalDGL(args):
 
             job_args = ['python',
                         'benchmark_dgl_'+model+'.py',
-                        '--dataset', dset,
+                        '--dataset', dgl_map[dset],
                         '--n-hidden', str(32),
                         '--layers', str(1),
                         '--n-epochs', str(100),
