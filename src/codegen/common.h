@@ -630,19 +630,19 @@ public:\n\
             model.getForward()->addCode(tempForwardAggrCall);
         } else if (cNode->getOp() == AGGREGATE_EDGE_MUL_OP)
         {
-            std::string normCall = "auto options_ones = torch::TensorOptions()\n\
+            std::string normCall = "auto options_ones_val = torch::TensorOptions()\n\
                        .dtype(torch::kFloat)\n\
                        .requires_grad(false)\n\
                        .device(torch::kCUDA, 0);\n\
-            torch::Tensor ones = torch::ones({global_nrows, 1}, options_ones);\n\
-            torch::Tensor offset_graph_ones = global_offset_graph[2 * 0];\n\
-            torch::Tensor columns_graph_ones = global_columns_graph[2 * 0];\n\
-            torch::Tensor value_graph_ones = global_value_graph[2 * 0];\n\
-            torch::Tensor bounds_ones = global_bounds[2 * 0];\n\
-            int segments_ones = global_segments[2 * 0];\n\
-            torch::Tensor degrees = aggregate_node_mul_sum_direct_coarse2_call(ones, offset_graph_ones, columns_graph_ones,\n\
+            torch::Tensor ones_val = torch::ones({global_nrows, 1}, options_ones);\n\
+            torch::Tensor offset_graph_ones_val = global_offset_graph[2 * 0];\n\
+            torch::Tensor columns_graph_ones_val = global_columns_graph[2 * 0];\n\
+            torch::Tensor value_graph_ones_val = global_value_graph[2 * 0];\n\
+            torch::Tensor bounds_ones_val = global_bounds[2 * 0];\n\
+            int segments_ones_val = global_segments[2 * 0];\n\
+            torch::Tensor degrees_val = aggregate_node_mul_sum_direct_coarse2_call(ones, offset_graph_ones, columns_graph_ones,\n\
                                 value_graph_ones, bounds_ones, segments_ones);\n\
-            torch::Tensor norm = torch::pow(degrees, -0.500000).detach();\n";
+            torch::Tensor norm_val = torch::pow(degrees, -0.500000).detach();\n";
             model.getInv()->addCode(normCall);
 
             bool isColTile = hasDOpt(cNode->getInput(2), COL_TILE_DOPT);
