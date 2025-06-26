@@ -642,7 +642,7 @@ public:\n\
             int segments_ones = global_segments[2 * 0];\n\
             torch::Tensor degrees = aggregate_node_mul_sum_direct_coarse2_call(ones, offset_graph_ones, columns_graph_ones,\n\
                                 value_graph_ones, bounds_ones, segments_ones);\n\
-            torch::Tensor norm = torch::pow(degrees, -0.500000)\n";
+            torch::Tensor norm = torch::pow(degrees, -0.500000).detach()\n";
             model.getInv()->addCode(normCall);
 
             bool isColTile = hasDOpt(cNode->getInput(2), COL_TILE_DOPT);
