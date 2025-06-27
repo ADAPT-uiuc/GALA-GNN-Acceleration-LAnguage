@@ -637,36 +637,52 @@ public:\n\
         } else if (cNode->getOp() == AGGREGATE_EDGE_MUL_OP)
         {
             hasEdgeMulAggr = true;
-            std::string normCall = "auto options_ones_val = torch::TensorOptions()\n\
-                       .dtype(torch::kFloat)\n\
-                       .requires_grad(false)\n\
-                       .device(torch::kCUDA, 0);\n\
-            torch::Tensor ones_val = torch::ones({global_nrows, 1}, options_ones_val);\n\
-            torch::Tensor offset_graph_ones_val = global_offset_graph[2 * 0];\n\
-            torch::Tensor columns_graph_ones_val = global_columns_graph[2 * 0];\n\
-            torch::Tensor value_graph_ones_val = global_value_graph[2 * 0];\n\
-            torch::Tensor bounds_ones_val = global_bounds[2 * 0];\n\
-            int segments_ones_val = global_segments[2 * 0];\n\
-            torch::Tensor degrees_val = aggregate_node_mul_sum_coarse2_call(ones_val, offset_graph_ones_val, columns_graph_ones_val,\n\
-                                value_graph_ones_val, bounds_ones_val, segments_ones_val);\n\
-            torch::Tensor norm_val = torch::pow(degrees_val, -0.500000).detach();\n";
-            model.getInv()->addCode(normCall);
-
+            std::string tempForwardAggrCall = "";
             bool isColTile = hasDOpt(cNode->getInput(2), COL_TILE_DOPT);
-
             auto inGraphIndx = cNode->getInput(2)->getDataInfo()->getIndex();
-
-            std::string tempForwardAggrCall = "        torch::Tensor offset_graph_vals = global_offset_graph[2 * " + std::to_string(inGraphIndx) + "];\n\
-        torch::Tensor columns_graph_vals = global_columns_graph[2 * " + std::to_string(inGraphIndx) + "];\n\
-        torch::Tensor value_graph_vals = global_value_graph[2 * " + std::to_string(inGraphIndx) + "];\n";
-
             if (isColTile){
+                std::string normCall = "auto options_ones_val = torch::TensorOptions()\n\
+                           .dtype(torch::kFloat)\n\
+                           .requires_grad(false)\n\
+                           .device(torch::kCUDA, 0);\n\
+                torch::Tensor ones_val = torch::ones({global_nrows, 1}, options_ones_val);\n\
+                torch::Tensor offset_graph_ones_val = global_offset_graph[2 * 0];\n\
+                torch::Tensor columns_graph_ones_val = global_columns_graph[2 * 0];\n\
+                torch::Tensor value_graph_ones_val = global_value_graph[2 * 0];\n\
+                torch::Tensor bounds_ones_val = global_bounds[2 * 0];\n\
+                int segments_ones_val = global_segments[2 * 0];\n\
+                torch::Tensor degrees_val = aggregate_node_mul_sum_coarse2_call(ones_val, offset_graph_ones_val, columns_graph_ones_val,\n\
+                                    value_graph_ones_val, bounds_ones_val, segments_ones_val);\n\
+                torch::Tensor norm_val = torch::pow(degrees_val, -0.500000).detach();\n";
+                model.getInv()->addCode(normCall);
+
+                tempForwardAggrCall = "        torch::Tensor offset_graph_vals = global_offset_graph[2 * " + std::to_string(inGraphIndx) + "];\n\
+            torch::Tensor columns_graph_vals = global_columns_graph[2 * " + std::to_string(inGraphIndx) + "];\n\
+            torch::Tensor value_graph_vals = global_value_graph[2 * " + std::to_string(inGraphIndx) + "];\n";
+
                 tempForwardAggrCall += "        torch::Tensor bounds_vals = global_bounds[2 * " + std::to_string(inGraphIndx) + "];\n\
         int segments_vals = global_segments[2 * " + std::to_string(inGraphIndx) + "];\n";
                 tempForwardAggrCall += "torch::Tensor " + generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
             + "(" + cNode->getInput(0)->getName() + "_val, " + cNode->getInput(1)->getName() + "_val, offset_graph_vals, columns_graph_vals, value_graph_vals, bounds_vals, segments_vals).detach();";
             } else
             {
+                std::string normCall = "auto options_ones_val = torch::TensorOptions()\n\
+                           .dtype(torch::kFloat)\n\
+                           .requires_grad(false)\n\
+                           .device(torch::kCUDA, 0);\n\
+                torch::Tensor ones_val = torch::ones({global_nrows, 1}, options_ones_val);\n\
+                torch::Tensor offset_graph_ones_val = global_offset_graph[2 * 0];\n\
+                torch::Tensor columns_graph_ones_val = global_columns_graph[2 * 0];\n\
+                torch::Tensor value_graph_ones_val = global_value_graph[2 * 0];\n\
+                torch::Tensor degrees_val = aggregate_node_mul_sum_call(ones_val, offset_graph_ones_val, columns_graph_ones_val,\n\
+                                    value_graph_ones_val);\n\
+                torch::Tensor norm_val = torch::pow(degrees_val, -0.500000).detach();\n";
+                model.getInv()->addCode(normCall);
+
+                tempForwardAggrCall = "        torch::Tensor offset_graph_vals = global_offset_graph[2 * " + std::to_string(inGraphIndx) + "];\n\
+            torch::Tensor columns_graph_vals = global_columns_graph[2 * " + std::to_string(inGraphIndx) + "];\n\
+            torch::Tensor value_graph_vals = global_value_graph[2 * " + std::to_string(inGraphIndx) + "];\n";
+
                 tempForwardAggrCall += "torch::Tensor " + generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
             + "_dir(" + cNode->getInput(0)->getName() + "_val, " + cNode->getInput(1)->getName() + "_val, offset_graph_vals, columns_graph_vals, value_graph_vals).detach();";
             }
