@@ -49,6 +49,7 @@ bool GALAFEContext::operator_reordering = true;
 bool GALAFEContext::sparse_rewrites = true;
 bool GALAFEContext::train_code_motion = true;
 bool GALAFEContext::training_subgraph = true;
+bool GALAFEContext::print_accuracy = false;
 
 //Dense matrix with double values.
 typedef DenseMatrix<ind1_t, ind2_t, val_t> DMd_t;
