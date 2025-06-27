@@ -283,37 +283,37 @@ class TimedGATConv(nn.Module):
         return self._time_stats
 
     def forward(self, graph, feat, get_attention=False):
-        # h_dst = h_src = self.feat_drop(feat)
-        # src_prefix_shape = dst_prefix_shape = feat.shape[:-1]
-        # feat_src = feat_dst = self.fc(h_src).view(-1, self._num_heads, self._out_feats)
-        # el = (feat_src * self.attn_l).sum(dim=-1).unsqueeze(-1)
-        # er = (feat_dst * self.attn_r).sum(dim=-1).unsqueeze(-1)
-        # # @self.cm.zoomIn(nspace=[self, th])
-        # # def nb_forward(v):
-        # #    coeff = [th.exp(self.leaky_relu(nb.el + v.er)) for nb in v.innbs]
-        # #    s = sum(coeff)
-        # #    alpha = [c/s for c in coeff]
-        # #    feat_src = [nb.feat_src for nb in v.innbs]
-        # #    return sum([alpha[i] * feat_src[i] for i in range(len(feat_src))])
-        # # rst = nb_forward(g=graph, n_feats= {'el':el, 'er': er, 'feat_src':feat_src})
-        # rst = B.fused_gat(graph, feat_src, el, er, self.negative_slope)
-
-        graph = graph.local_var()
         h_dst = h_src = self.feat_drop(feat)
+        src_prefix_shape = dst_prefix_shape = feat.shape[:-1]
         feat_src = feat_dst = self.fc(h_src).view(-1, self._num_heads, self._out_feats)
         el = (feat_src * self.attn_l).sum(dim=-1).unsqueeze(-1)
         er = (feat_dst * self.attn_r).sum(dim=-1).unsqueeze(-1)
-        # Vertex-centric implementation.
-        dgl_context = dgl.utils.to_dgl_context(feat.device)
-        graph = graph._graph.get_immutable_gidx(dgl_context)
-        @self.cm.zoomIn(nspace=[self, th])
-        def nb_forward(v):
-           coeff = [th.exp(self.leaky_relu(nb.el + v.er)) for nb in v.innbs]
-           s = sum(coeff)
-           alpha = [c/s for c in coeff]
-           feat_src = [nb.feat_src for nb in v.innbs]
-           return sum([alpha[i] * feat_src[i] for i in range(len(feat_src))])
-        rst = nb_forward(g=graph, n_feats= {'el':el, 'er': er, 'feat_src':feat_src})
+        # @self.cm.zoomIn(nspace=[self, th])
+        # def nb_forward(v):
+        #    coeff = [th.exp(self.leaky_relu(nb.el + v.er)) for nb in v.innbs]
+        #    s = sum(coeff)
+        #    alpha = [c/s for c in coeff]
+        #    feat_src = [nb.feat_src for nb in v.innbs]
+        #    return sum([alpha[i] * feat_src[i] for i in range(len(feat_src))])
+        # rst = nb_forward(g=graph, n_feats= {'el':el, 'er': er, 'feat_src':feat_src})
+        rst = B.fused_gat(graph, feat_src, el, er, self.negative_slope)
+
+        # graph = graph.local_var()
+        # h_dst = h_src = self.feat_drop(feat)
+        # feat_src = feat_dst = self.fc(h_src).view(-1, self._num_heads, self._out_feats)
+        # el = (feat_src * self.attn_l).sum(dim=-1).unsqueeze(-1)
+        # er = (feat_dst * self.attn_r).sum(dim=-1).unsqueeze(-1)
+        # # Vertex-centric implementation.
+        # dgl_context = dgl.utils.to_dgl_context(feat.device)
+        # graph = graph._graph.get_immutable_gidx(dgl_context)
+        # @self.cm.zoomIn(nspace=[self, th])
+        # def nb_forward(v):
+        #    coeff = [th.exp(self.leaky_relu(nb.el + v.er)) for nb in v.innbs]
+        #    s = sum(coeff)
+        #    alpha = [c/s for c in coeff]
+        #    feat_src = [nb.feat_src for nb in v.innbs]
+        #    return sum([alpha[i] * feat_src[i] for i in range(len(feat_src))])
+        # rst = nb_forward(g=graph, n_feats= {'el':el, 'er': er, 'feat_src':feat_src})
 
         rst = rst.squeeze(1)
         # rst = feat_src
