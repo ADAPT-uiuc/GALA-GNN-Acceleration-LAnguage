@@ -526,6 +526,11 @@ public:
             graphNamePathMap["Pubmed"] = "PubmedGraphDataset";
             graphNamePathMap["Arxiv"] = "ogbn-arxiv";
             graphNamePathMap["Products"] = "ogbn-products";
+            graphNamePathMap["papers100M_1"] = "ogbn-papers100M_1";
+            graphNamePathMap["papers100M_2"] = "ogbn-papers100M_2";
+            graphNamePathMap["papers100M_5"] = "ogbn-papers100M_5";
+            graphNamePathMap["papers100M_10"] = "ogbn-papers100M_10";
+            graphNamePathMap["papers100M_20"] = "ogbn-papers100M_20";
 
             // This doesn't need to change
             std::string fileLoadCode = "    SM adj0;\n\
