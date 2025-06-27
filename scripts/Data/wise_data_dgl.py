@@ -7,6 +7,7 @@ from dgl import AddSelfLoop
 import torch
 
 basedir = "../../../data/" 
+os.makedirs(basedir, exist_ok=True)
 undirected = True  # Change to False if you want the directed version
 
 # Datasets to process
