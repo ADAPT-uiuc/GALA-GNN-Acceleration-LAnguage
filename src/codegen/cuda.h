@@ -193,7 +193,7 @@ public:
             std::cout << "CC:" << maxCoarsening << " " << isWeighted << " " << !(isColTile) << " " << !(isKernelSample) << std::endl;
             if (maxCoarsening == 1 && isWeighted && !(isColTile) && !(isKernelSample))
             {
-                std::string aggrKernelCall = "torch::Tensor " + getKernelName(cNode) + "(torch::Tensor input_dense,\n\
+                std::string aggrKernelCall = "torch::Tensor " + getKernelName(cNode) + "_call(torch::Tensor input_dense,\n\
                                  torch::Tensor offset_graph,\n\
                                  torch::Tensor columns_graph,\n\
                                  torch::Tensor value_graph) {\n\
