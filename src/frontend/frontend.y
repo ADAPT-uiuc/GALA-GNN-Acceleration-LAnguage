@@ -960,7 +960,7 @@ void generate_ir(){
         auto loadDataset = new ForwardNode(POINTWISE, LOAD_OP);
         loadDataset->addParam(m1.dataset_name);
         // TODO Temp fix
-        graphData = createDataNode(CSR_STYPE, false, false, {0,0}, true, "adj0", INT32, INT32, F32);
+        graphData = createDataNode(CSR_STYPE, true, true, {0,0}, true, "adj0", INT32, INT32, F32);
         featData = createDataNode(RM_DTYPE, false, false, {-1, -2}, true, "t_iden", INT32, INT32, F32);
 
         // association between graph and features

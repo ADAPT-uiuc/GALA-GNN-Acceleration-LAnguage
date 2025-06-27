@@ -171,10 +171,10 @@ public:
             auto graphInfo =  graphInput->getDataInfo();
 
             // Unweighted (Col tile or undirected is not necessary at the moment)
-            bool isWeighted = false;
-            if (graphInfo->getWeighted())
+            bool isWeighted = true;
+            if (!graphInfo->getWeighted())
             {
-                isWeighted = true;
+                isWeighted = false;
             }
 
             int maxCoarsening = 1;
@@ -185,13 +185,84 @@ public:
                     maxCoarsening = (int)opt.second;
                 }
             }
-            std::cout << "AA: " << getKernelName(cNode) << " maxCourse: " << maxCoarsening << std::endl;
 
             bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);
             bool isKernelSample = hasCOpt(cNode, SAMPLE_COPT);
 
-            std::string kernelCodeStr = "";
 
+
+            if (maxCoarsening == 1 && isWeighted && !(isColTile) && !(isKernelSample))
+            {
+                std::string aggrKernelCall = "torch::Tensor " + getKernelName(cNode) + "(torch::Tensor input_dense,\n\
+                                 torch::Tensor offset_graph,\n\
+                                 torch::Tensor columns_graph,\n\
+                                 torch::Tensor value_graph) {\n\
+  auto nrows = offset_graph.numel() - 1;\n\
+  auto nvals = columns_graph.numel();\n\
+  auto full_iden = input_dense.numel();\n\
+  auto dcols = full_iden / nrows;\n\
+  float *iden_ptr = input_dense.data_ptr<float>();\n\
+  // Output\n\
+  auto options = torch::TensorOptions()\n\
+                     .dtype(torch::kFloat)\n\
+                     .requires_grad(true)\n\
+                     .device(torch::kCUDA, 0);\n\
+  auto output_dense = torch::zeros({nrows, dcols}, options);\n\
+  float *oden_array = output_dense.data_ptr<float>();\n\
+  int *offset_ptr = offset_graph.data_ptr<int>();\n\
+  int *col_ptr = columns_graph.data_ptr<int>();\n\
+  float *val_ptr = value_graph.data_ptr<float>();\n\
+\n\
+  float alpha = 1.0f;\n\
+  float beta = 1.0f;\n\
+\n\
+  // Create the sparse / dense objects\n\
+  cusparseHandle_t handle = NULL;\n\
+  cusparseSpMatDescr_t matA;\n\
+  cusparseDnMatDescr_t matB, matC;\n\
+  void *dBuffer = NULL;\n\
+  size_t bufferSize = 0;\n\
+\n\
+  CUSPARSE_CHECK(cusparseCreate(&handle));\n\
+  CUSPARSE_CHECK(cusparseCreateCsr(&matA, nrows, nrows, nvals, offset_ptr,\n\
+                                   col_ptr, val_ptr, CUSPARSE_INDEX_32I,\n\
+                                   CUSPARSE_INDEX_32I, // Need to change these\n\
+                                   CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F));\n\
+  // Create dense matrix B\n\
+  CUSPARSE_CHECK(cusparseCreateDnMat(&matB, nrows, dcols, dcols, iden_ptr,\n\
+                                     CUDA_R_32F,\n\
+                                     CUSPARSE_ORDER_ROW)); // changed\n\
+  // Create dense matrix C\n\
+  CUSPARSE_CHECK(cusparseCreateDnMat(&matC, nrows, dcols, dcols, oden_array,\n\
+                                     CUDA_R_32F,\n\
+                                     CUSPARSE_ORDER_ROW)); // changed\n\
+\n\
+  // allocate an external buffer if needed\n\
+  CUSPARSE_CHECK(cusparseSpMM_bufferSize(\n\
+      handle, CUSPARSE_OPERATION_NON_TRANSPOSE,\n\
+      CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, matA, matB, &beta, matC,\n\
+      CUDA_R_32F, CUSPARSE_SPMM_CSR_ALG2, &bufferSize));\n\
+  CUDA_CHECK(cudaMalloc(&dBuffer, bufferSize));\n\
+\n\
+  CUSPARSE_CHECK(cusparseSpMM(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,\n\
+                              CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, matA,\n\
+                              matB, &beta, matC, CUDA_R_32F,\n\
+                              CUSPARSE_SPMM_CSR_ALG2, dBuffer));\n\
+\n\
+  CUSPARSE_CHECK(cusparseDestroySpMat(matA));\n\
+  CUSPARSE_CHECK(cusparseDestroyDnMat(matB));\n\
+  CUSPARSE_CHECK(cusparseDestroyDnMat(matC));\n\
+  CUSPARSE_CHECK(cusparseDestroy(handle));\n\
+  CUDA_CHECK(cudaFree(dBuffer));\n\
+\n\
+  return output_dense;\n\
+}\n";
+                // Adding the kernel call and setting the name
+                kernelCallCode.addCode(aggrKernelCall);
+                cNode->setKernelName("gather_forward");
+            } else
+            {
+                std::string kernelCodeStr = "";
             // TODO eventually change the 32, 8 sizes based on the configurations of the CIR
             //  The 64 here needs to be changed into something else if the blocksize.y is changed
             // TODO add the semiring selection here
@@ -211,7 +282,7 @@ public:
                     int dcols";
                 if (isKernelSample){
                     kernelCodeStr += ", int ra, int rb";
-                }    
+                }
                 kernelCodeStr += ") {\n\
 if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {\n";
 
@@ -221,7 +292,7 @@ if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {\n";
                     kernelCodeStr += "    float local" + std::to_string(j) + " = C[(((((((int)blockIdx.x) * 8)\
 + ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) + ((int)threadIdx.x)) + " + std::to_string(32 * j) + ")];\n";
                 }
-                
+
                 if (isKernelSample) {
                     kernelCodeStr += "\
         int jmax =\n\
@@ -238,12 +309,12 @@ if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {\n";
               J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);\n\
              ++j) {\n";
                 }
-                            
+
                             for (int j = 0; j <= cFact; j++)
                             {
                                 kernelCodeStr += "\
             local" + std::to_string(j) + " = local" + std::to_string(j) + " +";
-                                
+
                                 if (isWeighted)
                                 {
                                     kernelCodeStr += "A[(j + J_indptr_data[((((int)blockIdx.x) * 8) +\n\
@@ -339,7 +410,7 @@ C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +\n\
 (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) +\n\
 ((int)threadIdx.x) + " + std::to_string(32 * j) + ") + offset] = local" + std::to_string(j) + ";\n";
                 }
-                
+
                 if (isKernelSample){
                     kernelCodeStr += "     }\n";
                 }
@@ -412,6 +483,7 @@ int start_vals = 0;";
             // Adding the kernel call and setting the name
             kernelCallCode.addCode(aggrKernelCall);
             cNode->setKernelName("gather_forward");
+            }
         } else if (cNode->getOp() == NON_LNR_OP_SOFTMAX) {
             std::string kernelCodeStr = "extern \"C\" __global__ void __launch_bounds__(256)\n\
 default_function_kernel_spmm_backward_sddmm_32_nln(\n\
