@@ -544,6 +544,7 @@ DataNode* addAggregate_CIR(DataNode* prevData, DataNode* graphData, TrainingLoop
 	    aggregate->addOpt(SAMPLE_COPT, m1.compute_transformations[SAMP_CPT]);
     if (m1.compute_transformations[SAMP_DYN_CPT] != 0)
 	    aggregate->addOpt(SAMPLE_DYNAMIC_COPT, m1.compute_transformations[SAMP_DYN_CPT]);
+	trainingLoop->addLoopNode(aggregate);
 
     // Relation (dependency) between features and aggregated output
     RelationEdge* inOutAggrRelationFeat = new RelationEdge(prevData, ALL_RELATION, outputData, ALL_RELATION);
