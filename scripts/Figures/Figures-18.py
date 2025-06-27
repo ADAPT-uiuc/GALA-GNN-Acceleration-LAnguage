@@ -30,7 +30,7 @@ def compile_and_get_time(args):
     errfile = open(args.stderr_log, 'w+')
 
     outfile = open(args.stat_log + "_scalability_GALA.csv", 'w+')
-    outfile.write("layers,hidden,hw,inference_time,total_time\n")
+    outfile.write("layers,hidden,inference_time,total_time\n")
     outfile.flush()
 
     # TODO add build
@@ -77,7 +77,7 @@ def compile_and_get_time(args):
                         '-j56']
             run_at(job_args, logfile, errfile, output_path + "build/")
             job_args = ['./gala_model']
-            outfile.write(li + "," + dim + "," + args.hw + ",")
+            outfile.write(li + "," + dim + ",")
             outfile.flush()
             run_at(job_args, outfile, errfile, output_path + "build/")
 
