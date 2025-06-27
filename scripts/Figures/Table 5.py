@@ -26,9 +26,9 @@ def compile_and_get_time(args):
     logfile = open(args.stdout_log, 'w+')
     errfile = open(args.stderr_log, 'w+')
     if args.train:
-        outfile = open(args.stat_log + "_" + args.hw + "_GALA_train.txt", 'w+')
+        outfile = open(args.stat_log + "_" + args.hw + "_GALA_train.csv", 'w+')
     else:
-        outfile = open(args.stat_log + "_" + args.hw + "_GALA_inf.txt", 'w+')
+        outfile = open(args.stat_log + "_" + args.hw + "_GALA_inf.csv", 'w+')
     outfile.write("dataset,model,hw,train,inference_time,total_time\n")
     outfile.flush()
 
@@ -59,11 +59,11 @@ def compile_and_get_time(args):
 
             if args.train:
                 job_args = ['../../build/tests/gala_train',
-                            '../../tests/GALA-DSL/' + model + '/' + dset + '/' + args.hw + '.txt',
+                            '../../tests/GALA-DSL/' + model + '/' + dset + '/' + args.hw + '.csv',
                             output_path]
             else:
                 job_args = ['../../build/tests/gala_inference',
-                            '../../tests/GALA-DSL/' + model + '/' + dset + '/' + args.hw + '.txt',
+                            '../../tests/GALA-DSL/' + model + '/' + dset + '/' + args.hw + '.csv',
                             output_path]
             run(job_args, logfile, errfile)
 
@@ -100,7 +100,7 @@ def evalDGL(args):
     logfile = open(args.stdout_log, 'a+')
     errfile = open(args.stderr_log, 'a+')
 
-    outfile = open(args.stat_log + "_" + args.hw + "_DGL_node_sampling.txt", 'w+')
+    outfile = open(args.stat_log + "_" + args.hw + "_DGL_node_sampling.csv", 'w+')
     outfile.write("dataset,model,hw,percen,inference_time,total_time\n")
     outfile.close()
 
@@ -119,11 +119,11 @@ def evalDGL(args):
                             '--pi', str(pi),
                             '--layers', str(1),
                             '--n-epochs', str(100),
-                            "--logfile", args.stat_log + "_" + args.hw + "_DGL_node_sampling.txt",
+                            "--logfile", args.stat_log + "_" + args.hw + "_DGL_node_sampling.csv",
                             "--device", "cuda",
                             "--skip_train",
                             "--discard", str(5)]
-                outfile = open(args.stat_log + "_" + args.hw + "_DGL_node_sampling.txt", 'a+')
+                outfile = open(args.stat_log + "_" + args.hw + "_DGL_node_sampling.csv", 'a+')
                 outfile.write(dset + "," + model + "," + args.hw + "," + pi + ",")
                 outfile.close()
                 run(job_args, logfile, errfile)
