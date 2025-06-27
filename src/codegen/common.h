@@ -406,7 +406,9 @@ public:
             if (transform->getNode1()->getName() == srcNode->getName())
             {
                 auto dNode = transform->getNode2();
-                auto tr = transform->getTransformation(0);
+                for (int tix = 0; tix < transform->getNumTransformations(); tix++)
+                {
+                    auto tr = transform->getTransformation(0);
                 if (tr->getTransformation() == COL_TILE_DOPT)
                 {
                     resString +=  "  std::vector<SM *> tiled_" + dNode->getName() +";\n\
@@ -491,8 +493,10 @@ public:
                     resString += generateTransformation(dNode, transforms);
                 } else if (tr->getTransformation() == SAMPLE_DOPT)
                 {
-                    resString += "inplace_sample_graph(&" + srcNode->getName() + ", " +  tr->getParam(0) + ");";
+                    resString += "inplace_sample_graph_ab(&" + srcNode->getName() + ", " +  tr->getParam(0) + ", 5, 7);";
                     resString += generateTransformation(dNode, transforms);
+                }
+
                 }
             }
         }
