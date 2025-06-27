@@ -111,6 +111,7 @@ class ModelConfig {
                 case UNWEIGHTED: return "UNWEIGHTED";
                 case FEAT_SIZE: return "FEAT_SIZE";
                 case LABEL_SIZE: return "LABEL_SIZE";
+                case SAMP: return "SAMP";
                 default: return "UNKNOWN_GRAPH_TRANSFORM";
             }
         }
@@ -118,6 +119,8 @@ class ModelConfig {
         string to_string(ComputeTransformType t) {
             switch (t) {
                 case COARSE: return "COARSE";
+                case SAMP_DYN_CPT: return "SAMP_DYN_CPT";
+                case SAMP_CPT: return "SAMP_CPT";
                 default: return "UNKNOWN_COMPUTE_TRANSFORM";
             }
         }

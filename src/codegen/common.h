@@ -409,7 +409,7 @@ public:
                 auto dNode = transform->getNode2();
                 for (int tix = 0; tix < transform->getNumTransformations(); tix++)
                 {
-                    auto tr = transform->getTransformation(0);
+                    auto tr = transform->getTransformation(tix);
                     if (tr->getTransformation() == COL_TILE_DOPT)
                     {
                         resString +=  "  std::vector<SM *> tiled_" + dNode->getName() +";\n\

@@ -1024,14 +1024,18 @@ void generate_ir(){
 
         RelationEdge* trgraphFeatAssociation = new RelationEdge(transformedGraph, ALL_RELATION, featData, ROWS_RELATION);
         GALAFEContext::associations.push_back(trgraphFeatAssociation);
+        TransformEdge* graphTrgraph = new TransformEdge(graphData, transformedGraph);
+        if (m1.graph_transformations[SAMP] != 0){ // only one data transform for now for gcn
+            TransformData* sampTransformation = new TransformData(SAMPLE_DOPT);
+            sampTransformation->addParam(to_string(m1.graph_transformations[SAMP]));
+            graphTrgraph->addTransformation(sampTransformation);
+        }
         if (m1.data_transformations[0].first == COL_TILE){ // only one data transform for now for gcn
             TransformData* tileTransformation = new TransformData(COL_TILE_DOPT);
             tileTransformation->addParam(to_string(m1.data_transformations[0].second));
-            /* tileTransformation->addParam("65000"); // why is it a string parameter? */
-            TransformEdge* graphTrgraph = new TransformEdge(graphData, transformedGraph);
             graphTrgraph->addTransformation(tileTransformation);
-            GALAFEContext::transforms.push_back(graphTrgraph);
         }
+        GALAFEContext::transforms.push_back(graphTrgraph);
 
         graph = transformedGraph;
     }
