@@ -29,4 +29,6 @@ label_size(41); // -3 if not given
 // Compute transformations
 aggrFn=aggrFn.coarsen(2);
 aggrFn=aggrFn.sample(20).dynamic();
+// Data transformations
+G=G.col_tile(370000);
 print_accuracy(true);

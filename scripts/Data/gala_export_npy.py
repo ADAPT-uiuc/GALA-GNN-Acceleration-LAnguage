@@ -45,6 +45,10 @@ def load_ogb(name, root="../../Data/ogb/"):
     print("finish constructing", name)
     return graph, num_labels
 
+def custom_dataset():
+    # Create a custom dataset here
+    return DGLDataset()
+
 
 def export_dense_mm(data, filesuffix, path):
     with open(path + filesuffix, 'wb') as file:
@@ -57,6 +61,10 @@ def main(args):
         ogbn_data = ['ogbn-proteins', 'ogbn-products', 'ogbn-arxiv', 'ogbn-mag', 'ogbn-papers100M']
         if (args.dataset in ogbn_data):
             graph, n_classes = load_ogb(args.dataset)
+        elif args.dataset == 'custom':
+            dataset = custom_dataset()
+            graph = dataset[0]
+            n_classes = dataset.num_classes
     else:
         dataset = dataset_name()
         graph = dataset[0]
@@ -70,9 +78,19 @@ def main(args):
                     "CoraFullDataset":"CoraFull",
                     "RedditDataset":"Reddit",
                     "ogbn-arxiv":"Arxiv",
-                    "ogbn-products":"Products"}
+                    "ogbn-products":"Products",
+                    "ogbn-papers100M_1": "papers100M_1",
+                    "ogbn-papers100M_2": "papers100M_2",
+                    "ogbn-papers100M_5": "papers100M_5",
+                    "ogbn-papers100M_10": "papers100M_10",
+                    "ogbn-papers100M_20": "papers100M_20"}
 
-    output_path = r"../../Data/" + dataset_list[args.dataset]
+    if args.dataset not in dataset_list:
+        data_path_name = args.dataset
+    else:
+        data_path_name = dataset_list[args.dataset]
+
+    output_path = r"../../Data/" + data_path_name
 
     print("Exporting", args.dataset, "to", output_path)
 
