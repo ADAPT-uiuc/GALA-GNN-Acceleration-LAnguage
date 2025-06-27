@@ -31,6 +31,9 @@ DataNode* reluDataPrevLayer;
 // bool sparse_rewrites = true;
 // bool training_subgraph = true;
 // bool train_code_motion = true;
+bool print_memory = false;
+bool print_accuracy = false;
+string opt_input = "";
 %}
 
 %union {
@@ -47,13 +50,13 @@ DataNode* reluDataPrevLayer;
 %token<sval> MODEL_W EVAL TRAIN LAYER ITERS VAL_STEP 
 %token<sval> AGGR_INIT FN_ARG MUL_SUM MUL_MEAN DSL_DOT FFN_OUT SIZE_FN 
 %token<sval> GRAPH_ATTR FEAT_ATTR RELU LABEL_ATTR DEGREE_ATTR NODE_ATTR LEAKY_RELU
-%token<sval> POW SCALAR_INIT IS_SPARSE
+%token<sval> POW SCALAR_INIT IS_SPARSE SAMPLE_OPT DYNAMIC_OPT
 %token<sval> COLTILE FEAT_SIZE_ASSIGN LABEL_SIZE_ASSIGN COARSEN SRC_ATTR DST_ATTR;
-%token<sval> INTEGER FLOAT SOFTMAX INIT_WEIGHT;
+%token<sval> INTEGER FLOAT SOFTMAX INIT_WEIGHT OPT_INPUT;
 %token<sval> LBRACE RBRACE DOT COMMA;
 %token<sval> TR FA OP_REORD SPARSE_REWRITES TRAIN_SUBGRAPH TRAIN_CODE_MOTION;
-%token<sval> PLUS MINUS MULTIPLY DIVIDE;
-%token<sval> FFN NULL_KEY EDGE_AGGR_INIT SUM EDGE_ATTR VAL_ATTR
+%token<sval> PLUS MINUS MULTIPLY DIVIDE PRINT_ACC PRINT_MEM
+%token<sval> FFN NULL_KEY EDGE_AGGR_INIT SUM EDGE_ATTR VAL_ATTR AGGRFN FILEPATH
 %token<sval> LOSS OPTIMIZER RMSE_LOSS ADAM_T DSL_FN RELAXNLN QUANT RABBIT_REORDER_OP SAMPLE_RANDOM_OP AGGR LSQBRA RSQBRA IF ELSE DO WHILE NOT AND OR NOTEQ EQ GREATER LESS GREATEREQ LESSEQ DATASET NONLN SENSEI_OP INT NEW
 
 %type <ival> bool op arg args
@@ -300,6 +303,14 @@ data_transform : data_var ASSIGN data_var DOT SET_UNDIRECTED LPAREN bool RPAREN 
     {  m1.addDataTransformation(COL_TILE, atof($7));  }
     | data_var ASSIGN data_var DOT IS_SPARSE LPAREN bool RPAREN SEMICOLON
     {  m1.addGraphTransformation(SPARSE, (float) $7); }
+    | data_var ASSIGN data_var DOT SAMPLE_OPT LPAREN INTEGER RPAREN SEMICOLON
+    {  m1.addGraphTransformation(SAMP, atof($7)); }
+    | data_var ASSIGN data_var DOT OPT_INPUT LPAREN string RPAREN SEMICOLON
+    { opt_input = $7; }
+    | PRINT_ACC LPAREN bool RPAREN SEMICOLON
+    { print_accuracy = $3; }
+    | PRINT_MEM LPAREN bool RPAREN SEMICOLON
+    { print_memory = $3; }
 ;
 // this is where to do compute transform
 function_transform : data_var ASSIGN data_var DOT COARSEN LPAREN INTEGER RPAREN SEMICOLON
@@ -312,6 +323,10 @@ function_transform : data_var ASSIGN data_var DOT COARSEN LPAREN INTEGER RPAREN 
     { GALAFEContext::training_subgraph = $3; }
     | TRAIN_CODE_MOTION LPAREN bool RPAREN SEMICOLON
     { GALAFEContext::train_code_motion = $3; }
+    | AGGRFN ASSIGN AGGRFN DOT SAMPLE_OPT LPAREN INTEGER RPAREN SEMICOLON
+    { m1.addComputeTransformation(SAMP_CPT, atof($7)); }
+    | data_var ASSIGN data_var DOT SAMPLE_OPT LPAREN INTEGER RPAREN DOT DYNAMIC_OPT LPAREN RPAREN SEMICOLON
+    { m1.addComputeTransformation(SAMP_DYN_CPT, atof($7)); }
 ;
 feats_s : IDENTIFIER DOT NODE_ATTR DOT FEAT_ATTR {};
 edge_vals : IDENTIFIER DOT EDGE_ATTR DOT VAL_ATTR {};
@@ -424,6 +439,23 @@ string : QUOTE IDENTIFIER QUOTE
         sprintf($$, "%s", $2);
         free($2);
     }
+    | QUOTE IDENTIFIER MINUS IDENTIFIER QUOTE
+    {
+        $$ = (char*) malloc(strlen($2) + strlen($4) + 1);
+        if ($$ == NULL) {
+            // handle malloc failure if needed
+        }
+        strcpy($$, $2);
+        strcat($$, $4);
+        free($2);
+        free($4);
+    }
+    | QUOTE FILEPATH QUOTE
+    {
+        $$ = (char*) malloc(strlen($2) + 2);
+        sprintf($$, "%s", $2);
+        free($2);
+    }
 ;
 %%
 
@@ -454,7 +486,7 @@ DataNode* addDegrees_CIR(DataNode* graphData, TrainingLoopNode* trainingLoop){
 	degreesOp->addInputData(graphData);
 	degreesOp->addOutputData(degreesData);
 	if (m1.compute_transformations.size() > 0)
-	    degreesOp->addOpt(COARSE_COPT, m1.compute_transformations[0].second);
+	    degreesOp->addOpt(COARSE_COPT, m1.compute_transformations[COARSE]);
 	trainingLoop->addLoopNode(degreesOp);
 	RelationEdge* degreesOpOnesDependency = new RelationEdge(onesData, ALL_RELATION, degreesData, ALL_RELATION);
 	GALAFEContext::dependencies.push_back(degreesOpOnesDependency);
@@ -506,9 +538,12 @@ DataNode* addAggregate_CIR(DataNode* prevData, DataNode* graphData, TrainingLoop
     aggregate->addInputData(prevData);
     aggregate->addInputData(graphData); 
     aggregate->addOutputData(outputData);
-    if (m1.compute_transformations.size() > 0)
-	    aggregate->addOpt(COARSE_COPT, m1.compute_transformations[0].second);
-    trainingLoop->addLoopNode(aggregate);
+    if (m1.compute_transformations[COARSE] != 0)
+	    aggregate->addOpt(COARSE_COPT, m1.compute_transformations[COARSE]);
+    if (m1.compute_transformations[SAMP_CPT] != 0)
+	    aggregate->addOpt(SAMPLE_COPT, m1.compute_transformations[SAMP_CPT]);
+    if (m1.compute_transformations[SAMP_DYN_CPT] != 0)
+	    aggregate->addOpt(SAMPLE_DYNAMIC_COPT, m1.compute_transformations[SAMP_DYN_CPT]);
 
     // Relation (dependency) between features and aggregated output
     RelationEdge* inOutAggrRelationFeat = new RelationEdge(prevData, ALL_RELATION, outputData, ALL_RELATION);
@@ -977,6 +1012,9 @@ void generate_ir(){
         DataInfo* originalGraphInfo = dynamic_cast<DataInfo*>(graphData->getData()->next());
         DataInfo* transformedGraphInfo = new DataInfo(CSR_STYPE, !m1.graph_transformations[UNDIRECTED], !m1.graph_transformations[UNWEIGHTED]);
         transformedGraphInfo->setSparse(m1.graph_transformations[SPARSE]);
+        if (m1.graph_transformations[SAMP] != 0){
+            transformedGraphInfo->addOpt(SAMPLE_DOPT, to_string(m1.graph_transformations[SAMP]));
+        }
         if (m1.data_transformations[0].first == COL_TILE){ // only one data transform for now for gcn
             transformedGraphInfo->addOpt(COL_TILE_DOPT, to_string(m1.data_transformations[0].second));
         }
@@ -1004,6 +1042,9 @@ void generate_ir(){
         graphInfo->setWeighted(!m1.graph_transformations[UNWEIGHTED]);
         graphInfo->setSparse(m1.graph_transformations[SPARSE]);
         graphInfo->setIndex(0);
+        if (m1.graph_transformations[SAMP] != 0){
+            graphInfo->addOpt(SAMPLE_DOPT, to_string(m1.graph_transformations[SAMP]));
+        }
         graph = graphData;
     }
 
