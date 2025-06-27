@@ -188,6 +188,17 @@ public:
 
             bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);
             bool isKernelSample = hasCOpt(cNode, SAMPLE_COPT) || hasCOpt(cNode, SAMPLE_DYNAMIC_COPT);
+            int nsamples;
+            if (isKernelSample)
+            {
+                for (auto opt: *cNode->getOpts())
+                {
+                    if ((opt.first == SAMPLE_COPT) || (opt.first == SAMPLE_DYNAMIC_COPT))
+                    {
+                        nsamples = (int)opt.second;
+                    }
+                }
+            }
 
 
             // std::cout << "CC:" << maxCoarsening << " " << isWeighted << " " << !(isColTile) << " " << !(isKernelSample) << std::endl;
@@ -299,7 +310,7 @@ if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {\n";
         (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -\n\
          J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);\n\
     if (jmax > 0) {\n\
-      for (int ji = 0; ji < nsamples; ++ji) {\n\
+      for (int ji = 0; ji < " + std::to_string(nsamples) + "; ++ji) {\n\
         int j = (ra * ji + rb) % jmax;\n";
                 } else {
                     kernelCodeStr += "\
@@ -375,7 +386,7 @@ if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {\n";
         (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -\n\
          J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);\n\
     if (jmax > 0) {\n\
-      for (int ji = 0; ji < nsamples; ++ji) {\n\
+      for (int ji = 0; ji < " + std::to_string(nsamples) + "; ++ji) {\n\
         int j = (ra * ji + rb) % jmax;\n";
                 } else {
                     kernelCodeStr += "\
