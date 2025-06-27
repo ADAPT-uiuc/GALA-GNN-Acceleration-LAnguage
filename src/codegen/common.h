@@ -403,13 +403,12 @@ public:
         for (int ix = 0; ix < transforms.size(); ix++)
         {
             auto transform = transforms[ix];
-            std::cout << "aa: " << transform->getNode1()->getName() << " " << transform->getNode2()->getName() << std::endl;
+            std::cout << "aa: " << transform->getNode1()->getName() << " " << transform->getNode2()->getName() << " " << transform->getNumTransformations() << std::endl;
             if (transform->getNode1()->getName() == srcNode->getName())
             {
                 auto dNode = transform->getNode2();
                 for (int tix = 0; tix < transform->getNumTransformations(); tix++)
                 {
-
                     auto tr = transform->getTransformation(0);
                     if (tr->getTransformation() == COL_TILE_DOPT)
                     {
