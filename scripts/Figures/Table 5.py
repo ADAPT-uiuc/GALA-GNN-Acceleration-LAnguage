@@ -4,11 +4,9 @@ import os
 
 build_path = r"../../build/"
 
-dataset_list = ["ogbn-papers100M"]
-
-models = ["gcn"]
-
 dgl_map = {"papers100M":"ogbn-papers100M"}
+
+sample_precen = ["1", "2", "5", "10", "20"]
 
 def run(args, logfile, errfile):
     proc = subprocess.Popen(args, stdout=logfile, stderr=errfile)
@@ -25,11 +23,8 @@ def run_at(args, logfile, errfile, path):
 def compile_and_get_time(args):
     logfile = open(args.stdout_log, 'w+')
     errfile = open(args.stderr_log, 'w+')
-    if args.train:
-        outfile = open(args.stat_log + "_" + args.hw + "_GALA_train.csv", 'w+')
-    else:
-        outfile = open(args.stat_log + "_" + args.hw + "_GALA_inf.csv", 'w+')
-    outfile.write("dataset,model,hw,train,inference_time,total_time\n")
+    outfile = open(args.stat_log + "_graph.csv", 'w+')
+    outfile.write("sample,train,inference_time,total_time\n")
     outfile.flush()
 
     # TODO add build
@@ -50,45 +45,34 @@ def compile_and_get_time(args):
     if not os.path.exists(output_path + "build/"):
         os.makedirs(output_path + "build/")
 
-    for dset in dataset_list:
-        for model in models:
-            curr = f">>>Running [{dset} dataset with {model} model] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-            print(curr)
-            logfile.write(curr+"\n")
-            errfile.write(curr+"\n")
+    for sp in sample_precen:
+        curr = f">>>Running [{sp} sample size] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+        print(curr)
+        logfile.write(curr+"\n")
+        errfile.write(curr+"\n")
 
-            if args.train:
-                job_args = ['../../build/tests/gala_train',
-                            '../../tests/GALA-DSL/' + model + '/' + dset + '/' + args.hw + '.csv',
-                            output_path]
-            else:
-                job_args = ['../../build/tests/gala_inference',
-                            '../../tests/GALA-DSL/' + model + '/' + dset + '/' + args.hw + '.csv',
-                            output_path]
-            run(job_args, logfile, errfile)
+        job_args = ['../../build/tests/gala_inference',
+                    '../../tests/GALA-DSL/ablations/scalability/graph_' + sp + + '.txt',
+                    output_path]
 
-            curr = f">>>Building the code for [{dset} dataset with {model} model] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-            print(curr)
-            logfile.write(curr+"\n")
-            errfile.write(curr+"\n")
+        run(job_args, logfile, errfile)
 
-            job_args = ['cmake',
-                        '-DCMAKE_PREFIX_PATH="/home/damitha2/new_torch/libtorch"',
-                        '-DCAFFE2_USE_CUDNN=True',
-                        '..']
-            run_at(job_args, logfile, errfile, output_path + "build/")
-            job_args = ['make',
-                        '-j56']
-            run_at(job_args, logfile, errfile, output_path + "build/")
-            job_args = ['./gala_model']
-            intTrain = int(args.train == 'true')
-            outfile.write(dset + "," + model + "," + args.hw + "," + str(intTrain) + ",")
-            outfile.flush()
-            run_at(job_args, outfile, errfile, output_path + "build/")
+        job_args = ['cmake',
+                    '-DCMAKE_PREFIX_PATH="/home/damitha2/new_torch/libtorch"',
+                    '-DCAFFE2_USE_CUDNN=True',
+                    '..']
+        run_at(job_args, logfile, errfile, output_path + "build/")
+        job_args = ['make',
+                    '-j56']
+        run_at(job_args, logfile, errfile, output_path + "build/")
+        job_args = ['./gala_model']
+        outfile.write(sp + ",")
+        outfile.flush()
+        run_at(job_args, outfile, errfile, output_path + "build/")
 
-            logfile.write(("<"*100)+"\n")
-            errfile.write(("<"*100)+"\n")
-            print("<"*100)
+        logfile.write(("<"*100)+"\n")
+        errfile.write(("<"*100)+"\n")
+        print("<"*100)
     logfile.close()
     errfile.close()
 
