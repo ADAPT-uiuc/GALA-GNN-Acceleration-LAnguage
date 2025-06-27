@@ -899,6 +899,41 @@ torch::Tensor bounds, int nrows, int segments) {\n\
   return output_sparse;\n\
 }\n";
             kernelCallCode.addCode(kernelCallCodeStr);
+            std::string kernelCallCodeStr2 = "torch::Tensor aggregate_edge_mul_dir(torch::Tensor input_dense1,\n\
+                               torch::Tensor input_dense2,\n\
+                               torch::Tensor offset_graph,\n\
+                               torch::Tensor columns_graph,\n\
+                               torch::Tensor value_graph) {\n\
+  auto nvals = columns_graph.numel();\n\
+  auto nrows = global_nrows;\n\
+  auto full_iden = input_dense1.numel();\n\
+  auto dcols = full_iden / nrows;\n\
+  // // Dense\n\
+  // Input\n\
+  float *iden_ptr1 = input_dense1.data_ptr<float>();\n\
+  float *iden_ptr2 = input_dense2.data_ptr<float>();\n\
+  // Output\n\
+  auto options = torch::TensorOptions()\n\
+                     .dtype(torch::kFloat)\n\
+                     .requires_grad(true)\n\
+                     .device(torch::kCUDA, 0);\n\
+  auto output_sparse = torch::zeros({nvals}, options);\n\
+  float *oden_array = output_sparse.data_ptr<float>();\n\
+  // Sparse\n\
+  int *offset_ptr = offset_graph.data_ptr<int>();\n\
+  int *col_ptr = columns_graph.data_ptr<int>();\n\
+  float *val_ptr = value_graph.data_ptr<float>();\n\
+    cudaStream_t stream1, stream2, stream3;\n\
+      cudaStreamCreate(&stream1);\n\
+      dim3 gridDim(((int)(nrows - 1) / 8) + 1);\n\
+      dim3 blockDim(32, 8);\n\
+      default_function_kernel_sddvv_mult_undir<<<gridDim, blockDim, 0,\n\
+                                                 stream1>>>(\n\
+          oden_array, offset_ptr, iden_ptr1,\n\
+          iden_ptr2, col_ptr, nrows);\n\
+  return output_sparse;\n\
+}\n";
+            kernelCallCode.addCode(kernelCallCodeStr2);
         }
     }
 
