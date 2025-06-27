@@ -74,11 +74,11 @@ def compile_and_get_time(args):
 
             if args.train:
                 job_args = ['../../build/tests/gala_train',
-                            '../../tests/GALA-DSL/' + model + '/' + dset + '/' + args.hw + '.csv',
+                            '../../tests/GALA-DSL/' + model + '/' + dset + '/' + args.hw + '.txt',
                             output_path]
             else:
                 job_args = ['../../build/tests/gala_inference',
-                            '../../tests/GALA-DSL/' + model + '/' + dset + '/' + args.hw + '.csv',
+                            '../../tests/GALA-DSL/' + model + '/' + dset + '/' + args.hw + '.txt',
                             output_path]
             run(job_args, logfile, errfile)
 

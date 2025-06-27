@@ -10,6 +10,9 @@ hidden_dims = ["32", "64", "128", "256", "512", "1024"]
 # dataset_list = ["Cora"]
 # models = ["gcn"]
 
+layers = ["2", "3", "4"]
+hidden_dims = ["32", "64", "128"]
+
 def run(args, logfile, errfile):
     proc = subprocess.Popen(args, stdout=logfile, stderr=errfile)
     proc.wait()
@@ -26,7 +29,7 @@ def compile_and_get_time(args):
     logfile = open(args.stdout_log, 'w+')
     errfile = open(args.stderr_log, 'w+')
 
-    outfile = open(args.stat_log + "_" + args.hw + "_scalability.csv", 'w+')
+    outfile = open(args.stat_log + "_scalability_GALA.csv", 'w+')
     outfile.write("layers,hidden,hw,inference_time,total_time\n")
     outfile.flush()
 
@@ -56,7 +59,7 @@ def compile_and_get_time(args):
             errfile.write(curr+"\n")
 
             job_args = ['../../build/tests/gala_inference',
-                        '../../tests/GALA-DSL/scalability/scalability_layers_dims.csv',
+                        '../../tests/GALA-DSL/scalability/' + li + '_' + dim + '.txt',
                         output_path]
             run(job_args, logfile, errfile)
 
@@ -102,13 +105,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Graph Benchmark Runner')
     parser.add_argument("--stat-log", type=str,
                         default="timing_info", help="File to store timing data")
-    parser.add_argument("--hw", type=str,
-                        default="h100", help="Target hardware")
     parser.add_argument("--job", type=str, choices=['gala', 'wise', 'fig'], default="gala",
                         help="Task to generate Figures 18.")
-    parser.add_argument("--train", action='store_true',
-                        help="Train the model")
-    parser.set_defaults(train=False)
     parser.add_argument("--out-path", type=str,
                         default="../../", help="Output path for the generated code")
     parser.add_argument("--stdout-log", type=str,

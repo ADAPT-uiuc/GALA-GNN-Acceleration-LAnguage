@@ -242,6 +242,7 @@ def full_trainer(graph,
         features = graph.ndata["feat"]
 
         epoch_times = []
+        epoch_memory = []
 
         max_acc = 0
         max_acc_epoch = 0
@@ -270,7 +271,8 @@ def full_trainer(graph,
             t_end = timeit.default_timer()
 
             if epoch > discard_k:
-                epoch_times.append(torch.cuda.max_memory_allocated(device=None))
+                epoch_times.append(t_end - t_start)
+                epoch_memory.append(torch.cuda.max_memory_allocated(device=None))
 
             if train_model:
                 acc = evaluate(graph, features, labels, test_mask, model)
@@ -283,7 +285,7 @@ def full_trainer(graph,
         results["fgat"] = running_results["fgat"]
         results["iter"] = running_results["iter"]
         results["time_mean"] = np.mean(epoch_times)
-        results["time_std"] = np.std(epoch_times)
+        results["memory_mean"] = np.mean(epoch_memory)
         results["time_init"] = t1 - t0
         results["acc"] = max_acc
         results["acc_epoch"] = max_acc_epoch
@@ -346,7 +348,7 @@ def main(args):
                       discard_k=args.discard,
                       use_opt=False)
     log_file_ptr = open(args.logfile, 'a+')
-    log_file_ptr.write(str(np.mean(r1['iter'])) + "," + str(r1['time_mean']) + "\n")
+    log_file_ptr.write(str(r1['time_mean']) + "," + str(r1['memory_mean']) + "\n")
     log_file_ptr.close()
 
     # print(str(r1['time_mean']),",",str(np.mean(r1['iter'])))
