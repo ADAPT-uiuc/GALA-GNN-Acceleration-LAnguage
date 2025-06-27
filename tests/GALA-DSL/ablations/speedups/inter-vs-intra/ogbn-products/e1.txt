@@ -22,6 +22,7 @@ m1.train(iters=100, validation_step=5);
 res = m1.eval();
 
 # schedule
+G=G.set_unweighted(false);
 feature_size(100); // -2 if not given
 label_size(47); // -3 if not given
 sparse_rewrites(false);
