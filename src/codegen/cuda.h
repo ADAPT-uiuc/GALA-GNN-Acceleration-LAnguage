@@ -190,7 +190,7 @@ public:
             bool isKernelSample = hasCOpt(cNode, SAMPLE_COPT);
 
 
-
+            std::cout << "CC:" << maxCoarsening << " " << isWeighted << " " << !(isColTile) << " " << !(isKernelSample) << std::endl;
             if (maxCoarsening == 1 && isWeighted && !(isColTile) && !(isKernelSample))
             {
                 std::string aggrKernelCall = "torch::Tensor " + getKernelName(cNode) + "(torch::Tensor input_dense,\n\
