@@ -54,14 +54,14 @@ class ModelConfig {
         vector<LayerOpType> layer_operations;
         vector<bool> nonln_present;
         map<GraphTransformType, float> graph_transformations;
-        vector<pair<ComputeTransformType, float>> compute_transformations;
+        map<ComputeTransformType, float> compute_transformations;
         vector<pair<DataTransformType, float>> data_transformations;
 
         void addGraphTransformation(GraphTransformType t, float param){
             graph_transformations[t] = param;
         }
         void addComputeTransformation(ComputeTransformType t, float param){
-            compute_transformations.push_back({t,  param});
+            compute_transformations[t] = param;
         }
         void addDataTransformation(DataTransformType t, float param){
             data_transformations.push_back({t,  param});
@@ -71,15 +71,18 @@ class ModelConfig {
             iterations = 0;
             num_layers = 0;
             normalization_value = -1;
-            normalization_value = 0;
             output_input_classes.clear();
             layer_operations.clear();
             graph_transformations.clear();
+            graph_transformations[SAMP] = 0;
             graph_transformations[UNDIRECTED] = true;
             graph_transformations[UNWEIGHTED] = true;
             graph_transformations[FEAT_SIZE] = -2;
             graph_transformations[LABEL_SIZE] = -3;
             compute_transformations.clear();
+            compute_transformations[COARSE] = 0;
+            compute_transformations[SAMP_DYN_CPT] = 0;
+            compute_transformations[SAMP_CPT] = 0;
             data_transformations.clear();
         }
         string to_string(LayerOpType t) {
