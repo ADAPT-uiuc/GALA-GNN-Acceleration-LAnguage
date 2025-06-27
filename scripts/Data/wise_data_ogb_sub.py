@@ -4,7 +4,7 @@ import scipy.sparse as sp
 from ogb.nodeproppred import DglNodePropPredDataset
 import dgl
 
-basedir = "../../../datanew/"
+basedir = "../../../data/"
 dataset_name = "ogbn-papers100M"
 
 # Define the percentages (as fractions) for which subgraphs will be saved
