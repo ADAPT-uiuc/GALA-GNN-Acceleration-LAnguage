@@ -1,5 +1,6 @@
 import argparse
 import subprocess
+import os
 
 dataset_list = ["CoraGraphDataset",
                 "PubmedGraphDataset",
@@ -41,7 +42,12 @@ def get_npy(args):
     errfile.close()
 
 def main(args):
-    get_npy(args)
+    if '--wisegraph' in os.sys.argv:
+        subprocess.call(['python', 'wise_data_dgl.py'])
+        subprocess.call(['python', 'wise_data_ogb.py'])
+        subprocess.call(['python', 'wise_data_ogb_sub.py'])
+    else:
+        get_npy(args)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Graph Benchmark Runner')
@@ -51,5 +57,7 @@ if __name__ == '__main__':
                         default="output.log", help="File to log outputs")
     parser.add_argument("--stderr-log", type=str,
                         default="errors.log", help="File to log errors(if any)")
+    parser.add_argument("--wisegraph", action='store_true',
+                        help="run WiseGraph dataset generation scripts")
     args = parser.parse_args()
     main(args)
