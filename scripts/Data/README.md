@@ -8,3 +8,7 @@ conda activate dgl
 ```commandline
 python get_all_datasets.py
 ```
+3. Run the `get_all_datasets.py --wisegraph` file to download all the datasets for wisegraph.
+```commandline
+python get_all_datasets.py
+```
