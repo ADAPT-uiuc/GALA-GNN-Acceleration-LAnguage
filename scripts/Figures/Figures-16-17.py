@@ -169,7 +169,7 @@ def evalSea(args):
                             '../../tests/Baselines/SeaStar/benchmark_sea_'+model+'.py',
                             '--dataset', dgl_map[dset],
                             '--n-hidden', str(32),
-                            '--layers', str(1),
+                            '--n-layers', str(1),
                             '--n-epochs', str(100),
                             "--logfile", args.stat_log + "_" + args.hw + "_sea.csv",
                             "--device", "cuda",
@@ -462,7 +462,7 @@ def main(args):
     elif (args.job == "fig"):
         createFigure(args)
     elif (args.job == "stats"):
-        createFigure(args)
+        printStats(args)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Graph Benchmark Runner')
