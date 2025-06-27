@@ -182,7 +182,7 @@ layer_inits : { }
 ;
 layer_init : IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON { 
     m1.nonln_present.push_back(!$5);
-    m1.num_layers++; 
+    m1.num_layers++;
 }
 ;
 model_init : IDENTIFIER ASSIGN IDENTIFIER LPAREN args RPAREN SEMICOLON { }
@@ -527,6 +527,10 @@ DataNode* addFFN_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int lay
     pair<int,int> resInputDim;
     if (layerNum == 0){
         weightInputDim = {m1.graph_transformations[FEAT_SIZE], m1.output_input_classes[layerNum]};
+        resInputDim = {-1, m1.output_input_classes[layerNum]};
+    }
+    else if (layerNum != (m1.num_layers - 1)){
+        weightInputDim = {m1.graph_transformations[FEAT_SIZE], m1.graph_transformations[FEAT_SIZE]};
         resInputDim = {-1, m1.output_input_classes[layerNum]};
     }
     else{
