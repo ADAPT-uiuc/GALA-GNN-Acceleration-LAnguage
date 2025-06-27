@@ -33,11 +33,16 @@ label_size { return LABEL_SIZE_ASSIGN; }
 coarsen { return COARSEN; }
 operator_reordering { return OP_REORD; }
 is_sparser { return IS_SPARSE; }
+print_accuracy { return PRINT_ACC; }
+print_memory { return PRINT_MEM; }
+opt_input { return OPT_INPUT; }
 sparse_rewrites { return SPARSE_REWRITES; }
 training_subgraph { return TRAIN_SUBGRAPH; }
 train_code_motion { return TRAIN_CODE_MOTION; }
 dsl.reorder.rabbit { return RABBIT_REORDER_OP; }
 dsl.sample.random  { return SAMPLE_RANDOM_OP; }
+sample { return SAMPLE_OPT; }
+dynamic { return DYNAMIC_OPT; }
 nn.ffn { return FFN; }
 nn.scalar { return SCALAR_INIT; }
 fn.softmax { return SOFTMAX; }
@@ -122,6 +127,11 @@ new { return NEW; }
     yylval.sval = strdup(yytext);
     return IDENTIFIER;
 }
+(\.\/|\.\.\/)[A-Za-z0-9_.-]*([A-Za-z0-9_-]+\/)*[A-Za-z0-9_.-]+|[A-Za-z0-9_-]+\/([A-Za-z0-9_-]+\/)*[A-Za-z0-9_.-]+ {
+    yylval.sval = strdup(yytext);
+    return FILEPATH;
+}
+
 <<EOF>> { yyterminate(); }
 . {}
 %%

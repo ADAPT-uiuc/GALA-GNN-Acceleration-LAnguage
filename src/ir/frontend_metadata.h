@@ -28,12 +28,15 @@ typedef enum {
     UNDIRECTED,
     UNWEIGHTED,
     SPARSE,
+    SAMP,
     FEAT_SIZE,
     LABEL_SIZE
 } GraphTransformType;
 
 typedef enum {
-    COARSE
+    COARSE,
+    SAMP_DYN_CPT,
+    SAMP_CPT
 } ComputeTransformType;
 
 typedef enum {
