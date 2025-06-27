@@ -1003,6 +1003,7 @@ void generate_ir(){
         // graphInfo->setDirected(!m1.graph_transformations[UNDIRECTED]);
         graphInfo->setWeighted(!m1.graph_transformations[UNWEIGHTED]);
         graphInfo->setSparse(m1.graph_transformations[SPARSE]);
+        graphInfo->setIndex(0);
         graph = graphData;
     }
 
