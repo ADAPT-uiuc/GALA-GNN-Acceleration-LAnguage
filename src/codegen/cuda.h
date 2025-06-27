@@ -190,7 +190,7 @@ public:
             bool isKernelSample = hasCOpt(cNode, SAMPLE_COPT);
 
 
-            std::cout << "CC:" << maxCoarsening << " " << isWeighted << " " << !(isColTile) << " " << !(isKernelSample) << std::endl;
+            // std::cout << "CC:" << maxCoarsening << " " << isWeighted << " " << !(isColTile) << " " << !(isKernelSample) << std::endl;
             if (maxCoarsening == 1 && isWeighted && !(isColTile) && !(isKernelSample))
             {
                 std::string aggrKernelCall = "torch::Tensor " + getKernelName(cNode) + "_call(torch::Tensor input_dense,\n\
@@ -1013,7 +1013,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
                     }
                     // std::cout << inputData->getName() << " :das" << std::endl;
 
-                    // std::cout << ":asd======== " << dataName << std::endl; 
+                    std::cout << ":asd======== " << dataName << std::endl;
 
                     if (encounteredStrings.find(dataName) == encounteredStrings.end())
                     {
@@ -1073,13 +1073,11 @@ torch::Tensor bounds, int nrows, int segments) {\n\
                             // These are graphs for backprop
                             if (!inputInfo->getDefaultDirected())
                             {
-                                std::cout << "Running this1" << std::endl;
                                 inputTransferCode += "  global_offset_graph.push_back(t_offsets"+std::to_string(indexData)+");\n\
             global_columns_graph.push_back(t_cols"+std::to_string(indexData)+");\n\
             global_value_graph.push_back(t_vals"+std::to_string(indexData)+");\n";
                             } else
                             {
-                                std::cout << "Running this2" << std::endl;
                                 inputTransferCode += "  int *dA_csrOffsets"+std::to_string(indexData)+"_b, *dA_columns"+std::to_string(indexData)+"_b; \n\
         float *dA_values"+std::to_string(indexData)+"_b;\n\
         \n\
@@ -1123,7 +1121,6 @@ torch::Tensor bounds, int nrows, int segments) {\n\
                             }
                         }
                     }
-
                 }
             }
 
