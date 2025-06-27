@@ -530,7 +530,7 @@ DataNode* addFFN_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int lay
         resInputDim = {-1, m1.output_input_classes[layerNum]};
     }
     else if (layerNum != (m1.num_layers - 1)){
-        weightInputDim = {m1.graph_transformations[FEAT_SIZE], m1.graph_transformations[FEAT_SIZE]};
+        weightInputDim = {m1.output_input_classes[layerNum], m1.output_input_classes[layerNum]};
         resInputDim = {-1, m1.output_input_classes[layerNum]};
     }
     else{
