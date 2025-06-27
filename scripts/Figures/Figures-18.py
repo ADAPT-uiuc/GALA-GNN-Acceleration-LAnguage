@@ -59,7 +59,7 @@ def compile_and_get_time(args):
             errfile.write(curr+"\n")
 
             job_args = ['../../build/tests/gala_inference',
-                        '../../tests/GALA-DSL/scalability/' + li + '_' + dim + '.txt',
+                        '../../tests/GALA-DSL/ablations/scalability/' + li + '_' + dim + '.txt',
                         output_path]
             run(job_args, logfile, errfile)
 
