@@ -1004,7 +1004,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
 
                 // std::cout << inputData->getName() << " :a: " << inputInfo->getDefaultName()  << " " << inputInfo->getDefaultIndex() << " " << inputInfo->getIndex() << std::endl;
 
-                if (!(inputInfo->getIndex() <= 0)){
+                if (true){
                     std::string dataName;
                     if (inputInfo->getDefaultName() == ""){
                         dataName = inputData->getName();
