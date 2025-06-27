@@ -9,6 +9,7 @@
 #include <vector>
 #include <map>
 #include "../ir/compute.h"
+#include "../frontend/context.h"
 #include <fstream>
 #include <iostream>
 
@@ -494,7 +495,7 @@ public:
                         resString += generateTransformation(dNode, transforms);
                     } else if (tr->getTransformation() == SAMPLE_DOPT)
                     {
-                        resString += "inplace_sample_graph_ab(&" + srcNode->getName() + ", " +  tr->getParam(0) + ", 5, 7);";
+                        resString += "inplace_sample_graph_ab(&" + srcNode->getName() + ", " +  tr->getParam(0) + ", 5, 7);\n";
                         resString += generateTransformation(dNode, transforms);
                     }
 
@@ -1439,6 +1440,10 @@ forward(torch::Tensor t_iden";
                 std::string timingInitStr = " double start, end;\n\
   double start_train, end_train;\n\
   std::vector<double> times_arr, times_arr_train;\n";
+                if (GALAFEContext::print_accuracy)
+                {
+                    timingInitStr += "  float max_acc = 0;\n";
+                }
                 model.getPreCall()->addCode(timingInitStr);
 
 
@@ -1490,7 +1495,38 @@ forward(torch::Tensor t_iden";
   //     times_arr_train.push_back(end_train - start_train);\n\
   //   }\n\
   // }";
-                std::string tempTrainLoopPostCall = ", epoch, mod_v)[0];\n\
+                std::string tempTrainLoopPostCall;
+                if (GALAFEContext::print_accuracy)
+                {
+                    tempTrainLoopPostCall = ", epoch, mod_v)[0];\n\
+    cudaDeviceSynchronize();\n\
+    end = get_time();\n\
+    cudaDeviceSynchronize();\n\
+    start_train = get_time();\n\
+    torch::Tensor prediction_train = prediction.index({t_train_mask});\n\
+    torch::Tensor labels_train = t_labs.index({t_train_mask});\n\
+    auto criterion = torch::nn::CrossEntropyLoss();\n\
+    torch::Tensor d_loss = criterion(prediction_train, labels_train);\n\
+    d_loss.backward();\n\
+    optimizer.step();\n\
+    cudaDeviceSynchronize();\n\
+    end_train = get_time();\n\
+    torch::Tensor prediction_test = prediction.index({t_test_mask});\n\
+    torch::Tensor labels_test = t_labs.index({t_test_mask});\n\
+    auto [pred_val, pred_idx] = torch::max({prediction_test}, 1);\n\
+    auto correct = torch::sum(pred_idx == labels_test);\n\
+    float acc = (correct.item<val_t>() * 100.0 / labels_test.sizes()[0]);\n\
+    if (max_acc<acc){\n\
+        max_acc = acc;\n\
+    }\n\
+    if (epoch >= skip_cache_warmup) {\n\
+      times_arr.push_back(end - start);\n\
+      times_arr_train.push_back(end_train - start_train);\n\
+    }\n\
+  }";
+                } else
+                {
+                    tempTrainLoopPostCall = ", epoch, mod_v)[0];\n\
     cudaDeviceSynchronize();\n\
     end = get_time();\n\
     cudaDeviceSynchronize();\n\
@@ -1508,6 +1544,8 @@ forward(torch::Tensor t_iden";
       times_arr_train.push_back(end_train - start_train);\n\
     }\n\
   }";
+                }
+
                 
 //                 std::string tempTrainLoopPostCall = ")[0];\n\
 //     torch::Tensor prediction_train = prediction.index({t_train_mask});\n\
@@ -1535,8 +1573,17 @@ forward(torch::Tensor t_iden";
   // std::cout << \"Train: \" << calc_mean(times_arr_train) << \",\"\n\
   //           << calc_std(times_arr_train) << std::endl;\n\
   // std::cout << \"Total: \" << calc_mean(times_arr) + calc_mean(times_arr_train) << std::endl;\n";
-        std::string printTimes = "  std::cout << calc_mean(times_arr) << \",\"\n\
+        std::string printTimes;
+        if (GALAFEContext::print_accuracy)
+        {
+            printTimes = "  std::cout << calc_mean(times_arr) << \",\"\n\
+            << max_acc << std::endl;\n";
+        }
+        else
+        {
+            printTimes = "  std::cout << calc_mean(times_arr) << \",\"\n\
             << calc_mean(times_arr) + calc_mean(times_arr_train) << std::endl;\n";
+        }
         postCode.addCode(printTimes);
 
         std::string closeMain = "}";

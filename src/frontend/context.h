@@ -26,6 +26,8 @@ class GALAFEContext {
 		static bool sparse_rewrites;
 		static bool training_subgraph;
 		static bool train_code_motion;
+		static bool print_memory;
+		static bool print_accuracy;
 };
 
 #endif //CONTEXT_H

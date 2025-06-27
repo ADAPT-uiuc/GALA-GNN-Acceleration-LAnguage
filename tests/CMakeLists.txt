@@ -6,4 +6,5 @@ FLEX_TARGET(Lexer ../src/frontend/frontend.l ${CMAKE_CURRENT_BINARY_DIR}/lexer.c
 ADD_FLEX_BISON_DEPENDENCY(Lexer Parser)
 
 add_executable(gala_inference gala_inference.cpp ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS})
+add_executable(gala_inference_sample gala_inference_sample.cpp ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS})
 add_executable(gala_train gala_train.cpp ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS})

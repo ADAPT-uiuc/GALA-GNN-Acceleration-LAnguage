@@ -18,7 +18,7 @@ M1 = model(G, non_ln) {
 }
 
 m1 = M1(G, dsl.non_ln.ReLU);
-m1.train(iters=100, validation_step=5);
+m1.train(iters=1000, validation_step=5);
 res = m1.eval();
 
 # schedule
