@@ -451,6 +451,62 @@ void inplace_sample_graph(SM* src, int sample_size){
                     new_offset_ptr);
 }
 
+template<class SM>
+void inplace_sample_graph_ab(SM* src, int sample_size, int ra, int rb){
+    // Get types
+    typedef typename SM::itype iT;
+    typedef typename SM::ntype nT;
+    typedef typename SM::vtype vT;
+
+    iT nrows = src->nrows();
+    iT ncols = src->ncols();
+    iT new_nvals = nrows * sample_size;
+
+    nT *new_offset_ptr = (nT *) aligned_alloc(64, (nrows + 1) * sizeof(nT));
+    iT *new_ids_ptr = (iT *) aligned_alloc(64, (new_nvals) * sizeof(iT));
+    vT *new_vals_ptr = (vT *) aligned_alloc(64, (new_nvals) * sizeof(vT));
+
+    new_offset_ptr[0] = 0;
+
+    nT *src_offset_ptr = src->offset_ptr();
+    iT *src_ids_ptr = src->ids_ptr();
+    vT *src_vals_ptr = src->vals_ptr();
+
+#pragma omp parallel for schedule(static)
+    for (iT i = 0; i < nrows; i++) {
+        nT first_node_edge = src_offset_ptr[i];
+        nT last_node_edge = src_offset_ptr[i + 1];
+        nT total_e = last_node_edge - first_node_edge;
+
+        std::vector<nT> e_used;
+
+        for (nT ji = 0; ji < sample_size; ji++){
+            int j = (ra * ji + rb) % total_e;
+            e_used.push_back(first_node_edge + j);
+        }
+
+        std::sort(e_used.begin(), e_used.end());
+
+
+        for (nT j = 0; j < sample_size; j++){
+            nT eid = e_used[j];
+
+            nT first_new_offset = i * sample_size;
+            new_offset_ptr[i + 1] = first_new_offset + sample_size;
+
+            new_ids_ptr[first_new_offset + j] = src_ids_ptr[eid];
+            new_vals_ptr[first_new_offset + j] = src_vals_ptr[eid];
+        }
+    }
+
+    src->import_csr(nrows,
+                    ncols,
+                    new_nvals,
+                    new_ids_ptr,
+                    new_vals_ptr,
+                    new_offset_ptr);
+}
+
 #ifdef PT_0
 // Need to produce this for BOTH input and output
 // TODO could make an unordered version of this? i.e. running parallely and adding as completed
