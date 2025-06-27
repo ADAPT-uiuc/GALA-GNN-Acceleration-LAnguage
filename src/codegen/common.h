@@ -495,7 +495,8 @@ public:
                         resString += generateTransformation(dNode, transforms);
                     } else if (tr->getTransformation() == SAMPLE_DOPT)
                     {
-                        resString += "inplace_sample_graph_ab(&" + srcNode->getName() + ", " +  tr->getParam(0) + ", 5, 7);\n";
+                        resString += "inplace_sample_graph_ab(&" + srcNode->getName() + ", " +  tr->getParam(0) + ", 5, 7);\n\
+nvals0 = adj0.nvals();\n";
                         resString += generateTransformation(dNode, transforms);
                     }
 
