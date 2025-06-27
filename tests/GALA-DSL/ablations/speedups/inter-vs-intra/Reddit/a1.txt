@@ -23,7 +23,7 @@ res = m1.eval();
 
 # schedule
 G=G.set_unweighted(false);
-// Data transformations
-G=G.col_tile(37000);
+// Compute transformations
+aggrFn=aggrFn.coarsen(2);
 operator_reordering(false);
 sparse_rewrites(false);

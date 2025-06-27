@@ -22,7 +22,9 @@ m1.train(iters=100, validation_step=5);
 res = m1.eval();
 
 # schedule
-G=G.set_unweighted(true); // false by default
+G=G.set_unweighted(false);
+// Compute transformations
+aggrFn=aggrFn.coarsen(2);
 // Data transformations
 G=G.col_tile(37000);
 operator_reordering(false);
