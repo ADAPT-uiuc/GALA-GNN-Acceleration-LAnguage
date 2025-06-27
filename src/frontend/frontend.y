@@ -1025,7 +1025,7 @@ void generate_ir(){
         RelationEdge* trgraphFeatAssociation = new RelationEdge(transformedGraph, ALL_RELATION, featData, ROWS_RELATION);
         GALAFEContext::associations.push_back(trgraphFeatAssociation);
         TransformEdge* graphTrgraph = new TransformEdge(graphData, transformedGraph);
-        if (m1.data_transformations[SAMP] != 0){ // only one data transform for now for gcn
+        if (m1.graph_transformations[SAMP] != 0){ // only one data transform for now for gcn
             TransformData* sampTransformation = new TransformData(SAMPLE_DOPT);
             sampTransformation->addParam(to_string(m1.graph_transformations[SAMP]));
             graphTrgraph->addTransformation(sampTransformation);
