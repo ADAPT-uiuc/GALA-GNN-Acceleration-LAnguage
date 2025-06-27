@@ -45,6 +45,11 @@ std::vector<RelationEdge*> GALAFEContext::dependencies;
 std::vector<RelationEdge*> GALAFEContext::associations;
 std::vector<TransformEdge*> GALAFEContext::transforms;
 
+bool GALAFEContext::operator_reordering = true;
+bool GALAFEContext::sparse_rewrites = true;
+bool GALAFEContext::train_code_motion = true;
+bool GALAFEContext::training_subgraph = true;
+
 //Dense matrix with double values.
 typedef DenseMatrix<ind1_t, ind2_t, val_t> DMd_t;
 //Dense matrix with integer values.
@@ -115,10 +120,16 @@ int main(int argc, char **argv) {
 
 	auto ctx = new GALAContext(GPU_DEVICE, SINGLE_NODE_SINGLE);
 	auto genCode = CUDAGenerator(ctx, outputPath);
-	GALATransformations::complexityOperatorReordering(GALAFEContext::program, GALAFEContext::dependencies,
+	if (GALAFEContext::operator_reordering)
+	{
+		GALATransformations::complexityOperatorReordering(GALAFEContext::program, GALAFEContext::dependencies,
 		GALAFEContext::associations, GALAFEContext::transforms);
-	GALATransformations::sparsityAwareRewrites(GALAFEContext::program, GALAFEContext::dependencies,
+	}
+	if (GALAFEContext::sparse_rewrites)
+	{
+		GALATransformations::sparsityAwareRewrites(GALAFEContext::program, GALAFEContext::dependencies,
 		GALAFEContext::associations, GALAFEContext::transforms);
+	}
 	genCode.writeCode(GALAFEContext::program, GALAFEContext::dependencies,
 		GALAFEContext::associations, GALAFEContext::transforms);
 

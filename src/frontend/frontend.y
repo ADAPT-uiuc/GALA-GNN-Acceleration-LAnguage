@@ -27,10 +27,10 @@ DataNode* reluDataPrevLayer;
 // extern vector<RelationEdge*> associationsVec;
 // extern vector<TransformEdge*> transformsVec;
 
-bool operator_reordering = true;
-bool sparse_rewrites = true;
-bool training_subgraph = true;
-bool train_code_motion = true;
+// bool operator_reordering = true;
+// bool sparse_rewrites = true;
+// bool training_subgraph = true;
+// bool train_code_motion = true;
 %}
 
 %union {
@@ -305,13 +305,13 @@ data_transform : data_var ASSIGN data_var DOT SET_UNDIRECTED LPAREN bool RPAREN 
 function_transform : data_var ASSIGN data_var DOT COARSEN LPAREN INTEGER RPAREN SEMICOLON
     {m1.addComputeTransformation(COARSE, atof($7)); }
     | OP_REORD LPAREN bool RPAREN SEMICOLON
-    { operator_reordering = $3;}
+    { GALAFEContext::operator_reordering = $3;}
     | SPARSE_REWRITES LPAREN bool RPAREN SEMICOLON
-    { sparse_rewrites = $3; }
+    { GALAFEContext::sparse_rewrites = $3; }
     | TRAIN_SUBGRAPH LPAREN bool RPAREN SEMICOLON
-    { training_subgraph = $3; }
+    { GALAFEContext::training_subgraph = $3; }
     | TRAIN_CODE_MOTION LPAREN bool RPAREN SEMICOLON
-    { train_code_motion = $3; }
+    { GALAFEContext::train_code_motion = $3; }
 ;
 feats_s : IDENTIFIER DOT NODE_ATTR DOT FEAT_ATTR {};
 edge_vals : IDENTIFIER DOT EDGE_ATTR DOT VAL_ATTR {};

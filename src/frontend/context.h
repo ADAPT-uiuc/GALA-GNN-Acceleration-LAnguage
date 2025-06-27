@@ -21,6 +21,11 @@ class GALAFEContext {
         static std::vector<RelationEdge*> dependencies;
         static std::vector<RelationEdge*> associations;
         static std::vector<TransformEdge*> transforms;
+
+		static bool operator_reordering;
+		static bool sparse_rewrites;
+		static bool training_subgraph;
+		static bool train_code_motion;
 };
 
 #endif //CONTEXT_H

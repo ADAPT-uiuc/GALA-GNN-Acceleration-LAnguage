@@ -7,12 +7,6 @@ build_path = r"../../build/"
 layers = ["2", "3", "4", "8"]
 hidden_dims = ["32", "64", "128", "256", "512", "1024"]
 
-# dataset_list = ["Cora"]
-# models = ["gcn"]
-
-layers = ["2", "3", "4"]
-hidden_dims = ["32", "64", "128"]
-
 def run(args, logfile, errfile):
     proc = subprocess.Popen(args, stdout=logfile, stderr=errfile)
     proc.wait()
