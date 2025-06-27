@@ -295,10 +295,10 @@ public:
                 return "global_nrows";
             } else if (val == -2)
             {
-                return "global_classes";
+                return "global_emb_size";
             } else if (val == -3)
             {
-                return "global_emb_size";
+                return "global_classes";
             } else
             {
                 // TODO
