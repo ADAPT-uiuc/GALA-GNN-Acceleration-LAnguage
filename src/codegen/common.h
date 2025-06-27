@@ -403,99 +403,100 @@ public:
         for (int ix = 0; ix < transforms.size(); ix++)
         {
             auto transform = transforms[ix];
+            std::cout << "aa: " << transform->getNode1()->getName() << " " << transform->getNode2()->getName() << " " << transform->getNumTransformations() << std::endl;
             if (transform->getNode1()->getName() == srcNode->getName())
             {
                 auto dNode = transform->getNode2();
                 for (int tix = 0; tix < transform->getNumTransformations(); tix++)
                 {
                     auto tr = transform->getTransformation(0);
-                if (tr->getTransformation() == COL_TILE_DOPT)
-                {
-                    resString +=  "  std::vector<SM *> tiled_" + dNode->getName() +";\n\
-  tiled_" + dNode->getName() + ".push_back(&" + srcNode->getName() + ");\n\
-  torch::Tensor total_offsets_" + dNode->getName() + ";\n\
-  torch::Tensor total_cols_" + dNode->getName() + ";\n\
-  torch::Tensor total_vals_" + dNode->getName() + ";\n\
-  torch::Tensor total_bounds_" + dNode->getName() + ";\n\
-  std::vector<iT> tile_offsets_" + dNode->getName() + " =\n\
-    static_ord_col_breakpoints<SM>(&" + srcNode->getName() + ", " + tr->getParam(0) +");\n\
-  iT segments_" + dNode->getName() + " = tile_offsets_" + dNode->getName() + ".size() - 1;\n\
-  total_offsets_" + dNode->getName() + " = torch::zeros({(" + srcNode->getName() + ".nrows() + 1) * (segments_"
-                    + dNode->getName() + ")}, options_int_tile);\n\
-  total_cols_" + dNode->getName() + " = torch::zeros({" + srcNode->getName() + ".nvals()}, options_int_tile);\n\
-  total_vals_" + dNode->getName() + " = torch::zeros({" + srcNode->getName() + ".nvals()}, options_float_tile);\n\
-  total_bounds_" + dNode->getName() + " = torch::zeros({2 * (segments_" + dNode->getName() + ")}, options_int_tile);\n\
-  ord_col_tiling_torch(tile_offsets_" + dNode->getName() + ", total_offsets_" + dNode->getName() +
-                        ", total_cols_" + dNode->getName() + ", total_vals_" + dNode->getName() + ",\n\
-    total_bounds_" + dNode->getName() + ", &" + srcNode->getName() + ");\n\
-  iT *offset_ptr_" + dNode->getName() + " = total_offsets_" + dNode->getName() + ".data_ptr<iT>();\n\
-  iT *col_ptr_" + dNode->getName() + " = total_cols_" + dNode->getName() + ".data_ptr<iT>();\n\
-  vT *val_ptr_" + dNode->getName() + " = total_vals_" + dNode->getName() + ".data_ptr<vT>();\n";
-
-                    resString += "  global_segments.push_back(segments_" + dNode->getName() + ");\n";
-                    resString += "  global_bounds.push_back(total_bounds_" + dNode->getName() + ");\n";
-                    // std::cout << transform->getNode1()->getName() << " " << transform->getNode2()->getName() << std::endl;
-                    // std::cout << transform->getNode1()->getDataInfo()->getDirected() << " " << transform->getNode2()->getDataInfo()->getDirected() << std::endl;
-                    if (!dNode->getDataInfo()->getDirected())
+                    if (tr->getTransformation() == COL_TILE_DOPT)
                     {
+                        resString +=  "  std::vector<SM *> tiled_" + dNode->getName() +";\n\
+      tiled_" + dNode->getName() + ".push_back(&" + srcNode->getName() + ");\n\
+      torch::Tensor total_offsets_" + dNode->getName() + ";\n\
+      torch::Tensor total_cols_" + dNode->getName() + ";\n\
+      torch::Tensor total_vals_" + dNode->getName() + ";\n\
+      torch::Tensor total_bounds_" + dNode->getName() + ";\n\
+      std::vector<iT> tile_offsets_" + dNode->getName() + " =\n\
+        static_ord_col_breakpoints<SM>(&" + srcNode->getName() + ", " + tr->getParam(0) +");\n\
+      iT segments_" + dNode->getName() + " = tile_offsets_" + dNode->getName() + ".size() - 1;\n\
+      total_offsets_" + dNode->getName() + " = torch::zeros({(" + srcNode->getName() + ".nrows() + 1) * (segments_"
+                        + dNode->getName() + ")}, options_int_tile);\n\
+      total_cols_" + dNode->getName() + " = torch::zeros({" + srcNode->getName() + ".nvals()}, options_int_tile);\n\
+      total_vals_" + dNode->getName() + " = torch::zeros({" + srcNode->getName() + ".nvals()}, options_float_tile);\n\
+      total_bounds_" + dNode->getName() + " = torch::zeros({2 * (segments_" + dNode->getName() + ")}, options_int_tile);\n\
+      ord_col_tiling_torch(tile_offsets_" + dNode->getName() + ", total_offsets_" + dNode->getName() +
+                            ", total_cols_" + dNode->getName() + ", total_vals_" + dNode->getName() + ",\n\
+        total_bounds_" + dNode->getName() + ", &" + srcNode->getName() + ");\n\
+      iT *offset_ptr_" + dNode->getName() + " = total_offsets_" + dNode->getName() + ".data_ptr<iT>();\n\
+      iT *col_ptr_" + dNode->getName() + " = total_cols_" + dNode->getName() + ".data_ptr<iT>();\n\
+      vT *val_ptr_" + dNode->getName() + " = total_vals_" + dNode->getName() + ".data_ptr<vT>();\n";
+
                         resString += "  global_segments.push_back(segments_" + dNode->getName() + ");\n";
                         resString += "  global_bounds.push_back(total_bounds_" + dNode->getName() + ");\n";
-                    } else
-                    {
-                        std::string tilingParam;
-                        if (tr->getNumParam() > 1)
+                        // std::cout << transform->getNode1()->getName() << " " << transform->getNode2()->getName() << std::endl;
+                        // std::cout << transform->getNode1()->getDataInfo()->getDirected() << " " << transform->getNode2()->getDataInfo()->getDirected() << std::endl;
+                        if (!dNode->getDataInfo()->getDirected())
                         {
-                            tilingParam = tr->getParam(1);
+                            resString += "  global_segments.push_back(segments_" + dNode->getName() + ");\n";
+                            resString += "  global_bounds.push_back(total_bounds_" + dNode->getName() + ");\n";
                         } else
                         {
-                            tilingParam = tr->getParam(0);
-                        }
-                        resString +=  "  std::vector<SM *> tiled_" + dNode->getName() +"_b;\n\
-  tiled_" + dNode->getName() + "_b.push_back(&" + srcNode->getName() + "_b);\n\
-  torch::Tensor total_offsets_" + dNode->getName() + "_b;\n\
-  torch::Tensor total_cols_" + dNode->getName() + "_b;\n\
-  torch::Tensor total_vals_" + dNode->getName() + "_b;\n\
-  torch::Tensor total_bounds_" + dNode->getName() + "_b;\n\
-  std::vector<iT> tile_offsets_" + dNode->getName() + "_b =\n\
-    static_ord_col_breakpoints<SM>(&" + srcNode->getName() + "_b, " + tilingParam +");\n\
-  iT segments_" + dNode->getName() + "_b = tile_offsets_" + dNode->getName() + "_b.size() - 1;\n\
-  total_offsets_" + dNode->getName() + "_b = torch::zeros({(" + srcNode->getName() + "_b.nrows() + 1) * (segments_"
-                    + dNode->getName() + "_b)}, options_int_tile);\n\
-  total_cols_" + dNode->getName() + "_b = torch::zeros({" + srcNode->getName() + "_b.nvals()}, options_int_tile);\n\
-  total_vals_" + dNode->getName() + "_b = torch::zeros({" + srcNode->getName() + "_b.nvals()}, options_float_tile);\n\
-  total_bounds_" + dNode->getName() + "_b = torch::zeros({2 * (segments_" + dNode->getName() + "_b)}, options_int_tile);\n\
-  ord_col_tiling_torch(tile_offsets_" + dNode->getName() + "_b, total_offsets_" + dNode->getName() +
-                        "_b, total_cols_" + dNode->getName() + "_b, total_vals_" + dNode->getName() + "_b,\n\
-    total_bounds_" + dNode->getName() + "_b, &" + srcNode->getName() + "_b);\n\
-  iT *offset_ptr_" + dNode->getName() + "_b = total_offsets_" + dNode->getName() + "_b.data_ptr<iT>();\n\
-  iT *col_ptr_" + dNode->getName() + "_b = total_cols_" + dNode->getName() + "_b.data_ptr<iT>();\n\
-  vT *val_ptr_" + dNode->getName() + "_b = total_vals_" + dNode->getName() + "_b.data_ptr<vT>();\n";
+                            std::string tilingParam;
+                            if (tr->getNumParam() > 1)
+                            {
+                                tilingParam = tr->getParam(1);
+                            } else
+                            {
+                                tilingParam = tr->getParam(0);
+                            }
+                            resString +=  "  std::vector<SM *> tiled_" + dNode->getName() +"_b;\n\
+      tiled_" + dNode->getName() + "_b.push_back(&" + srcNode->getName() + "_b);\n\
+      torch::Tensor total_offsets_" + dNode->getName() + "_b;\n\
+      torch::Tensor total_cols_" + dNode->getName() + "_b;\n\
+      torch::Tensor total_vals_" + dNode->getName() + "_b;\n\
+      torch::Tensor total_bounds_" + dNode->getName() + "_b;\n\
+      std::vector<iT> tile_offsets_" + dNode->getName() + "_b =\n\
+        static_ord_col_breakpoints<SM>(&" + srcNode->getName() + "_b, " + tilingParam +");\n\
+      iT segments_" + dNode->getName() + "_b = tile_offsets_" + dNode->getName() + "_b.size() - 1;\n\
+      total_offsets_" + dNode->getName() + "_b = torch::zeros({(" + srcNode->getName() + "_b.nrows() + 1) * (segments_"
+                        + dNode->getName() + "_b)}, options_int_tile);\n\
+      total_cols_" + dNode->getName() + "_b = torch::zeros({" + srcNode->getName() + "_b.nvals()}, options_int_tile);\n\
+      total_vals_" + dNode->getName() + "_b = torch::zeros({" + srcNode->getName() + "_b.nvals()}, options_float_tile);\n\
+      total_bounds_" + dNode->getName() + "_b = torch::zeros({2 * (segments_" + dNode->getName() + "_b)}, options_int_tile);\n\
+      ord_col_tiling_torch(tile_offsets_" + dNode->getName() + "_b, total_offsets_" + dNode->getName() +
+                            "_b, total_cols_" + dNode->getName() + "_b, total_vals_" + dNode->getName() + "_b,\n\
+        total_bounds_" + dNode->getName() + "_b, &" + srcNode->getName() + "_b);\n\
+      iT *offset_ptr_" + dNode->getName() + "_b = total_offsets_" + dNode->getName() + "_b.data_ptr<iT>();\n\
+      iT *col_ptr_" + dNode->getName() + "_b = total_cols_" + dNode->getName() + "_b.data_ptr<iT>();\n\
+      vT *val_ptr_" + dNode->getName() + "_b = total_vals_" + dNode->getName() + "_b.data_ptr<vT>();\n";
 
-                        resString += "  global_segments.push_back(segments_" + dNode->getName() + "_b);\n";
-                        resString += "  global_bounds.push_back(total_bounds_" + dNode->getName() + "_b);\n";
-                    }
-                } else if (tr->getTransformation() == SUBGRAPH_DOPT)
-                {
-                    if (tr->getNumParam() == 2)
-                    {
-                        resString +=  " std::vector<SM *> forward_adj;\n\
-  std::vector<SM *> backward_adj;\n\
-  getMaskSubgraphs(&adj0, &train_mask, " + tr->getParam(1) + ", forward_adj, backward_adj);\n";
-                        for (int i = 0; i < std::stoi(tr->getParam(1)); i++)
-                        {
-                            int iy = std::stoi(tr->getParam(1)) - (i + 1);
-                            int iz = i + 1;
-                            resString += "  SM adj" + std::to_string(iz) + " = *forward_adj[" + std::to_string(iy) +"];\n\
-  SM adj" + std::to_string(iz) + "_b = *backward_adj[" + std::to_string(iy) +"];\n\
-  nT nvals" + std::to_string(iz) + " = adj" + std::to_string(iz) + ".nvals();\n";
+                            resString += "  global_segments.push_back(segments_" + dNode->getName() + "_b);\n";
+                            resString += "  global_bounds.push_back(total_bounds_" + dNode->getName() + "_b);\n";
                         }
+                    } else if (tr->getTransformation() == SUBGRAPH_DOPT)
+                    {
+                        if (tr->getNumParam() == 2)
+                        {
+                            resString +=  " std::vector<SM *> forward_adj;\n\
+      std::vector<SM *> backward_adj;\n\
+      getMaskSubgraphs(&adj0, &train_mask, " + tr->getParam(1) + ", forward_adj, backward_adj);\n";
+                            for (int i = 0; i < std::stoi(tr->getParam(1)); i++)
+                            {
+                                int iy = std::stoi(tr->getParam(1)) - (i + 1);
+                                int iz = i + 1;
+                                resString += "  SM adj" + std::to_string(iz) + " = *forward_adj[" + std::to_string(iy) +"];\n\
+      SM adj" + std::to_string(iz) + "_b = *backward_adj[" + std::to_string(iy) +"];\n\
+      nT nvals" + std::to_string(iz) + " = adj" + std::to_string(iz) + ".nvals();\n";
+                            }
+                        }
+                        resString += generateTransformation(dNode, transforms);
+                    } else if (tr->getTransformation() == SAMPLE_DOPT)
+                    {
+                        resString += "inplace_sample_graph_ab(&" + srcNode->getName() + ", " +  tr->getParam(0) + ", 5, 7);";
+                        resString += generateTransformation(dNode, transforms);
                     }
-                    resString += generateTransformation(dNode, transforms);
-                } else if (tr->getTransformation() == SAMPLE_DOPT)
-                {
-                    resString += "inplace_sample_graph_ab(&" + srcNode->getName() + ", " +  tr->getParam(0) + ", 5, 7);";
-                    resString += generateTransformation(dNode, transforms);
-                }
 
                 }
             }
