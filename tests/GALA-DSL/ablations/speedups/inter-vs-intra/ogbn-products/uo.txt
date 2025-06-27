@@ -22,6 +22,7 @@ m1.train(iters=100, validation_step=5);
 res = m1.eval();
 
 # schedule
+G=G.set_unweighted(false);
 operator_reordering(false);
 sparse_rewrites(false);
 training_subgraph(false);
