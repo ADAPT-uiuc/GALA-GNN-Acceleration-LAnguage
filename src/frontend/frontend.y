@@ -960,7 +960,7 @@ void generate_ir(){
         auto loadDataset = new ForwardNode(POINTWISE, LOAD_OP);
         loadDataset->addParam(m1.dataset_name);
         // TODO Temp fix
-        graphData = createDataNode(CSR_STYPE, true, true, {0,0}, true, "adj0", INT32, INT32, F32);
+        graphData = createDataNode(CSR_STYPE, false, true, {0,0}, true, "adj0", INT32, INT32, F32);
         featData = createDataNode(RM_DTYPE, false, false, {-1, -2}, true, "t_iden", INT32, INT32, F32);
 
         // association between graph and features
@@ -1000,7 +1000,7 @@ void generate_ir(){
     else{ // then make sure to modify the original graph with the schedule transformations!
         
         DataInfo* graphInfo = dynamic_cast<DataInfo*>(graphData->getData()->next());
-        graphInfo->setDirected(!m1.graph_transformations[UNDIRECTED]);
+        // graphInfo->setDirected(!m1.graph_transformations[UNDIRECTED]);
         graphInfo->setWeighted(!m1.graph_transformations[UNWEIGHTED]);
         graphInfo->setSparse(m1.graph_transformations[SPARSE]);
         graph = graphData;
