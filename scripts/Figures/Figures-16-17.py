@@ -470,7 +470,7 @@ if __name__ == '__main__':
                         default="timing_info", help="File to store timing data")
     parser.add_argument("--hw", type=str,
                         default="h100", help="Target hardware")
-    parser.add_argument("--job", type=str, choices=['gala', 'dgl', 'wise', 'star', 'stir', 'fig', 'stats'], default="gala",
+    parser.add_argument("--job", type=str, choices=['gala', 'dgl', 'wise', 'sea', 'stir', 'fig', 'stats'], default="gala",
                         help="Task to generate Figures 16 to 17.")
     parser.add_argument("--train", action='store_true',
                         help="Train the model")
