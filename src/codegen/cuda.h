@@ -1013,8 +1013,6 @@ torch::Tensor bounds, int nrows, int segments) {\n\
                     }
                     // std::cout << inputData->getName() << " :das" << std::endl;
 
-                    std::cout << ":asd======== " << dataName << std::endl;
-
                     if (encounteredStrings.find(dataName) == encounteredStrings.end())
                     {
                         if (inputInfo->getFormat() == CSR_STYPE)
@@ -1132,6 +1130,8 @@ torch::Tensor bounds, int nrows, int segments) {\n\
                 if (inputInfo->getFormat() == CSR_STYPE && !inputInfo->getDerived())
                 {
                     // TODO Check if this is a dependant of an exising graph
+
+                    std::cout << ":asd======== "  << std::endl;
                     
                     int indexData = (int)encounteredStrings.size();
                     if (inputInfo->getIndex() != -1)
