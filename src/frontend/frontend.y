@@ -427,7 +427,7 @@ string : QUOTE IDENTIFIER QUOTE
 ;
 %%
 
-DataNode* createDataNode(int rm_dtype, bool isDirected, bool isWeighted, pair<int,int> infoDims, bool levelIndependence, string name, NumTypes indexType, NumTypes edgeType, NumTypes valueType){
+DataNode* createDataNode(DataFormat rm_dtype, bool isDirected, bool isWeighted, pair<int,int> infoDims, bool levelIndependence, string name, NumTypes indexType, NumTypes edgeType, NumTypes valueType){
     DataInfo* info = new DataInfo(rm_dtype, isDirected, isWeighted);
     info->setDims(infoDims.first, infoDims.second);
     DataLevel* level = new DataLevel(info, levelIndependence);
