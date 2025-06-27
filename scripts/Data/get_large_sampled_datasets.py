@@ -13,7 +13,7 @@ import torch as th
 import dgl
 import os
 
-def load_ogb(name, root="/shared/damitha2/ogb"):
+def load_ogb(name, root="../../Data/ogb/"):
     from ogb.nodeproppred import DglNodePropPredDataset
 
     print("load", name)
@@ -138,9 +138,19 @@ def main(args):
 
         n_edges = graph.number_of_edges()
 
-        print(args.dataset, n_classes, graph.num_nodes(), n_edges, graph.ndata['feat'].size(), graph.ndata['label'].size(), num_to_flip_train, num_to_flip_val, num_to_flip_test, num_to_flip_others)
+        # output_path = r"/shared/damitha2/gala_npy/" + args.dataset
 
-        output_path = r"/shared/damitha2/gala_npy/" + args.dataset + "_" + str(pi)
+        dataset_list = {"CoraGraphDataset":"Cora",
+                        "PubmedGraphDataset":"Pubmed",
+                        "CoraFullDataset":"CoraFull",
+                        "RedditDataset":"Reddit",
+                        "ogbn-arxiv":"Arxiv",
+                        "ogbn-products":"Products",
+                        "ogbn-papers100M": "papers100M"}
+
+        data_path_name = dataset_list[args.dataset]
+
+        output_path = r"../../Data/" + data_path_name + "_" + str(pi)
 
         print("Exporting", args.dataset, "to", output_path)
 
