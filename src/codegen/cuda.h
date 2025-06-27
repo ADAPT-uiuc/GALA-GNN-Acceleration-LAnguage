@@ -58,7 +58,7 @@ public:
     std::string coarsenedKernelCall(ComputeNode* cNode, int cFact, int prevLayer, int weighted = true)
     {
         std::string res = "";
-        bool isKernelSample = hasCOpt(cNode, SAMPLE_COPT);
+        bool isKernelSample = hasCOpt(cNode, SAMPLE_COPT) || hasCOpt(cNode, SAMPLE_DYNAMIC_COPT);
 
         // Add check for the next coarsening
         // Top layer just divide
@@ -187,7 +187,7 @@ public:
             }
 
             bool isColTile = hasDOpt(cNode->getInput(1), COL_TILE_DOPT);
-            bool isKernelSample = hasCOpt(cNode, SAMPLE_COPT);
+            bool isKernelSample = hasCOpt(cNode, SAMPLE_COPT) || hasCOpt(cNode, SAMPLE_DYNAMIC_COPT);
 
 
             // std::cout << "CC:" << maxCoarsening << " " << isWeighted << " " << !(isColTile) << " " << !(isKernelSample) << std::endl;
