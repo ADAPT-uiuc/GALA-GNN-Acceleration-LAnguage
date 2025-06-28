@@ -1,5 +1,5 @@
 //
-// Created by damitha on 2/18/22.
+
 //
 
 #ifndef SPARSE_ACCELERATOR_TILING_H

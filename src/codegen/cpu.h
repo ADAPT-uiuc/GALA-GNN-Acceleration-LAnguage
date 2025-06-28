@@ -1,5 +1,4 @@
 //
-// Created by damitha on 4/23/24.
 //
 
 #ifndef GNN_ACCELERATION_LANGUAGE_CPU_H

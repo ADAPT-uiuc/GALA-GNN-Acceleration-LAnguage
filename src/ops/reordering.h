@@ -1,5 +1,5 @@
 //
-// Created by damitha on 2/20/22.
+
 //
 #include <map>
 #include <omp.h>

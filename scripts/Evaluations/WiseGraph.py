@@ -15,7 +15,7 @@ elif args.h100:
 else:
     raise ValueError("Please specify either --a100 or --h100")
 
-script_path = os.path.abspath("../../../CxGNN-Compute/test/ae/E1_overall/run_wisegraph.sh")
+script_path = os.path.abspath("../Environments/WiseGraph/" + hardware + "/CxGNN-Compute/test/ae/E1_overall/run_wisegraph.sh")
 working_dir = os.path.dirname(script_path)
 
 try:

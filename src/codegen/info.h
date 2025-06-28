@@ -1,5 +1,5 @@
 //
-// Created by damitha on 11/27/23.
+
 //
 
 #ifndef GNN_ACCELERATION_LANGUAGE_INFO_H

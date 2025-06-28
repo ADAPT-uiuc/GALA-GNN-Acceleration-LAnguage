@@ -1,5 +1,5 @@
 //
-// Created by damitha on 2/17/22.
+
 //
 
 #ifndef SPARSE_ACCELERATOR_PARAMS_H

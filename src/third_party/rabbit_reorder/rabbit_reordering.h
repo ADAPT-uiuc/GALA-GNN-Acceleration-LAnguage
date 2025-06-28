@@ -1,5 +1,4 @@
 //
-// Created by damitha on 8/16/22.
 //
 
 #ifndef SPARSE_ACCELERATOR_REORDERIN_H
