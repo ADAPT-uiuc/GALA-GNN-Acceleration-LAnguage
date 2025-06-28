@@ -525,22 +525,23 @@ nvals0 = adj0.nvals();\n";
             }
 
             // TODO link this up correctly
-            std::map<std::string, std::string> graphNamePathMap;
-            graphNamePathMap["Reddit"] = "RedditDataset";
-            graphNamePathMap["Cora"] = "CoraGraphDataset";
-            graphNamePathMap["CoraFull"] = "CoraFullDataset";
-            graphNamePathMap["Pubmed"] = "PubmedGraphDataset";
-            graphNamePathMap["Arxiv"] = "ogbn-arxiv";
-            graphNamePathMap["Products"] = "ogbn-products";
-            graphNamePathMap["papers100M_1"] = "ogbn-papers100M_1";
-            graphNamePathMap["papers100M_2"] = "ogbn-papers100M_2";
-            graphNamePathMap["papers100M_5"] = "ogbn-papers100M_5";
-            graphNamePathMap["papers100M_10"] = "ogbn-papers100M_10";
-            graphNamePathMap["papers100M_20"] = "ogbn-papers100M_20";
+            // std::map<std::string, std::string> graphNamePathMap;
+            // graphNamePathMap["Reddit"] = "RedditDataset";
+            // graphNamePathMap["Cora"] = "CoraGraphDataset";
+            // graphNamePathMap["CoraFull"] = "CoraFullDataset";
+            // graphNamePathMap["Pubmed"] = "PubmedGraphDataset";
+            // graphNamePathMap["Arxiv"] = "ogbn-arxiv";
+            // graphNamePathMap["Products"] = "ogbn-products";
+            // graphNamePathMap["papers100M_1"] = "ogbn-papers100M_1";
+            // graphNamePathMap["papers100M_2"] = "ogbn-papers100M_2";
+            // graphNamePathMap["papers100M_5"] = "ogbn-papers100M_5";
+            // graphNamePathMap["papers100M_10"] = "ogbn-papers100M_10";
+            // graphNamePathMap["papers100M_20"] = "ogbn-papers100M_20";
+            // graphNamePathMap[cNode->getParam(0)]
 
             // This doesn't need to change
             std::string fileLoadCode = "    SM adj0;\n\
-    std::string filename = \"/shared/damitha2/gala_npy/" + graphNamePathMap[cNode->getParam(0)] +  "/\";\n\
+    std::string filename = \"../../Data/" + cNode->getParam(0) +  "/\";\n\
     readSM_npy32<SM>(filename, &adj0);\n\
 \n\
     // Adj info\n\

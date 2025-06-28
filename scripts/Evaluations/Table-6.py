@@ -24,7 +24,7 @@ def compile_and_get_time(args):
     logfile = open(args.stdout_log, 'w+')
     errfile = open(args.stderr_log, 'w+')
     outfile = open(args.stat_log + "_graph.csv", 'w+')
-    outfile.write("sample,train,inference_time,total_time\n")
+    outfile.write("sample,inference_time,total_time\n")
     outfile.flush()
 
     # TODO add build
@@ -57,11 +57,6 @@ def compile_and_get_time(args):
 
         run(job_args, logfile, errfile)
 
-        job_args = ['cmake',
-                    '-DCMAKE_PREFIX_PATH="/home/damitha2/new_torch/libtorch"',
-                    '-DCAFFE2_USE_CUDNN=True',
-                    '..']
-        run_at(job_args, logfile, errfile, output_path + "build/")
         job_args = ['make',
                     '-j56']
         run_at(job_args, logfile, errfile, output_path + "build/")
@@ -84,37 +79,35 @@ def evalDGL(args):
     logfile = open(args.stdout_log, 'a+')
     errfile = open(args.stderr_log, 'a+')
 
-    outfile = open(args.stat_log + "_" + args.hw + "_DGL_node_sampling.csv", 'w+')
-    outfile.write("dataset,model,hw,percen,inference_time,total_time\n")
+    outfile = open(args.stat_log + "_DGL_node_sampling.csv", 'w+')
+    outfile.write("sample,inference_time,total_time\n")
     outfile.close()
 
     for pi in percen:
-        for dset in dataset_list:
-            for model in models:
-                curr = f">>>Testing [{dset} ; ({32},{1}) ] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-                print(curr)
-                logfile.write(curr+"\n")
-                errfile.write(curr+"\n")
+        curr = f">>>Testing [{pi} ; ({32},{1}) ] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+        print(curr)
+        logfile.write(curr+"\n")
+        errfile.write(curr+"\n")
 
-                job_args = ['python',
-                            '../../tests/Baselines/DGL/benchmark_dgl_'+model+'_node_sampling.py',
-                            '--dataset', dgl_map[dset],
-                            '--n-hidden', str(32),
-                            '--pi', str(pi),
-                            '--layers', str(1),
-                            '--n-epochs', str(100),
-                            "--logfile", args.stat_log + "_" + args.hw + "_DGL_node_sampling.csv",
-                            "--device", "cuda",
-                            "--skip_train",
-                            "--discard", str(5)]
-                outfile = open(args.stat_log + "_" + args.hw + "_DGL_node_sampling.csv", 'a+')
-                outfile.write(dset + "," + model + "," + args.hw + "," + pi + ",")
-                outfile.close()
-                run(job_args, logfile, errfile)
+        job_args = ['python',
+                    '../../tests/Baselines/DGL/benchmark_dgl_gcn_node_sampling.py',
+                    '--dataset', "ogbn-papers100M",
+                    '--n-hidden', str(32),
+                    '--pi', str(pi),
+                    '--layers', str(1),
+                    '--n-epochs', str(100),
+                    "--logfile", args.stat_log + "_" + args.hw + "_DGL_node_sampling.csv",
+                    "--device", "cuda",
+                    "--skip_train",
+                    "--discard", str(5)]
+        outfile = open(args.stat_log + "_" + args.hw + "_DGL_node_sampling.csv", 'a+')
+        outfile.write(pi + ",")
+        outfile.close()
+        run(job_args, logfile, errfile)
 
-                logfile.write(("<"*100)+"\n")
-                errfile.write(("<"*100)+"\n")
-                print("<"*100)
+        logfile.write(("<"*100)+"\n")
+        errfile.write(("<"*100)+"\n")
+        print("<"*100)
     logfile.close()
     errfile.close()
 
@@ -131,7 +124,7 @@ def main(args):
         evalDGL(args)
     elif (args.job == "wise"):
         evalWise(args)
-    elif (args.job == "fig"):
+    elif (args.job == "stat"):
         createFigure(args)
 
 if __name__ == '__main__':
@@ -140,7 +133,7 @@ if __name__ == '__main__':
                         default="timing_info_graph_scale", help="File to store timing data")
     parser.add_argument("--hw", type=str,
                         default="h100", help="Target hardware")
-    parser.add_argument("--job", type=str, choices=['gala', 'dgl', 'wise', 'fig'], default="gala",
+    parser.add_argument("--job", type=str, choices=['gala', 'dgl', 'wise', 'stat'], default="gala",
                         help="Task to generate Figures 16 to 17.")
     parser.add_argument("--train", action='store_true',
                         help="Train the model")

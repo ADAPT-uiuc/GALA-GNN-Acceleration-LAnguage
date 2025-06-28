@@ -55,11 +55,6 @@ def compile_and_get_time(args):
 
             run(job_args, logfile, errfile)
 
-        job_args = ['cmake',
-                    '-DCMAKE_PREFIX_PATH="/home/damitha2/new_torch/libtorch"',
-                    '-DCAFFE2_USE_CUDNN=True',
-                    '..']
-        run_at(job_args, logfile, errfile, output_path + "build/")
         job_args = ['make',
                     '-j56']
         run_at(job_args, logfile, errfile, output_path + "build/")
