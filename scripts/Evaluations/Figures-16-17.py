@@ -162,7 +162,7 @@ def evalSea(args):
 
             if (model == "gat" and args.hw == "h100"):
                 outfile = open(args.stat_log + "_" + args.hw + "_sea.csv", 'a+')
-                outfile.write(dset + "," + model + "," + args.hw + ",0,0")
+                outfile.write(dset + "," + model + "," + args.hw + ",0,0\n")
                 outfile.close()
             else:
                 job_args = ['python',

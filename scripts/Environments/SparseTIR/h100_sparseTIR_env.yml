@@ -110,6 +110,7 @@ dependencies:
       - charset-normalizer==3.4.1
       - cloudpickle==3.1.1
       - decorator==5.2.1
+      - --find-links https://data.dgl.ai/wheels/cu118/repo.html
       - dgl==1.0.2+cu118
       - exceptiongroup==1.2.2
       - filelock==3.17.0
@@ -145,6 +146,7 @@ dependencies:
       - pluggy==1.5.0
       - propcache==0.3.0
       - psutil==7.0.0
+      - --find-links https://data.pyg.org/whl/torch-2.1.2+cu118.html
       - pyg-lib==0.4.0+pt21cu118
       - pyparsing==3.2.1
       - pytest==8.3.5
@@ -158,17 +160,20 @@ dependencies:
       - synr==0.6.0
       - threadpoolctl==3.5.0
       - tomli==2.2.1
+      - --find-links https://download.pytorch.org/whl/torch
       - torch==2.1.2+cu118
+      - --find-links https://data.pyg.org/whl/torch-2.1.2+cu118.html
       - torch-cluster==1.6.3+pt21cu118
       - torch-geometric==2.6.1
       - torch-scatter==2.1.2+pt21cu118
       - torch-sparse==0.6.18+pt21cu118
       - torch-spline-conv==1.2.2+pt21cu118
+      - --find-links https://download.pytorch.org/whl/torchvision/
       - torchvision==0.16.2+cu118
       - tornado==6.4.2
       - tqdm==4.67.1
       - triton==2.1.0
-      - tvm==0.9.dev0
+      #- tvm==0.9.dev0
       - typing-extensions==4.12.2
       - tzdata==2025.1
       - urllib3==2.3.0
