@@ -356,9 +356,7 @@ def main(args):
 
     train_model = True
     if args.skip_train:
-        train_model = False
-
-    output_path = r"/shared/damitha2/gala_npy/" + args.dataset
+        train_model = Falset
 
     # Edge-SPMM (default)
     # print('================Default==============')

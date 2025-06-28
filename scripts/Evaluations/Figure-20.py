@@ -80,10 +80,10 @@ def compile_and_get_time(args):
 
     gala_df = pd.read_csv(args.stat_log + "_input_aware.csv")
     for index, row in gala_df.iterrows():
-        if (row['mode'] == "schedule"):
+        if row['mode'] == "schedule":
             vals[row['graph']] = row['inference_time']
         else:
-            print("Speedup of the input aware compilation for graph:", row['graph'] ", is:", row['inference_time'] / vals[row['graph']])
+            print("Speedup of the input aware compilation for graph:", row['graph'], ", is:", row['inference_time'] / vals[row['graph']])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Graph Benchmark Runner')
@@ -91,7 +91,7 @@ if __name__ == '__main__':
                         default="timing_info_graph_scale", help="File to store timing data")
     parser.add_argument("--hw", type=str,
                         default="h100", help="Target hardware")
-    parser.add_argument("--job", type=str, choices=['gala', 'dgl', 'wise', 'fig'], default="gala",
+    parser.add_argument("--job", type=str, choices=['gala', 'dgl', 'wise', 'stat'], default="gala",
                         help="Task to generate Figures 16 to 17.")
     parser.add_argument("--train", action='store_true',
                         help="Train the model")

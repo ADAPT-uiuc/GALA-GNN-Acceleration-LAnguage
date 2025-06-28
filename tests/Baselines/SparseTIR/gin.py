@@ -11,7 +11,6 @@ import torch.nn.functional as F
 from torch.utils.dlpack import to_dlpack as th_to_dlpack
 from torch.utils.dlpack import from_dlpack as th_from_dlpack
 
-import time
 from utils import get_dataset
 import tvm
 import tvm.testing
@@ -24,7 +23,9 @@ from tvm.sparse import (
     column_part_hyb,
     format_decompose,
 )
+from dgl.nn.pytorch.glob import SumPooling
 
+forward_pass_times = []
 
 @T.prim_func
 def csrmm(
@@ -83,7 +84,7 @@ def csr2ell_index_map(i, j):
 
 kernels = {}
 kernel_args = {}
-forward_pass_times = []
+
 
 class SpMM(torch.autograd.Function):
     @staticmethod
@@ -111,121 +112,80 @@ class SpMM(torch.autograd.Function):
         f(*args)
         return dX
 
+class MLP(nn.Module):
+    """Construct two-layer MLP-type aggreator for GIN model"""
 
-class GraphConv(nn.Module):
-    def __init__(self, in_feats, out_feats, norm="both", weight=True, bias=True, activation=None):
-        super(GraphConv, self).__init__()
+    def __init__(self, input_dim, output_dim):
+        super().__init__()
+        self.linear = nn.Linear(input_dim, output_dim, bias=False)
 
-        self._in_feats = in_feats
-        self._out_feats = out_feats
-        self._in_src_feats, self._in_dst_feats = in_feats, in_feats
-        self._out_feats = out_feats
-        self.fc_self = nn.Linear(self._in_dst_feats, out_feats, bias=False)
-        self.fc_neigh = nn.Linear(self._in_src_feats, out_feats, bias=False)
-        self._norm = norm
-        self._weight = nn.Parameter(torch.Tensor(in_feats, out_feats))
+    def forward(self, x):
+        h = x
+        h = F.relu(self.linear(h))
+        return h
+
+class GINConv(nn.Module):
+    def __init__(self, apply_func = None, init_eps = 0, learn_eps = False, activation=None, aggregator_type="sum"):
+        super(GINConv, self).__init__()
+        self.apply_func = apply_func
+        self._aggregator_type = aggregator_type
+        if learn_eps:
+            self.eps = torch.nn.Parameter(torch.FloatTensor([init_eps]))
+        else:
+            self.register_buffer("eps", torch.FloatTensor([init_eps]))
         #self._bias = nn.Parameter(torch.Tensor(out_feats))
         self._activation = activation
         self.reset_parameters()
 
     def reset_parameters(self):
         """Reinitialize learnable parameters."""
-        gain = nn.init.calculate_gain("relu")
-        nn.init.xavier_uniform_(self.fc_self.weight, gain=gain)
-        nn.init.xavier_uniform_(self.fc_neigh.weight, gain=gain)
+        #gain = nn.init.calculate_gain("relu")
+        #nn.init.xavier_uniform_(self.fc_self.weight, gain=gain)
+        #nn.init.xavier_uniform_(self.fc_neigh.weight, gain=gain)
+        pass
 
-    def forward(self, feat, graph):
+    def forward(self, feat, graph, edge_weight=None):
+        _reducer = getattr(fn, self._aggregator_type)
         with graph.local_scope():
-            '''
-            if not self._allow_zero_in_degree:
-                if (graph.in_degrees() == 0).any():
-                    raise DGLError(
-                        "There are 0-in-degree nodes in the graph, "
-                        "output for those nodes will be invalid. "
-                        "This is harmful for some applications, "
-                        "causing silent performance regression. "
-                        "Adding self-loop on the input graph by "
-                        "calling `g = dgl.add_self_loop(g)` will resolve "
-                        "the issue. Setting ``allow_zero_in_degree`` "
-                        "to be `True` when constructing this module will "
-                        "suppress the check and let the code run."
-                    )
-            '''
             aggregate_fn = fn.copy_u("h", "m")
-            '''
             if edge_weight is not None:
                 assert edge_weight.shape[0] == graph.num_edges()
                 graph.edata["_edge_weight"] = edge_weight
                 aggregate_fn = fn.u_mul_e("h", "_edge_weight", "m")
-            '''
 
-            weight = self._weight
-            # (BarclayII) For RGCN on heterogeneous graphs we need to support GCN on bipartite.
             feat_src, feat_dst = expand_as_pair(feat, graph)
-            if self._norm in ["left", "both"]:
-                degs = graph.out_degrees().to(feat_src).clamp(min=1)
-                if self._norm == "both":
-                    norm = torch.pow(degs, -0.5)
-                else:
-                    norm = 1.0 / degs
-                shp = norm.shape + (1,) * (feat_src.dim() - 1)
-                norm = torch.reshape(norm, shp)
-                feat_src = feat_src * norm
-
-            if self._in_feats > self._out_feats:
-                # mult W first to reduce the feature size for aggregation.
-                if weight is not None:
-                    feat_src = torch.matmul(feat_src, weight)
-                graph.srcdata["h"] = feat_src
-                #graph.update_all(aggregate_fn, fn.sum(msg="m", out="h"))
-                rst = SpMM.apply(feat_src) # <--- sparsetir integration 
-                #rst = graph.dstdata["h"]
-                graph.dstdata["h"] = rst
-            else:
-                # aggregate first then mult W
-                graph.srcdata["h"] = feat_src
-                #graph.update_all(aggregate_fn, fn.sum(msg="m", out="h"))
-                rst = SpMM.apply(feat_src) # <--- sparstir integration
-                #rst = graph.dstdata["h"]
-                graph.dstdata["h"] = rst
-                if weight is not None:
-                    rst = torch.matmul(rst, weight)
-
-            if self._norm in ["right", "both"]:
-                degs = graph.in_degrees().to(feat_dst).clamp(min=1)
-                if self._norm == "both":
-                    norm = torch.pow(degs, -0.5)
-                else:
-                    norm = 1.0 / degs
-                shp = norm.shape + (1,) * (feat_dst.dim() - 1)
-                norm = torch.reshape(norm, shp)
-                rst = rst * norm
-
-            #if self._bias is not None:
-                #rst = rst + self._bias
-
+            graph.srcdata["h"] = feat_src
+            #graph.update_all(aggregate_fn, _reducer("m", "neigh"))
+            graph.dstdata["neigh"] = SpMM.apply(feat_src)
+            rst = (1 + self.eps) * feat_dst + graph.dstdata["neigh"]
+            if self.apply_func is not None:
+                rst = self.apply_func(rst)
+            # activation
             if self._activation is not None:
                 rst = self._activation(rst)
-            
             return rst
 
-class GCN(nn.Module):
+
+class GIN(nn.Module):
     def __init__(self, in_feats, hidden_feats, out_feats, num_layers, dropout, g):
-        super(GCN, self).__init__()
+        super(GIN, self).__init__()
 
         self.graph = g
         self.layers = nn.ModuleList()
+        self.linear_prediction = nn.ModuleList()
         #self.bns = nn.ModuleList()
         # input layer
-        self.layers.append(GraphConv(in_feats, hidden_feats))
-        #self.bns.append(nn.BatchNorm1d(hidden_feats))
-        # hidden layers
-        for _ in range(num_layers - 2):
-            self.layers.append(GraphConv(hidden_feats, hidden_feats))
-            #self.bns.append(nn.BatchNorm1d(hidden_feats))
-        # output layer
-        self.layers.append(GraphConv(hidden_feats, out_feats))
-        self.dropout = nn.Dropout(p=dropout)
+        mlp_in = MLP(in_feats, hidden_feats)
+        self.layers.append(GINConv(apply_func=mlp_in, aggregator_type="sum", learn_eps=False, activation=F.relu))
+
+        mlp_hid = MLP(hidden_feats, out_feats)
+        self.layers.append(GINConv(apply_func=mlp_hid, aggregator_type="sum", learn_eps=False, activation=F.relu))
+        
+        #self.linear_prediction.append(nn.Linear(in_feats, hidden_feats))
+        #self.linear_prediction.append(nn.Linear(hidden_feats, out_feats))
+
+        self.pool = (SumPooling())
+        #self.dropout = nn.Dropout(p=dropout)
 
     def reset_parameters(self):
         for layer in self.layers:
@@ -234,19 +194,19 @@ class GCN(nn.Module):
             #bn.reset_parameters()
 
     def forward(self, x):
+
         torch.cuda.synchronize()
         start = time.time()
-        for i, layer in enumerate(self.layers[:-1]):
-            x = layer(x,self.graph)
-            #print(time.time()-start)
-            #x = self.bns[i](x)
+        #hidden_rep = [x]
+        for i, layer in enumerate(self.layers):
+            x = layer(feat=x, graph=self.graph)
             x = F.relu(x)
-            #x = self.dropout(x)
-        x = self.layers[-1](x,self.graph)
+            #hidden_rep.append(x)
+
         torch.cuda.synchronize()
         forward_pass_times.append(time.time()-start)
 
-        return x.log_softmax(dim=-1)
+        return x 
 
 
 def train(dataset, model, feats, y_true, train_idx, optimizer,graph):
@@ -262,11 +222,11 @@ def train(dataset, model, feats, y_true, train_idx, optimizer,graph):
     '''
     criterion = nn.CrossEntropyLoss()
     loss = criterion(out, y_true[train_idx])
+    #loss.requires_grad = True
     loss.backward()
     optimizer.step()
 
     return loss.item()
-
 
 def create_kernels(g, feat_sizes, bucket_sizes=[], num_col_parts=1):
     global kernels
@@ -411,7 +371,6 @@ def create_kernels(g, feat_sizes, bucket_sizes=[], num_col_parts=1):
 
             kernels[(feat_size, forward)] = f
 
-
 def pad_length(x: int):
     if x <= 32:
         return 32
@@ -421,7 +380,6 @@ def pad_length(x: int):
     while ret < x:
         ret = ret + 128
     return ret
-
 
 bucketing_config = {
     "arxiv": [1, 2, 4, 8, 16, 32],
@@ -450,7 +408,9 @@ col_part = {
 
 def main():
     parser = argparse.ArgumentParser(description="OGBN-Cora (GraphConv Full-Batch)")
-    parser.add_argument("-d", "--dataset", type=str, default="reddit")
+    parser.add_argument("-d", "--dataset", type=str, default="cora")
+    parser.add_argument("--logfile", type=str, default='logger.txt',
+                        help="Logging file")
     args = parser.parse_args()
     print(args)
 
@@ -478,7 +438,7 @@ def main():
         col_part[args.dataset],
     )
 
-    model = GCN(
+    model = GIN(
         in_feats=feats.size(-1),
         hidden_feats=32,
         out_feats=num_classes,
@@ -505,11 +465,13 @@ def main():
     end_event.record()
     torch.cuda.synchronize()
     dur = start_event.elapsed_time(end_event) / active
-    print("---------------GCN---dataset: {}------SparseTIR---------------".format(args.dataset))
+    print("------GIN------dataset: {}------SparseTIR---------------".format(args.dataset))
     print("Training time: {} ms/epoch".format(dur))
-    print("Forward Pass (training) time: {}".format(np.mean(np.array(forward_pass_times[1:]))*1000))
+    print("Forward Pass time: {}".format(np.mean(np.array(forward_pass_times[1:]))*1000))
     print("----------------------------------------------")
-
+    log_file_ptr = open(args.logfile, 'a+')
+    log_file_ptr.write(str(np.mean(np.array(forward_pass_times[1:]))*1000) + "," + str(dur) + "\n")
+    log_file_ptr.close()
 
 
 if __name__ == "__main__":

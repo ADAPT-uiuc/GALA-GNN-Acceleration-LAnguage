@@ -76,25 +76,35 @@ def compile_and_get_time(args):
     logfile.close()
     errfile.close()
 
-def evalWise(args):
-    print("WiseGraph: Empty for now")
 
 def createFigure(args):
-    print("Create figure: Empty for now")
+    import pandas as pd
+    vals = {}
+    for l in layers:
+        vals[l] = {}
+        for dim in hidden_dims:
+            vals[l][dim] = 0
+
+    wise_df = pd.read_csv("results_fig18_19.csv")
+    for index, row in wise_df.iterrows():
+        if row['dataset'] == "reddit":
+            vals[row['num_layer']][row['hidden_feat']] = row['inference_time']
+    gala_df = pd.read_csv(args.stat_log + "_scalability_GALA.csv")
+    for index, row in gala_df.iterrows():
+        if row['dataset'] == "reddit":
+            print("Layers:", row['num_layer'],"Hidden dim",['hidden_feat'],"Speedup", vals[row['num_layer']][row['hidden_feat']] / row['inference_time'])
 
 def main(args):
     if (args.job == "gala"):
         compile_and_get_time(args)
-    elif (args.job == "wise"):
-        evalWise(args)
-    elif (args.job == "fig"):
+    elif (args.job == "stat"):
         createFigure(args)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Graph Benchmark Runner')
     parser.add_argument("--stat-log", type=str,
                         default="timing_info", help="File to store timing data")
-    parser.add_argument("--job", type=str, choices=['gala', 'wise', 'fig'], default="gala",
+    parser.add_argument("--job", type=str, choices=['gala', 'wise', 'stat'], default="gala",
                         help="Task to generate Figures 18.")
     parser.add_argument("--out-path", type=str,
                         default="../../", help="Output path for the generated code")

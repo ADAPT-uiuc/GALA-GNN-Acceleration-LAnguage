@@ -138,8 +138,6 @@ def main(args):
 
         n_edges = graph.number_of_edges()
 
-        # output_path = r"/shared/damitha2/gala_npy/" + args.dataset
-
         dataset_list = {"CoraGraphDataset":"Cora",
                         "PubmedGraphDataset":"Pubmed",
                         "CoraFullDataset":"CoraFull",

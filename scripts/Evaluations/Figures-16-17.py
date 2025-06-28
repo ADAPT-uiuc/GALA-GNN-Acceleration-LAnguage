@@ -142,9 +142,6 @@ def evalDGL(args):
     logfile.close()
     errfile.close()
 
-def evalWise(args):
-    print("WiseGraph: Empty for now")
-
 def evalSea(args):
     logfile = open(args.stdout_log, 'a+')
     errfile = open(args.stderr_log, 'a+')
@@ -186,7 +183,39 @@ def evalSea(args):
     errfile.close()
 
 def evalSTIR(args):
-    print("SparseTIR: Empty for now")
+    logfile = open(args.stdout_log, 'a+')
+    errfile = open(args.stderr_log, 'a+')
+
+    outfile = open(args.stat_log + "_" + args.hw + "_stir.csv", 'w+')
+    outfile.write("dataset,model,hw,inference_time,total_time\n")
+    outfile.close()
+
+    for dset in dataset_list:
+        for model in models:
+            curr = f">>>Testing [{dset} ; ({32},{1}) ] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+            print(curr)
+            logfile.write(curr+"\n")
+            errfile.write(curr+"\n")
+
+            if (model == "gat" or model == "sage"):
+                outfile = open(args.stat_log + "_" + args.hw + "_stir.csv", 'a+')
+                outfile.write(dset + "," + model + "," + args.hw + ",0,0\n")
+                outfile.close()
+            else:
+                job_args = ['python',
+                            '../../tests/Baselines/SparseTIR/'+model+'.py',
+                            '--dataset', dgl_map[dset],
+                            "--logfile", args.stat_log + "_" + args.hw + "_sea.csv"]
+                outfile = open(args.stat_log + "_" + args.hw + "_sea.csv", 'a+')
+                outfile.write(dset + "," + model + "," + args.hw + ",")
+                outfile.close()
+                run(job_args, logfile, errfile)
+
+            logfile.write(("<"*100)+"\n")
+            errfile.write(("<"*100)+"\n")
+            print("<"*100)
+    logfile.close()
+    errfile.close()
 
 def createFigure(args):
     import pandas as pd
@@ -236,7 +265,12 @@ def createFigure(args):
     for index, row in dgl_df.iterrows():
         data[row['model']]["DGL"][graph_name_rev[row['dataset']]] = row[time_field]
 
+# dataset,model,hidden_feat,num_layer,hardware,inference_time,total_time,runtime,memory_used
     # Read WiseGraph
+    wise_df = pd.read_csv("results_fig16_17.csv")
+    for index, row in wise_df.iterrows():
+        if row['hidden_feat'] == 32 and row['num_layer'] == 2:
+            data[row['model']]["WiseGraph"][graph_name_rev[row['dataset']]] = row[time_field]
 
     # Read SeaStar
     dgl_df = pd.read_csv(args.stat_log + "_" + args.hw + "_sea.csv")
@@ -244,6 +278,9 @@ def createFigure(args):
         data[row['model']]["SeaStar"][graph_name_rev[row['dataset']]] = row[time_field]
 
     # Read SparseTIR
+    dgl_df = pd.read_csv(args.stat_log + "_" + args.hw + "_stir.csv")
+    for index, row in dgl_df.iterrows():
+        data[row['model']]["SeaStar"][graph_name_rev[row['dataset']]] = row[time_field]
 
     df_data = []
     df_cols = ["Graph", "Model", "System", "Speedup"]
@@ -456,8 +493,6 @@ def main(args):
         compile_and_get_time(args)
     elif (args.job == "dgl"):
         evalDGL(args)
-    elif (args.job == "wise"):
-        evalWise(args)
     elif (args.job == "sea"):
         evalSea(args)
     elif (args.job == "stir"):

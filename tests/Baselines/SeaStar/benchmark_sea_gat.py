@@ -245,7 +245,7 @@ def main(args):
     initial_classes_for_suite = args.n_hidden
     print(str(args.dataset))
 
-    raw_dir = "/shared/damitha2/gala_npy/" + args.dataset + "/"
+    raw_dir = "../Data/" + args.dataset + "/"
     adj_src_path = raw_dir + "Adj_src.npy"
     adj_dst_path = raw_dir + "Adj_dst.npy"
     feat_path = raw_dir + "Feat.npy"

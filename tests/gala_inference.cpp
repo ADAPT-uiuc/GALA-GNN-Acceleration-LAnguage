@@ -1,5 +1,4 @@
 //
-// Created by damitha on 4/9/24.
 //
 #include "common.h"
 #include <iostream>

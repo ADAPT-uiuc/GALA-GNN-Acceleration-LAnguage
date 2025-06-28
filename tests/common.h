@@ -1,5 +1,4 @@
 //
-// Created by damitha on 6/6/22.
 //
 #include "../src/utils/mtx_io.h"
 #include "../src/utils/threading_utils.h"

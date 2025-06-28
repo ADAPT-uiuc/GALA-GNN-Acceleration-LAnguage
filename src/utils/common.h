@@ -1,5 +1,4 @@
 //
-// Created by damitha on 6/6/22.
 //
 
 #ifndef _COMMON_H

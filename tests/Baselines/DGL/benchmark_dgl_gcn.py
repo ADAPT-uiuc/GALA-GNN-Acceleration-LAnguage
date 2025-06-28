@@ -331,8 +331,6 @@ def main(args):
     if args.skip_train:
         train_model = False
 
-    output_path = r"/shared/damitha2/gala_npy/" + args.dataset
-
     r1 = full_trainer(graph=graph,
                       device_str=device_str,
                       n_hidden=n_hidden,

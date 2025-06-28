@@ -96,26 +96,30 @@ def evalDGL(args):
     logfile.close()
     errfile.close()
 
-def evalWise(args):
-    print("WiseGraph: Empty for now")
 def createFigure(args):
-    print("Create Figure 16-17: Empty for now")
+
+    wise_df = pd.read_csv(args.stat_log + "_memory.csv")
+    for index, row in wise_df.iterrows():
+        print(row['exec'],'-- memory:',row['memory'],'-- time:',row['total_time'])
+
+    wise_df = pd.read_csv("results_fig16_17.csv")
+    for index, row in wise_df.iterrows():
+        if row['hidden_feat'] == 32 and row['num_layer'] == 2 and row['model'] == 'gcn' and row['dataset'] == 'reddit':
+            print('WiseGraph -- memory:',row['memory_used'],'-- time:',row['total_time'])
 
 def main(args):
     if (args.job == "gala"):
         compile_and_get_time(args)
     elif (args.job == "dgl"):
         evalDGL(args)
-    elif (args.job == "wise"):
-        evalWise(args)
-    elif (args.job == "fig"):
+    elif (args.job == "stat"):
         createFigure(args)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Graph Benchmark Runner')
     parser.add_argument("--stat-log", type=str,
                         default="timing_info", help="File to store timing data")
-    parser.add_argument("--job", type=str, choices=['gala', 'dgl', 'wise', 'fig'], default="gala",
+    parser.add_argument("--job", type=str, choices=['gala', 'dgl', 'wise', 'stat'], default="gala",
                         help="Task to generate Figures 16 to 17.")
     parser.add_argument("--out-path", type=str,
                         default="../../", help="Output path for the generated code")
