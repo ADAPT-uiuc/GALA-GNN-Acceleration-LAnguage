@@ -669,14 +669,14 @@ public:
                                 int outCols = cNode->getInput(1)->getDataInfo()->getDimCol();
 
 
-                                std::cout << "in:" << cNode->getInput(1)->getName() << std::endl;
-                                std::cout << inCols << " " << outCols << std::endl;
+                                // std::cout << "in:" << cNode->getInput(1)->getName() << std::endl;
+                                // std::cout << inCols << " " << outCols << std::endl;
 
                                 // If the output is larger than the input then move the weight update as far forward
                                 // as possible
                                 if (outCols > inCols)
                                 {
-                                    std::cout << "Move forward." << std::endl;
+                                    // std::cout << "Move forward." << std::endl;
                                     // Check next operation and get the complexity
                                     if (lNode->getLoopNodeNum() <= (ix + 1))
                                     {
@@ -782,7 +782,7 @@ public:
                                     }
                                 } else if (outCols < inCols)
                                 {
-                                    std::cout << "Move backward." << std::endl;
+                                    // std::cout << "Move backward." << std::endl;
                                     // Check next operation and get the complexity
                                     if (0 > (ix - 1))
                                     {
