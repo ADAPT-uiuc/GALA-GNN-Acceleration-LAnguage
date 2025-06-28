@@ -5,6 +5,7 @@ import os
 build_path = r"../../build/"
 
 graphs = ["Reddit", "Products"]
+mode = ["input-aware", "schedule"]
 
 sample_precen = ["1", "2", "5", "10", "20"]
 
@@ -24,18 +25,8 @@ def compile_and_get_time(args):
     logfile = open(args.stdout_log, 'w+')
     errfile = open(args.stderr_log, 'w+')
     outfile = open(args.stat_log + "_graph.csv", 'w+')
-    outfile.write("sample,train,inference_time,total_time\n")
+    outfile.write("graph,mode,inference_time,total_time\n")
     outfile.flush()
-
-    # TODO add build
-    if not os.path.exists(build_path):
-        os.makedirs(build_path)
-        job_args = ['cmake',
-                    '..']
-        run_at(job_args, logfile, errfile, build_path)
-        job_args = ['make',
-                    '-j56']
-        run_at(job_args, logfile, errfile, build_path)
 
     output_path = args.out_path + "codegen/"
 
@@ -45,17 +36,24 @@ def compile_and_get_time(args):
     if not os.path.exists(output_path + "build/"):
         os.makedirs(output_path + "build/")
 
-    for sp in sample_precen:
+    for graph in graphs:
         curr = f">>>Running [{sp} sample size] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
         print(curr)
         logfile.write(curr+"\n")
         errfile.write(curr+"\n")
 
-        job_args = ['../../build/tests/gala_inference',
-                    '../../tests/GALA-DSL/ablations/scalability/graph_' + sp + + '.txt',
-                    output_path]
+        if (mode == "schedule"):
+            job_args = ['../../build/tests/gala_inference',
+                        '../../tests/GALA-DSL/ablations/scalability/graph_' + sp + + '.txt',
+                        output_path]
 
-        run(job_args, logfile, errfile)
+            run(job_args, logfile, errfile)
+        else:
+            job_args = ['../../build/tests/gala_inference',
+                        '../../tests/GALA-DSL/ablations/input-optimize/graph_' + sp + + '.txt',
+                        output_path]
+
+            run(job_args, logfile, errfile)
 
         job_args = ['cmake',
                     '-DCMAKE_PREFIX_PATH="/home/damitha2/new_torch/libtorch"',

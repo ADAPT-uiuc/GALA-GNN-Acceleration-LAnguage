@@ -8,8 +8,8 @@ dataset_list = ["Cora",
                 "Pubmed",
                 "CoraFull",
                 "Reddit",
-                "ogbn-arxiv",
-                "ogbn-products"]
+                "Arxiv",
+                "Products"]
 models = ["gcn",
           "gat",
           "gin",
@@ -19,8 +19,8 @@ dgl_map = {"Cora":"CoraGraphDataset",
            "Pubmed":"PubmedGraphDataset",
            "CoraFull":"CoraFullDataset",
            "Reddit":"RedditDataset",
-           "ogbn-arxiv":"ogbn-arxiv",
-           "ogbn-products":"ogbn-products"}
+           "Arxiv":"ogbn-arxiv",
+           "Products":"ogbn-products"}
 
 # dataset_list = ["Cora"]
 # models = ["gcn"]
@@ -399,7 +399,7 @@ def createFigure(args):
     else:
         num = " 16 "
     plt.savefig("Figure" + num + alph + ".pdf", format="pdf", bbox_inches="tight", pad_inches=0, dpi=1000)
-    
+
 def printStats(args):
     import pandas as pd
     import numpy as np
