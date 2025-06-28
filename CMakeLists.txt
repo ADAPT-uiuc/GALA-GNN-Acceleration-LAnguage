@@ -103,7 +103,7 @@ endif ()
 ######################### GNN DSL ###########################
 if (DSL)
     # Turn MKL on (for the dense matrix multiplications)
-    option(USE_MKL "MKL option" ON)
+    option(USE_MKL "MKL option" OFF)
     set(C_COMP ON) # Compress the sparse matrices
 
     message("Build for code for sparse matrix ops and it's dependencies.")
