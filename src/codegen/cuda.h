@@ -55,7 +55,7 @@ public:
         cmakeCode.addCode(cmakeExecutable);
     }
 
-    std::string coarsenedKernelCall(ComputeNode* cNode, int cFact, int prevLayer, int weighted = true)
+    std::string coarsenedKernelCall(ComputeNode* cNode, int cFact, int prevLayer, int weighted = true, int skip = 0)
     {
         std::string res = "";
         bool isKernelSample = hasCOpt(cNode, SAMPLE_COPT) || hasCOpt(cNode, SAMPLE_DYNAMIC_COPT);
@@ -72,7 +72,7 @@ public:
         } else
         {
             // Sub-layers - modulo division by the higher layer. Then, see if any remaining
-            res += "  if ((dcols % " + std::to_string(32 * (cFact + 1)) + " ) > "
+            res += "  if ((dcols % " + std::to_string(32 * (cFact + 1 + skip)) + " ) > "
             + std::to_string(32 * (cFact)) + ") {\n";
         }
 
@@ -96,7 +96,7 @@ public:
                 res += "    dim3 blockDim(32, 8);\n";
             } else
             {
-                res += "    dim3 blockDim(dcols %" + std::to_string(32 * (cFact + 1)) + ", 8);\n";
+                res += "    dim3 blockDim(dcols %" + std::to_string(32 * (cFact + 1 + skip)) + ", 8);\n";
             }
         }
 
@@ -128,12 +128,12 @@ public:
                 res += "    " + getKernelName(cNode) + "_kernel" + std::to_string(cFact - 1) + "_offset<<<gridDim, blockDim, 0, stream"
                 + std::to_string(cFact) + ">>>(\n\
         oden_array, &offset_ptr[i1 * (nrows + 1)]," + (weightedStr) +" iden_ptr, &col_ptr[start_vals], nrows, dcols, ((int)dcols /"
-                + std::to_string(32 * (cFact + 1)) + ") * " + std::to_string(32 * (cFact + 1));
+                + std::to_string(32 * (cFact + 1 + skip)) + ") * " + std::to_string(32 * (cFact + 1 + skip));
             } else
             {
                 res += "    " + getKernelName(cNode) + "_kernel0_offset<<<gridDim, blockDim, 0, stream0>>>(\n\
         oden_array, &offset_ptr[i1 * (nrows + 1)]," + (weightedStr) + " iden_ptr, &col_ptr[start_vals], nrows, dcols, ((int)dcols /"
-                + std::to_string(32 * (cFact + 1)) + ") * " + std::to_string(32 * (cFact + 1));
+                + std::to_string(32 * (cFact + 1 + skip)) + ") * " + std::to_string(32 * (cFact + 1 + skip));
             }
             if (isKernelSample){
                 res += ", global_ra, global_rb";
@@ -161,7 +161,7 @@ public:
         {
             res += "else {\n";
             std::cout << "ss:" <<  cFact - 1 << std::endl;
-            res += coarsenedKernelCall(cNode, cFact - 1, 0, weighted);
+            res += coarsenedKernelCall(cNode, cFact - 1, 0, weighted, skip + 1);
             res += "}\n";
         }
         return res;
