@@ -594,18 +594,25 @@ DataNode* addFFN_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int lay
     string weightNum = "weight" + to_string(layerNum+1);
     pair<int,int> weightInputDim;
     pair<int,int> resInputDim;
-    std::cout << weightNum << " " << m1.graph_transformations[FEAT_SIZE]  << " " << m1.output_input_classes[layerNum] << " " << m1.graph_transformations[LABEL_SIZE] << std::endl;
-    std::cout << layerNum << " " << (m1.num_layers - 1) << std::endl;
+    // std::cout << weightNum << " " << m1.graph_transformations[FEAT_SIZE]  << " " << m1.output_input_classes[layerNum] << " " << m1.graph_transformations[LABEL_SIZE] << std::endl;
+    // std::cout << layerNum << " " << (m1.num_layers - 1) << std::endl;
+    // TODO temp patch (happens when passing labels as the param)
+    int in_out_classes;
+    if (m1.output_input_classes[layerNum] == 0){
+        in_out_classes = m1.output_input_classes[0];
+    } else {
+        in_out_classes = m1.output_input_classes[layerNum];
+    }
     if (layerNum == 0){
-        weightInputDim = {m1.graph_transformations[FEAT_SIZE], m1.output_input_classes[layerNum]};
-        resInputDim = {-1, m1.output_input_classes[layerNum]};
+        weightInputDim = {m1.graph_transformations[FEAT_SIZE], in_out_classes};
+        resInputDim = {-1, in_out_classes};
     }
     else if (layerNum != (m1.num_layers - 1)){
-        weightInputDim = {m1.output_input_classes[layerNum], m1.output_input_classes[layerNum]};
-        resInputDim = {-1, m1.output_input_classes[layerNum]};
+        weightInputDim = {in_out_classes, in_out_classes};
+        resInputDim = {-1, in_out_classes};
     }
     else{
-        weightInputDim = {m1.output_input_classes[layerNum], m1.graph_transformations[LABEL_SIZE]};
+        weightInputDim = {in_out_classes, m1.graph_transformations[LABEL_SIZE]};
         resInputDim = {-1, m1.graph_transformations[LABEL_SIZE]};
     }
     DataNode* weightData = createDataNode(RM_DTYPE, false, false, weightInputDim, true, weightNum, INT32, INT32, F32);
