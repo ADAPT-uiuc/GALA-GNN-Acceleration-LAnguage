@@ -175,11 +175,11 @@ int main(int argc, char **argv) {
 		GALATransformations::complexityOperatorReordering(GALAFEContext::program, GALAFEContext::dependencies,
 		GALAFEContext::associations, GALAFEContext::transforms);
 	}
-	// if (GALAFEContext::sparse_rewrites)
-	// {
-	// 	GALATransformations::sparsityAwareRewrites(GALAFEContext::program, GALAFEContext::dependencies,
-	// 	GALAFEContext::associations, GALAFEContext::transforms);
-	// }
+	if (GALAFEContext::sparse_rewrites)
+	{
+		GALATransformations::sparsityAwareRewrites(GALAFEContext::program, GALAFEContext::dependencies,
+		GALAFEContext::associations, GALAFEContext::transforms);
+	}
 	genCode.writeCode(GALAFEContext::program, GALAFEContext::dependencies,
 		GALAFEContext::associations, GALAFEContext::transforms);
 
