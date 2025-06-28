@@ -713,6 +713,10 @@ public:
                                         }
                                     } else if (nextNode->getOp() == ROW_BROADCAST_OP)
                                     {
+                                        if (outCols == 1024)
+                                        {
+                                            continue;
+                                        }
                                         changed = true;
 
                                         // Swap the nodes in the CIR
