@@ -61,6 +61,8 @@ dsl.nn.optmz.ADAM { return ADAM_T; }
 DSL_Dataset { return DATASET; }
 NonLn { return NONLN; }
 aggregate { return AGGR; }
+aggrFn { return AGGRFN; }
+edgeFn { return EDGEFN; }
 model { return MODEL_W; }
 layer { return LAYER; }
 graphs { return GRAPH_ATTR; }
