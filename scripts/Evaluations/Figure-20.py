@@ -5,7 +5,7 @@ import os
 build_path = r"../../build/"
 
 graphs = ["Reddit", "Products"]
-mode = ["input-aware", "schedule"]
+modes = ["schedule", "input-aware"]
 
 sample_precen = ["1", "2", "5", "10", "20"]
 
@@ -24,7 +24,7 @@ def run_at(args, logfile, errfile, path):
 def compile_and_get_time(args):
     logfile = open(args.stdout_log, 'w+')
     errfile = open(args.stderr_log, 'w+')
-    outfile = open(args.stat_log + "_graph.csv", 'w+')
+    outfile = open(args.stat_log + "_input_aware.csv", 'w+')
     outfile.write("graph,mode,inference_time,total_time\n")
     outfile.flush()
 
@@ -36,96 +36,54 @@ def compile_and_get_time(args):
     if not os.path.exists(output_path + "build/"):
         os.makedirs(output_path + "build/")
 
-    for graph in graphs:
-        curr = f">>>Running [{sp} sample size] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-        print(curr)
-        logfile.write(curr+"\n")
-        errfile.write(curr+"\n")
+    for mode in modes:
+        for graph in graphs:
+            curr = f">>>Running [{sp} sample size] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+            print(curr)
+            logfile.write(curr+"\n")
+            errfile.write(curr+"\n")
 
-        if (mode == "schedule"):
-            job_args = ['../../build/tests/gala_inference',
-                        '../../tests/GALA-DSL/ablations/scalability/graph_' + sp + + '.txt',
-                        output_path]
+            if (mode == "schedule"):
+                job_args = ['../../build/tests/gala_inference',
+                            '../../tests/GALA-DSL/gcn/' + graph + '/h100.txt',
+                            output_path]
 
-            run(job_args, logfile, errfile)
-        else:
-            job_args = ['../../build/tests/gala_inference',
-                        '../../tests/GALA-DSL/ablations/input-optimize/graph_' + sp + + '.txt',
-                        output_path]
+                run(job_args, logfile, errfile)
+            else:
+                job_args = ['../../build/tests/gala_inference',
+                            '../../tests/GALA-DSL/ablations/input-optimize/' + graph + '.txt',
+                            output_path]
 
-            run(job_args, logfile, errfile)
-
-        job_args = ['make',
-                    '-j56']
-        run_at(job_args, logfile, errfile, output_path + "build/")
-        job_args = ['./gala_model']
-        outfile.write(sp + ",")
-        outfile.flush()
-        run_at(job_args, outfile, errfile, output_path + "build/")
-
-        logfile.write(("<"*100)+"\n")
-        errfile.write(("<"*100)+"\n")
-        print("<"*100)
-    logfile.close()
-    errfile.close()
-
-def evalDGL(args):
-    dgl_working_path = r"../../tests/Baselines/DGL"
-
-    percen = [1, 2, 5, 10, 20]
-
-    logfile = open(args.stdout_log, 'a+')
-    errfile = open(args.stderr_log, 'a+')
-
-    outfile = open(args.stat_log + "_" + args.hw + "_DGL_node_sampling.csv", 'w+')
-    outfile.write("dataset,model,hw,percen,inference_time,total_time\n")
-    outfile.close()
-
-    for pi in percen:
-        for dset in dataset_list:
-            for model in models:
-                curr = f">>>Testing [{dset} ; ({32},{1}) ] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-                print(curr)
-                logfile.write(curr+"\n")
-                errfile.write(curr+"\n")
-
-                job_args = ['python',
-                            '../../tests/Baselines/DGL/benchmark_dgl_'+model+'_node_sampling.py',
-                            '--dataset', dgl_map[dset],
-                            '--n-hidden', str(32),
-                            '--pi', str(pi),
-                            '--layers', str(1),
-                            '--n-epochs', str(100),
-                            "--logfile", args.stat_log + "_" + args.hw + "_DGL_node_sampling.csv",
-                            "--device", "cuda",
-                            "--skip_train",
-                            "--discard", str(5)]
-                outfile = open(args.stat_log + "_" + args.hw + "_DGL_node_sampling.csv", 'a+')
-                outfile.write(dset + "," + model + "," + args.hw + "," + pi + ",")
-                outfile.close()
                 run(job_args, logfile, errfile)
 
-                logfile.write(("<"*100)+"\n")
-                errfile.write(("<"*100)+"\n")
-                print("<"*100)
+            job_args = ['make',
+                        '-j56']
+            run_at(job_args, logfile, errfile, output_path + "build/")
+            job_args = ['./gala_model']
+            outfile.write(graph + "," + modes + ",")
+            outfile.flush()
+            run_at(job_args, outfile, errfile, output_path + "build/")
+
+            logfile.write(("<"*100)+"\n")
+            errfile.write(("<"*100)+"\n")
+            print("<"*100)
     logfile.close()
     errfile.close()
 
-def evalWise(args):
-    print("WiseGraph: Empty for now")
+    import pandas as pd
+    import numpy as np
+    import math
+    import scipy
+    from scipy import stats
 
-def createFigure(args):
-    print("Create Figure 16-17: Empty for now")
+    vals = {"Reddit" : 0, "Products" : 0}
 
-def main(args):
-    if (args.job == "gala"):
-        compile_and_get_time(args)
-    elif (args.job == "dgl"):
-        evalDGL(args)
-    elif (args.job == "wise"):
-        evalWise(args)
-    elif (args.job == "fig"):
-        createFigure(args)
+    gala_df = pd.read_csv(args.stat_log + "_input_aware.csv")
+    for index, row in gala_df.iterrows():
+        if (row['mode'] == "schedule"):
+            vals[row['graph']] = row['inference_time']
+        else:
+            print("Speedup of the input aware compilation for graph:", row['graph'] ", is:", row['inference_time'] / vals[row['graph']])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Graph Benchmark Runner')
