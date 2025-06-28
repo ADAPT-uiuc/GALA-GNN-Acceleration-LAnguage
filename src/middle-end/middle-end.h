@@ -349,12 +349,13 @@ public:
                             //     std::cout << "works3.2 " << oNode->getInput(1)->getName() << std::endl;
                             // }
                             if (outputUses > 0 &&
+                                oNode->getInput(0) == output &&
                                 oNode->getOp() == AGGREGATE_MUL_SUM_OP &&
                                 inputCols < outputCols &&
                                 !oNode->getInput(1)->getDataInfo()->getSparse())
                             {
-                                std::cout << "works1" << std::endl;
-                                std::cout << "use: " << oNode->getInput(0)->getName() << " op:" << oNode->getOp() << " " << oNode->getInput(0) << " " << output << std::endl;
+                                // std::cout << "works1" << std::endl;
+                                // std::cout << "use: " << oNode->getInput(0)->getName() << " op:" << oNode->getOp() << " " << oNode->getInput(0) << " " << output << std::endl;
                                 oNode->setInputDataNode(0, cNode->getInput(0));
                                 oNode->getOutput(0)->getDataInfo()->setDims(inputDataInfo->getDimRow(), inputCols);
 
@@ -382,7 +383,7 @@ public:
                             // std::cout << "works3.5" << std::endl;
                             if (oNode->getInput(0) == output)
                             {
-                                std::cout << "use: " << oNode->getInput(0)->getName() << " op:" << oNode->getOp() << " " << oNode->getInput(0) << " " << output << std::endl;
+                                // std::cout << "use: " << oNode->getInput(0)->getName() << " op:" << oNode->getOp() << " " << oNode->getInput(0) << " " << output << std::endl;
                                 outputUses++;
                             }
                             // std::cout << "works3.6" << std::endl;
