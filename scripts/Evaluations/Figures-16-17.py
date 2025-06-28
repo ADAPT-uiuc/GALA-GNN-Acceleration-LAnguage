@@ -218,6 +218,8 @@ def createFigure(args):
         data[mod] = {}
         for sys in systems:
             data[mod][sys] = {}
+            for graph in graph_name:
+                data[mod][sys][graph] = 0
 
     # Read GALA
     if args.train:
@@ -396,7 +398,8 @@ def createFigure(args):
         num = " 17 "
     else:
         num = " 16 "
-    plt.savefig("final/Figure" + num + alph + ".pdf", format="pdf", bbox_inches="tight", pad_inches=0, dpi=1000)
+    plt.savefig("Figure" + num + alph + ".pdf", format="pdf", bbox_inches="tight", pad_inches=0, dpi=1000)
+    
 def printStats(args):
     import pandas as pd
     import numpy as np
