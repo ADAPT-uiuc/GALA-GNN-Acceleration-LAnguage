@@ -467,32 +467,63 @@ DataNode* createDataNode(DataFormat rm_dtype, bool isDirected, bool isWeighted, 
     return data;
 }
 DataNode* addDegrees_CIR(DataNode* graphData, TrainingLoopNode* trainingLoop){
-    if (debug == 2) cout << "degrees\n";
-	ForwardNode* onesTensorOp = new ForwardNode(POINTWISE, ONES_OP);
-    DataNode* onesData = createDataNode(RM_DTYPE, false, false, {-1, 1}, true, "ones", INT32, INT32, F32);
-	onesTensorOp->addOutputData(onesData);
-	trainingLoop->addLoopNode(onesTensorOp);
-	//* Dependencies
-	RelationEdge* onesTensorGraphAssociation = new RelationEdge(graphData, ALL_RELATION, onesData, ROWS_RELATION);
-	GALAFEContext::associations.push_back(onesTensorGraphAssociation);
+    if ((m1.compute_transformations[SAMP_CPT] != 0)){
+        // The actual degrees calculation
+        ForwardNode* degreesOp = new ForwardNode(UPDATE_NODE, FULL_OP);
+        DataInfo* degreesInfo = new DataInfo(RM_DTYPE);
+        degreesInfo->setDims(-1, 1);
+        DataLevel* rootDegreesLevel = new DataLevel(degreesInfo, true);
+        DataNode* degreesData = new DataNode("degrees", INT32, INT32, F32, rootDegreesLevel);
+        degreesOp->addInputData(graphData);
+        degreesOp->addOutputData(degreesData);
+        degreesOp->addParam(to_string(m1.compute_transformations[SAMP_CPT]));
+        trainingLoop->addLoopNode(degreesOp);
+        RelationEdge* degreesOpGraphDependency = new RelationEdge(graphData, ALL_RELATION, degreesData, ROWS_RELATION);
+        GALAFEContext::dependencies.push_back(degreesOpGraphDependency);
+        return degreesData;
+    } else if ((m1.compute_transformations[SAMP_DYN_CPT] != 0)){
+          // The actual degrees calculation
+          ForwardNode* degreesOp = new ForwardNode(UPDATE_NODE, FULL_OP);
+          DataInfo* degreesInfo = new DataInfo(RM_DTYPE);
+          degreesInfo->setDims(-1, 1);
+          DataLevel* rootDegreesLevel = new DataLevel(degreesInfo, true);
+          DataNode* degreesData = new DataNode("degrees", INT32, INT32, F32, rootDegreesLevel);
+          degreesOp->addInputData(graphData);
+          degreesOp->addOutputData(degreesData);
+          degreesOp->addParam(to_string(m1.compute_transformations[SAMP_DYN_CPT]));
+          trainingLoop->addLoopNode(degreesOp);
+          RelationEdge* degreesOpGraphDependency = new RelationEdge(graphData, ALL_RELATION, degreesData, ROWS_RELATION);
+          GALAFEContext::dependencies.push_back(degreesOpGraphDependency);
+          return degreesData;
+      } else {
+        ForwardNode* onesTensorOp = new ForwardNode(POINTWISE, ONES_OP);
+        DataNode* onesData = createDataNode(RM_DTYPE, false, false, {-1, 1}, true, "ones", INT32, INT32, F32);
+        onesTensorOp->addOutputData(onesData);
+        trainingLoop->addLoopNode(onesTensorOp);
+        //* Dependencies
+        RelationEdge* onesTensorGraphAssociation = new RelationEdge(graphData, ALL_RELATION, onesData, ROWS_RELATION);
+        GALAFEContext::associations.push_back(onesTensorGraphAssociation);
 
-	// The actual degrees calculation
-	ForwardNode* degreesOp = new ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_DIRECT);
-	DataInfo* degreesInfo = new DataInfo(RM_DTYPE);
-	degreesInfo->setDims(-1, 1);
-	DataLevel* rootDegreesLevel = new DataLevel(degreesInfo, true);
-	DataNode* degreesData = new DataNode("degrees", INT32, INT32, F32, rootDegreesLevel);
-	degreesOp->addInputData(onesData);
-	degreesOp->addInputData(graphData);
-	degreesOp->addOutputData(degreesData);
-	if (m1.compute_transformations.size() > 0)
-	    degreesOp->addOpt(COARSE_COPT, m1.compute_transformations[COARSE]);
-	trainingLoop->addLoopNode(degreesOp);
-	RelationEdge* degreesOpOnesDependency = new RelationEdge(onesData, ALL_RELATION, degreesData, ALL_RELATION);
-	GALAFEContext::dependencies.push_back(degreesOpOnesDependency);
-	RelationEdge* degreesOpGraphDependency = new RelationEdge(graphData, ALL_RELATION, degreesData, ROWS_RELATION);
-	GALAFEContext::dependencies.push_back(degreesOpGraphDependency);
-    return degreesData;
+        // The actual degrees calculation
+        ForwardNode* degreesOp = new ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_DIRECT);
+        DataInfo* degreesInfo = new DataInfo(RM_DTYPE);
+        degreesInfo->setDims(-1, 1);
+        DataLevel* rootDegreesLevel = new DataLevel(degreesInfo, true);
+        DataNode* degreesData = new DataNode("degrees", INT32, INT32, F32, rootDegreesLevel);
+        degreesOp->addInputData(onesData);
+        degreesOp->addInputData(graphData);
+        degreesOp->addOutputData(degreesData);
+        if (m1.compute_transformations.size() > 0)
+            degreesOp->addOpt(COARSE_COPT, m1.compute_transformations[COARSE]);
+        trainingLoop->addLoopNode(degreesOp);
+        RelationEdge* degreesOpOnesDependency = new RelationEdge(onesData, ALL_RELATION, degreesData, ALL_RELATION);
+        GALAFEContext::dependencies.push_back(degreesOpOnesDependency);
+        RelationEdge* degreesOpGraphDependency = new RelationEdge(graphData, ALL_RELATION, degreesData, ROWS_RELATION);
+        GALAFEContext::dependencies.push_back(degreesOpGraphDependency);
+        return degreesData;
+    }
+
+
 }
 DataNode* addNormalization_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop){
     if (debug == 2) cout << "normalization setup\n";

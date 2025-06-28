@@ -60,6 +60,7 @@ enum ComputeOp {
     // Data creation ops
     ONES_OP,
     EPSILON_OP,
+    FULL_OP
 };
 
 enum CompOptimization {

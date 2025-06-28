@@ -1313,6 +1313,40 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
                 + ", " + colDims + "}, options_" + cNode->getOutput(0)->getName() + ");";
                 model.getForward()->addCode(onesCall);
             }
+        } else if (cNode->getOp() == FULL_OP)
+        {
+            auto outputInfo = cNode->getOutput(0)->getDataInfo();
+
+            std::string rowDims = processDims(outputInfo->getDimRow());
+            std::string colDims = processDims(outputInfo->getDimCol());
+
+            if (outOfLoop)
+            {
+                // TODO eventually use a device specific function for this.
+                std::string tempOptionsOnes = "    auto options_" + cNode->getOutput(0)->getName() +" = torch::TensorOptions()\n\
+                       .dtype(torch::kFloat)\n\
+                       .requires_grad(false)\n\
+                       .device(torch::kCUDA, 0);";
+                model.getInv()->addCode(tempOptionsOnes);
+
+                // TODO add the inputs to the forward call based on the actual inputs
+                std::string onesCall =  generateOutputString(cNode, outOfLoop) + " = torch::ones({" + rowDims
+                + ", " + colDims + "}, " + cNode->getParam(0) + " * segments, options_" + cNode->getOutput(0)->getName() + ");";
+                model.getInv()->addCode(onesCall);
+            } else
+            {
+                // TODO eventually use a device specific function for this.
+                std::string tempOptionsOnes = "    auto options_" + cNode->getOutput(0)->getName() +" = torch::TensorOptions()\n\
+                       .dtype(torch::kFloat)\n\
+                       .requires_grad(false)\n\
+                       .device(torch::kCUDA, 0);";
+                model.getForward()->addCode(tempOptionsOnes);
+
+                // TODO add the inputs to the forward call based on the actual inputs
+                std::string onesCall =  generateOutputString(cNode, outOfLoop) + " = torch::ones({" + rowDims
+                + ", " + colDims + "}, " + cNode->getParam(0) + " * segments, options_" + cNode->getOutput(0)->getName() + ");";
+                model.getForward()->addCode(onesCall);
+            }
         }
     }
 
