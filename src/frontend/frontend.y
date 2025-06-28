@@ -1035,6 +1035,14 @@ void generate_ir(){
       typedef DenseMatrix<ind1_t, ind2_t, lab_t> DL;
       typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;
 
+      typedef typename SM::itype iT;
+      typedef typename SM::ntype nT;
+      typedef typename SM::vtype vT;
+
+      typedef typename DM::itype diT;
+      typedef typename DM::ntype dnT;
+      typedef typename DM::vtype dvT;
+
       std::string filename;
       SM adj;
       filename = path;

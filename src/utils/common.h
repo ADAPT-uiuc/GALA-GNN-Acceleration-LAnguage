@@ -6,6 +6,7 @@
 
 #include "../formats/csrc_matrix.h"
 #include "../formats/coo_matrix.h"
+#include "../formats/dense_matrix.h"
 
 #include "../ops/aggregators.h"
 
