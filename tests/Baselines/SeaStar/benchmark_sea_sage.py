@@ -21,7 +21,6 @@ from ogb.nodeproppred import DglNodePropPredDataset
 from dgl import transform
 from dgl import DGLGraph
 import dgl
-import fast_matrix_market as fmm
 from seastar import CtxManager
 
 def evaluate(g, features, labels, mask, model, norm_data):
