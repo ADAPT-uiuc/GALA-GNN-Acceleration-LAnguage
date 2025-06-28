@@ -356,6 +356,8 @@ public:
                             {
                                 // std::cout << "works1" << std::endl;
                                 // std::cout << "use: " << oNode->getInput(0)->getName() << " op:" << oNode->getOp() << " " << oNode->getInput(0) << " " << output << std::endl;
+                                cNode->getInput(0)->setName(cNode->getInput(0)->getName() + "_n");
+
                                 oNode->setInputDataNode(0, cNode->getInput(0));
                                 oNode->getOutput(0)->getDataInfo()->setDims(inputDataInfo->getDimRow(), inputCols);
 
