@@ -1330,7 +1330,7 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
                 model.getInv()->addCode(tempOptionsOnes);
 
                 // TODO add the inputs to the forward call based on the actual inputs
-                std::string onesCall =  generateOutputString(cNode, outOfLoop) + " = torch::ones({" + rowDims
+                std::string onesCall =  generateOutputString(cNode, outOfLoop) + " = torch::full({" + rowDims
                 + ", " + colDims + "}, " + cNode->getParam(0) + " * global_segments[0], options_" + cNode->getOutput(0)->getName() + ");";
                 model.getInv()->addCode(onesCall);
             } else
@@ -1343,7 +1343,7 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
                 model.getForward()->addCode(tempOptionsOnes);
 
                 // TODO add the inputs to the forward call based on the actual inputs
-                std::string onesCall =  generateOutputString(cNode, outOfLoop) + " = torch::ones({" + rowDims
+                std::string onesCall =  generateOutputString(cNode, outOfLoop) + " = torch::full({" + rowDims
                 + ", " + colDims + "}, " + cNode->getParam(0) + " * global_segments[0], options_" + cNode->getOutput(0)->getName() + ");";
                 model.getForward()->addCode(onesCall);
             }
