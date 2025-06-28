@@ -381,6 +381,7 @@ public:
                             // std::cout << "works3.5" << std::endl;
                             if (oNode->getInput(0) == output)
                             {
+                                std::cout << "use" << oNode->getInput(0)->getName() <<" op:" << oNode->getOp() << std::endl;
                                 outputUses++;
                             }
                             // std::cout << "works3.6" << std::endl;
