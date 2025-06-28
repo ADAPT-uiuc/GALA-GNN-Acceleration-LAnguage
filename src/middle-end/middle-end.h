@@ -368,8 +368,8 @@ public:
                                 resInfo->setDims(-1, outputCols); // -1=N=232965, the number of nodes in the graph, -3=output classes
                                 auto rootResLevel = new DataLevel(resInfo, true);
                                 auto resData = new DataNode("res", INT32, INT32, F32, rootResLevel);
-                                ffn->addInputData(cNode->getInput(0));
-                                ffn->addInputData(oNode->getInput(1));
+                                ffn->addInputData(oNode->getOutput(0));
+                                ffn->addInputData(cNode->getInput(1));
                                 ffn->addOutputData(resData);
                                 lNode->insertToLoopNodes(iy + 1, ffn);
                                 //* Dependencies
