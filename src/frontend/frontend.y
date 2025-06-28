@@ -594,6 +594,7 @@ DataNode* addFFN_CIR(DataNode* prevData, TrainingLoopNode* trainingLoop, int lay
     string weightNum = "weight" + to_string(layerNum+1);
     pair<int,int> weightInputDim;
     pair<int,int> resInputDim;
+    std::cout << weightNum << " " << m1.graph_transformations[FEAT_SIZE]  << " " << m1.output_input_classes[layerNum] << " " << m1.graph_transformations[LABEL_SIZE] << std::endl;
     if (layerNum == 0){
         weightInputDim = {m1.graph_transformations[FEAT_SIZE], m1.output_input_classes[layerNum]};
         resInputDim = {-1, m1.output_input_classes[layerNum]};
