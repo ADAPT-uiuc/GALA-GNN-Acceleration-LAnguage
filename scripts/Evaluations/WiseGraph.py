@@ -1,15 +1,26 @@
+import argparse
 import subprocess
 import os
 import shutil
 
-# Path to the bash script
+parser = argparse.ArgumentParser(description="Run WiseGraph test with specified hardware")
+parser.add_argument("--a100", action="store_true", help="Use A100 hardware")
+parser.add_argument("--h100", action="store_true", help="Use H100 hardware")
+args = parser.parse_args()
+
+if args.a100:
+    hardware = "a100"
+elif args.h100:
+    hardware = "h100"
+else:
+    raise ValueError("Please specify either --a100 or --h100")
+
 script_path = os.path.abspath("../../../CxGNN-Compute/test/ae/E1_overall/run_wisegraph.sh")
 working_dir = os.path.dirname(script_path)
 
-# Run the bash script in its own directory
 try:
     result = subprocess.run(
-        ["bash", os.path.basename(script_path)],
+        ["bash", os.path.basename(script_path), hardware],
         cwd=working_dir,
         check=True,
         capture_output=True,
@@ -23,7 +34,6 @@ except subprocess.CalledProcessError as e:
     print("Script failed with return code:", e.returncode)
     print("Error output:\n", e.stderr)
 
-# Copy result CSVs to the current directory
 output_files = ["results_fig16_17.csv", "results_fig18_19.csv", "results_table5.csv"]
 for fname in output_files:
     src_path = os.path.join(working_dir, fname)
