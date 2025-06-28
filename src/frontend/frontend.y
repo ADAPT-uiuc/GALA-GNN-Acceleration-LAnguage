@@ -55,7 +55,7 @@ string opt_input = "";
 %token<sval> INTEGER FLOAT SOFTMAX INIT_WEIGHT OPT_INPUT;
 %token<sval> LBRACE RBRACE DOT COMMA;
 %token<sval> TR FA OP_REORD SPARSE_REWRITES TRAIN_SUBGRAPH TRAIN_CODE_MOTION;
-%token<sval> PLUS MINUS MULTIPLY DIVIDE PRINT_ACC PRINT_MEM
+%token<sval> PLUS MINUS MULTIPLY DIVIDE PRINT_ACC PRINT_MEM EDGEFN
 %token<sval> FFN NULL_KEY EDGE_AGGR_INIT SUM EDGE_ATTR VAL_ATTR AGGRFN FILEPATH
 %token<sval> LOSS OPTIMIZER RMSE_LOSS ADAM_T DSL_FN RELAXNLN QUANT RABBIT_REORDER_OP SAMPLE_RANDOM_OP AGGR LSQBRA RSQBRA IF ELSE DO WHILE NOT AND OR NOTEQ EQ GREATER LESS GREATEREQ LESSEQ DATASET NONLN SENSEI_OP INT NEW
 
@@ -82,9 +82,10 @@ statements : { }
     | statements statement 
     {}
 ;
-statement : IDENTIFIER ASSIGN function_init SEMICOLON
-    {
-    }
+statement : AGGRFN ASSIGN function_init SEMICOLON
+    {}
+    | EDGEFN ASSIGN function_init SEMICOLON
+    {}
     | IDENTIFIER ASSIGN IDENTIFIER DOT GRAPH_ATTR SEMICOLON
     {
     }
@@ -313,7 +314,7 @@ data_transform : data_var ASSIGN data_var DOT SET_UNDIRECTED LPAREN bool RPAREN 
     { print_memory = $3; }
 ;
 // this is where to do compute transform
-function_transform : data_var ASSIGN data_var DOT COARSEN LPAREN INTEGER RPAREN SEMICOLON
+function_transform : AGGRFN ASSIGN AGGRFN DOT COARSEN LPAREN INTEGER RPAREN SEMICOLON
     {m1.addComputeTransformation(COARSE, atof($7)); }
     | OP_REORD LPAREN bool RPAREN SEMICOLON
     { GALAFEContext::operator_reordering = $3;}
@@ -324,8 +325,8 @@ function_transform : data_var ASSIGN data_var DOT COARSEN LPAREN INTEGER RPAREN 
     | TRAIN_CODE_MOTION LPAREN bool RPAREN SEMICOLON
     { GALAFEContext::train_code_motion = $3; }
     | AGGRFN ASSIGN AGGRFN DOT SAMPLE_OPT LPAREN INTEGER RPAREN SEMICOLON
-    { m1.addComputeTransformation(SAMP_CPT, atof($7)); }
-    | data_var ASSIGN data_var DOT SAMPLE_OPT LPAREN INTEGER RPAREN DOT DYNAMIC_OPT LPAREN RPAREN SEMICOLON
+    {  m1.addComputeTransformation(SAMP_CPT, atof($7)); }
+    | AGGRFN ASSIGN AGGRFN DOT SAMPLE_OPT LPAREN INTEGER RPAREN DOT DYNAMIC_OPT LPAREN RPAREN SEMICOLON
     { m1.addComputeTransformation(SAMP_DYN_CPT, atof($7)); }
 ;
 feats_s : IDENTIFIER DOT NODE_ATTR DOT FEAT_ATTR {};
@@ -431,6 +432,8 @@ arg : INTEGER COMMA { m1.output_input_classes.push_back(atof($1)); } | INTEGER
     } // not matching if its same arg number as nonln, but for now its okay
     | data_var COMMA { } | data_var {}
     | DSL_DOT RELU { $$ = 0; } | DSL_DOT RELU COMMA  { $$ = 0; }
+    | AGGRFN {} | AGGRFN COMMA {}
+    | EDGEFN {} | EDGEFN COMMA {}
 ;
 bool : TR { $$ = 1; } | FA { $$ = 0; };
 string : QUOTE IDENTIFIER QUOTE
