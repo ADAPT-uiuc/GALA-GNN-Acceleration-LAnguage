@@ -8,6 +8,7 @@
 #include "../ir/data.h"
 #include "../ir/compute.h"
 #include "../ir/frontend_metadata.h"
+#include "../utils/common.h"
 
 #include <vector>
 #include <map>
