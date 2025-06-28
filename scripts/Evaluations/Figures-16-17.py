@@ -88,7 +88,7 @@ def compile_and_get_time(args):
             errfile.write(curr+"\n")
 
             job_args = ['cmake',
-                        '-DCMAKE_PREFIX_PATH="/home/damitha2/new_torch/libtorch"',
+                        '-DCMAKE_PREFIX_PATH="../Environments/libtorch"',
                         '-DCAFFE2_USE_CUDNN=True',
                         '..']
             run_at(job_args, logfile, errfile, output_path + "build/")
