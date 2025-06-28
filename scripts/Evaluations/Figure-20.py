@@ -4,7 +4,7 @@ import os
 
 build_path = r"../../build/"
 
-dgl_map = {"papers100M":"ogbn-papers100M"}
+graphs = ["Reddit", "Products"]
 
 sample_precen = ["1", "2", "5", "10", "20"]
 
