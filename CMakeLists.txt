@@ -333,8 +333,6 @@ else()
         else()
             set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -liomp5")
         endif ()
-    else()
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgomp -lopenblas")
     endif ()
 endif ()
 
