@@ -354,7 +354,7 @@ public:
                                 inputCols < outputCols &&
                                 !oNode->getInput(1)->getDataInfo()->getSparse())
                             {
-                                // std::cout << "works1" << std::endl;
+                                std::cout << "works1" << std::endl;
                                 // std::cout << "use: " << oNode->getInput(0)->getName() << " op:" << oNode->getOp() << " " << oNode->getInput(0) << " " << output << std::endl;
                                 cNode->getOutput(0)->setName(cNode->getOutput(0)->getName() + "_e");
 
@@ -385,7 +385,7 @@ public:
                             // std::cout << "works3.5" << std::endl;
                             if (oNode->getInput(0) == output)
                             {
-                                // std::cout << "use: " << oNode->getInput(0)->getName() << " op:" << oNode->getOp() << " " << oNode->getInput(0) << " " << output << std::endl;
+                                std::cout << "use: " << oNode->getInput(0)->getName() << " op:" << oNode->getOp() << " " << oNode->getInput(0) << " " << output << std::endl;
                                 outputUses++;
                             }
                             // std::cout << "works3.6" << std::endl;
