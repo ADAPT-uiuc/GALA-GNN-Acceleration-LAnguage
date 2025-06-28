@@ -1,6 +1,10 @@
 //
 // Created by damitha on 6/6/22.
 //
+
+#ifndef _COMMON_H
+#define _COMMON_H
+
 #include "mtx_io.h"
 #include "threading_utils.h"
 
@@ -699,3 +703,4 @@ double calc_mean(std::vector<double> &vec) {
 //    }
 //    return edges;
 //}
+#endif
