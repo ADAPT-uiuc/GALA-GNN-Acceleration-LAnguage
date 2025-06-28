@@ -377,7 +377,7 @@ public:
                                 auto inOutWeightAssociation = new RelationEdge(oNode->getOutput(0), ROWS_RELATION, cNode->getInput(1), COLS_RELATION);
                                 associations.push_back(inOutWeightAssociation);
                                 // std::cout << "works2" << std::endl;
-                                output->setName("res_f");
+                                output->setName("res");
                             }
                             // std::cout << "works3.5" << std::endl;
                             if (oNode->getInput(0) == output)
