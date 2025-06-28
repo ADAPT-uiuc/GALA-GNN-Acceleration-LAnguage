@@ -8,7 +8,6 @@
 #include "../ir/data.h"
 #include "../ir/compute.h"
 #include "../ir/frontend_metadata.h"
-#include "../utils/common.h"
 
 #include <vector>
 #include <map>
@@ -29,6 +28,8 @@ class GALAFEContext {
 		static bool train_code_motion;
 		static bool print_memory;
 		static bool print_accuracy;
+
+		static std::string opt_input;
 };
 
 #endif //CONTEXT_H
