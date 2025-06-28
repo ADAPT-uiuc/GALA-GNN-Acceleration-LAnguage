@@ -697,7 +697,9 @@ public:
                                         auto nextInput = nextNode->getInput(0);
                                         auto nextOutput = nextNode->getOutput(0);
 
-                                        output->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+                                        output->getDataInfo()->setDims(-1, inCols);
+
+                                        std::cout << "in:" << cNode->getInput(1)->getName() << std::endl;
 
                                         if (output->getName() == nextOutput->getName())
                                         {
@@ -727,7 +729,7 @@ public:
                                         auto nextInput = nextNode->getInput(1);
                                         auto nextOutput = nextNode->getOutput(0);
 
-                                        output->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
+                                        output->getDataInfo()->setDims(-1, inCols);
 
                                         // New next node
                                         cNode->setInputDataNode(0, output);
