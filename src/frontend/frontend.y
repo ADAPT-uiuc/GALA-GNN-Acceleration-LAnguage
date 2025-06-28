@@ -1045,7 +1045,7 @@ void generate_ir(){
 
       std::string filename;
       SM adj;
-      filename = path;
+      filename = opt_input;
       readSM_npy32<SM>(filename, &adj);
 
       // Adj info
@@ -1071,7 +1071,7 @@ void generate_ir(){
       m1.graph_transformations[FEAT_SIZE] = emb_size;
       m1.graph_transformations[LABEL_SIZE] = classes;
       if ((nvals / (nrows * nrows)) > 50) {
-        m1.addDataTransformation(COL_TILE, to_string(nrows / 4));
+        m1.addDataTransformation(COL_TILE, nrows / 4);
       }
     }
 
