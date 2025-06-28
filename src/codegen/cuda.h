@@ -157,6 +157,12 @@ public:
             res += "else {\n";
             res += coarsenedKernelCall(cNode, cFact - 1, -1, weighted);
             res += "}\n";
+        } else if (cFact != 0 )
+        {
+            res += "else {\n";
+            std::cout << "ss:" <<  cFact - 1 << std::endl;
+            res += coarsenedKernelCall(cNode, cFact - 1, 0, weighted);
+            res += "}\n";
         }
         return res;
     }
