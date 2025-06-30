@@ -1,0 +1,20 @@
+train:
+  name: neighbor
+  num_layer: 3
+  fanouts:
+    - 10
+    - 15
+    - 20
+  batch_size: 1000
+  replace: False
+  self_loop: True
+eval:
+  name: neighbor
+  num_layer: 3
+  fanouts:
+    - 30
+    - 30
+    - 30
+  batch_size: 100
+  replace: False
+  self_loop: True

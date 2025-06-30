@@ -1,0 +1,16 @@
+train:
+  name: saint
+  batch_size: 4000
+  num_layer: 3
+  fanouts:
+    - 10
+    - 15
+    - 20
+eval:
+  name: saint
+  batch_size: 4000
+  num_layer: 3
+  fanouts:
+    - 30
+    - 30
+    - 30

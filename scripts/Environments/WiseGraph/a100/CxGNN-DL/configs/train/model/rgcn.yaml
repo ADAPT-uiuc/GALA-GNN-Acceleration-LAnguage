@@ -1,0 +1,6 @@
+type: RGCN
+hidden_dim: 256
+num_layers: 3
+num_rel: 7
+dropout: 0.1
+loss_fn: nll

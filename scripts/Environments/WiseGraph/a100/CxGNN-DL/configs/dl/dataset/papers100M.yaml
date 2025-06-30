@@ -1,0 +1,7 @@
+name: papers100M
+path: ../../../../data/papers100M
+split_type: time
+symmetric: True
+num_classes: 172
+feature_dim: 128
+evaluator: acc
