@@ -384,6 +384,10 @@ public:
         {
             if (cNode->getOutput(0)->getName() == cNode->getInput(ix)->getName())
             {
+                if (cNode->getOp() == FFN_OP)
+                {
+
+                }
                 return cNode->getInput(ix)->getName();
             }
         }
