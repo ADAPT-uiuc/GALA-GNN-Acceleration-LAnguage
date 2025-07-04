@@ -8,7 +8,7 @@ basedir = "../Environments/WiseGraph/data/"
 dataset_name = "ogbn-papers100M"
 
 # Define the percentages (as fractions) for which subgraphs will be saved
-percentages = [0.01, 0.02, 0.05, 0.10]
+percentages = [0.01, 0.02, 0.05, 0.10, 0.2]
 undirected = True  # set to False for a directed version
 
 print(f"Loading dataset: {dataset_name}")
