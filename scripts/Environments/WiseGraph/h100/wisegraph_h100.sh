@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # module load cmake
-# module load cuda-toolkit/12.2
+# module load cuda-toolkit/11.8
 
 mkdir .venv
 python3 -m venv .venv/cxgnn2
