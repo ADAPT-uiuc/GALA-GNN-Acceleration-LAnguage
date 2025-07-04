@@ -4,7 +4,7 @@ import scipy.sparse as sp
 from ogb.nodeproppred import DglNodePropPredDataset
 import dgl
 
-basedir = "../../../data/" 
+basedir = "../Environments/WiseGraph/data/" 
 datasets = ["ogbn-arxiv", "ogbn-products"]
 undirected = True  # Change to False if you want the directed version
 
