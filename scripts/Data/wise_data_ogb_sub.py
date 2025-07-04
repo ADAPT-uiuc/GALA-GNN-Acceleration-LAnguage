@@ -4,7 +4,7 @@ import scipy.sparse as sp
 from ogb.nodeproppred import DglNodePropPredDataset
 import dgl
 
-basedir = "../../../data/"
+basedir = "../Environments/WiseGraph/data/"
 dataset_name = "ogbn-papers100M"
 
 # Define the percentages (as fractions) for which subgraphs will be saved
@@ -13,7 +13,7 @@ undirected = True  # set to False for a directed version
 
 print(f"Loading dataset: {dataset_name}")
 # Load the dataset
-dataset = DglNodePropPredDataset(name=dataset_name)
+dataset = DglNodePropPredDataset(name=dataset_name, root="../../Data/ogb/")
 split_idx = dataset.get_idx_split()  # train/valid/test split indices
 dgl_graph, labels = dataset[0]         # get the DGL graph and node labels
 

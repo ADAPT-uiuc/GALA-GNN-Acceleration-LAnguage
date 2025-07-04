@@ -4,7 +4,7 @@ import scipy.sparse as sp
 from ogb.nodeproppred import DglNodePropPredDataset
 import dgl
 
-basedir = "../../../data/" 
+basedir = "../Environments/WiseGraph/data/"
 datasets = ["ogbn-arxiv", "ogbn-products"]
 undirected = True  # Change to False if you want the directed version
 
@@ -12,7 +12,7 @@ for name in datasets:
     print(f"Processing dataset: {name}")
 
     # Load the dataset
-    dataset = DglNodePropPredDataset(name=name)
+    dataset = DglNodePropPredDataset(name=name, root="../../Data/ogb/")
     split_idx = dataset.get_idx_split()  # Get the split indices for train/validation/test
     dgl_graph, labels = dataset[0]  # Get the DGL graph and labels
     

@@ -6,7 +6,7 @@ import dgl
 from dgl import AddSelfLoop
 import torch
 
-basedir = "../../../data/" 
+basedir = "../Environments/WiseGraph/data/"
 os.makedirs(basedir, exist_ok=True)
 undirected = True  # Change to False if you want the directed version
 
