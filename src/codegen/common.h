@@ -1208,7 +1208,7 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
                 inputSizes.push_back(cNode->getInput(1)->getDataInfo()->getDimCol());
 
                 // TODO add the inputs to the forward call based on the actual inputs
-                std::cout << "cc: " << generateOutputString(cNode, outOfLoop) << std::endl;
+                std::cout << "cc: " << generateOutputString(cNode, outOfLoop) << " -- " << std::to_string(fcCount) << std::endl;
                 std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
                 model.getForward()->addCode(forwardCall);
   
