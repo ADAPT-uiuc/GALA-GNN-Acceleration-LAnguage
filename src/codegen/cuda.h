@@ -160,7 +160,7 @@ public:
         } else if (cFact != 0 )
         {
             res += "else {\n";
-            std::cout << "ss:" <<  cFact - 1 << std::endl;
+            // std::cout << "ss:" <<  cFact - 1 << std::endl;
             res += coarsenedKernelCall(cNode, cFact - 1, 0, weighted, skip + 1);
             res += "}\n";
         }

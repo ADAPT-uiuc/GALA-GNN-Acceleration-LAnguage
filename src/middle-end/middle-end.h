@@ -355,9 +355,9 @@ public:
                                 !oNode->getInput(1)->getDataInfo()->getSparse())
                             {
                                 // std::cout << "use: " << oNode->getInput(0)->getName() << " op:" << oNode->getOp() << " " << oNode->getInput(0) << " " << output << std::endl;
-                                std::cout << "out-name1:" << cNode->getOutput(0)->getName() << std::endl;
+                                // std::cout << "out-name1:" << cNode->getOutput(0)->getName() << std::endl;
                                 cNode->getOutput(0)->setName(cNode->getOutput(0)->getName() + "_e");
-                                std::cout << "out-name2:" << cNode->getOutput(0)->getName() << std::endl;
+                                // std::cout << "out-name2:" << cNode->getOutput(0)->getName() << std::endl;
 
                                 oNode->setInputDataNode(0, cNode->getInput(0));
                                 oNode->getOutput(0)->getDataInfo()->setDims(inputDataInfo->getDimRow(), inputCols);

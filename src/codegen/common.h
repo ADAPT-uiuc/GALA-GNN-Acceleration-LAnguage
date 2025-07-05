@@ -407,7 +407,7 @@ public:
         for (int ix = 0; ix < transforms.size(); ix++)
         {
             auto transform = transforms[ix];
-            std::cout << "aa: " << transform->getNode1()->getName() << " " << transform->getNode2()->getName() << " " << transform->getNumTransformations() << std::endl;
+            // std::cout << "aa: " << transform->getNode1()->getName() << " " << transform->getNode2()->getName() << " " << transform->getNumTransformations() << std::endl;
             if (transform->getNode1()->getName() == srcNode->getName())
             {
                 auto dNode = transform->getNode2();
@@ -1208,7 +1208,7 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
                 inputSizes.push_back(cNode->getInput(1)->getDataInfo()->getDimCol());
 
                 // TODO add the inputs to the forward call based on the actual inputs
-                std::cout << "cc1: " << generateOutputString(cNode, outOfLoop) << " -- " << std::to_string(fcCount) << std::endl;
+                // std::cout << "cc1: " << generateOutputString(cNode, outOfLoop) << " -- " << std::to_string(fcCount) << std::endl;
                 std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
                 model.getForward()->addCode(forwardCall);
   
@@ -1216,7 +1216,7 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
             fcCount++;
         }  else if (cNode->getOp() == FFN_OP_REPEAT)
         {
-            std::cout << "cc2: " << generateOutputString(cNode, outOfLoop) << " -- " << std::to_string(fcCount) << std::endl;
+            // std::cout << "cc2: " << generateOutputString(cNode, outOfLoop) << " -- " << std::to_string(fcCount) << std::endl;
             // TODO add the inputs to the forward call based on the actual inputs
             std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = fc" + std::to_string(fcCount - 1) + "->forward(" + cNode->getInput(0)->getName() + ");";
             model.getForward()->addCode(forwardCall);
