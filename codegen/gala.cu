@@ -63,144 +63,9 @@ std::vector<torch::Tensor> global_bounds;
     }\
   } while (0)
 extern "C" __global__ void __launch_bounds__(256)
-    default_function_kernel_spmm_backward_sddmm_32_eaggr(
-        float *__restrict__ C, // Output dense
-        int *__restrict__ J_indptr_data,
-        float *__restrict__ A, // Input values
-        int *__restrict__ J_indices_data, int nrows) {
-  if (((((int)blockIdx.x) * 32) + ((int)threadIdx.x)) < nrows) {
-    float local_C = 1e-12;
-    for (int j = 0;
-         j <
-         (J_indptr_data[(((((int)blockIdx.x) * 32) + ((int)threadIdx.x)) + 1)] -
-          J_indptr_data[((((int)blockIdx.x) * 32) + ((int)threadIdx.x))]);
-         ++j) {
-      local_C = (local_C + (A[(j + J_indptr_data[((((int)blockIdx.x) * 32) +
-                                                  ((int)threadIdx.x))])]));
-    }
-    C[((((int)blockIdx.x) * 32) + ((int)threadIdx.x))] =
-        C[((((int)blockIdx.x) * 32) + ((int)threadIdx.x))] + local_C;
-  }
-}
-extern "C" __global__ void __launch_bounds__(256)
-default_function_kernel_sddvv_plus_undir(
-    float *__restrict__ C,           // output
-    int *__restrict__ J_indptr_data, // index pointer
-    float *__restrict__ A,           // input A
-    float *__restrict__ B,           // Input B
-    int *__restrict__ J_indices_data, int nrows) {
-    if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) { // This is fine
-        for (int j = (int)threadIdx.x; // Not fine. This should increase by 32
-             j <
-             (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
-              J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
-             j += 32) {
-            C[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] =
-                (A[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))] +
-                 B[(J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
-                                                       ((int)threadIdx.y))])])]);
-             }
-    }
-}
-extern "C" __global__ void __launch_bounds__(256)
-default_function_kernel_sddmm_mult_undir_shared(
-    float *__restrict__ C,           // output
-    int *__restrict__ J_indptr_data, // index pointer
-    float *__restrict__ A,           // input A
-    float *__restrict__ B,           // Input B
-    int *__restrict__ J_indices_data, int nrows, int dcols) {
-    extern __shared__ float shared_mem[];
-    if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) { // This is fine
-        for (int k = threadIdx.x; k < dcols; k += 32) {
-            if (k < dcols) {
-                shared_mem[k] =
-                    A[((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + k];
-            }
-        }
-        __syncthreads();
-        for (int j = (int)threadIdx.x; // Not fine. This should increase by 32
-             j <
-             (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
-              J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
-             j += 32) {
-            float local_C = 0;
-            for (int k = 0; k < dcols; k++) {
-                local_C =
-                    local_C +
-                    ((shared_mem[k] *
-                      B[(J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
-                                                            ((int)threadIdx.y))])]) *
-                            dcols +
-                        k]));
-            }
-            C[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] =
-                local_C;
-             }
-    }
-}
-
-extern "C" __global__ void __launch_bounds__(256)
-default_function_kernel_spmm_backward_sddmm_32_nln(
-    float *__restrict__ C, // Output dense
-    int *__restrict__ J_indptr_data,
-    float *__restrict__ A, // Input values
-    int *__restrict__ J_indices_data, int nrows) {
-  if (((((int)blockIdx.x) * 32) + ((int)threadIdx.x)) < nrows) {
-    float local_C = 1e-12;
-    for (int j = 0;
-         j <
-         (J_indptr_data[(((((int)blockIdx.x) * 32) + ((int)threadIdx.x)) + 1)] -
-          J_indptr_data[((((int)blockIdx.x) * 32) + ((int)threadIdx.x))]);
-         ++j) {
-      local_C = (local_C + (A[(j + J_indptr_data[((((int)blockIdx.x) * 32) +
-                                                  ((int)threadIdx.x))])]));
-    }
-    C[((((int)blockIdx.x) * 32) + ((int)threadIdx.x))] =
-        C[((((int)blockIdx.x) * 32) + ((int)threadIdx.x))] + local_C;
-  }
-}
-extern "C" __global__ void __launch_bounds__(256)
-default_function_kernel_softmax_sddvv_undir(
-    float *__restrict__ C,           // output (values)
-    int *__restrict__ J_indptr_data, // index pointer
-    float *__restrict__ A,           // input A
-    int *__restrict__ J_indices_data, int nrows) {
-    if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) { // This is fine
-        for (int j = (int)threadIdx.x; // Not fine. This should increase by 32
-             j <
-             (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
-              J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
-             j += 32) {
-            C[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] =
-                C[(j +
-                   J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] *
-                (A[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
-             }
-    }
-}
-extern "C" __global__ void __launch_bounds__(256)
-default_function_kernel_mult_sddvv_undir(
-    float *__restrict__ C,           // output (values)
-    int *__restrict__ J_indptr_data, // index pointer
-    float *__restrict__ A,           // input A
-    int *__restrict__ J_indices_data, int nrows) {
-    if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) { // This is fine
-        for (int j = (int)threadIdx.x; // Not fine. This should increase by 32
-             j <
-             (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
-              J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
-             j += 32) {
-            C[(j + J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] =
-                C[(j +
-                   J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))])] *
-                (A[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
-             }
-    }
-}
-extern "C" __global__ void __launch_bounds__(256)
-aggregate_node_mul_sum_coarse2_kernel0(float *__restrict__ C,
+aggregate_node_mul_sum_direct_coarse2_kernel0(float *__restrict__ C,
                     int *__restrict__ J_indptr_data,
-                                float *__restrict__ A, float *__restrict__ B,
+float *__restrict__ B,
                     int *__restrict__ J_indices_data, int nrows,
                     int dcols) {
 if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
@@ -210,8 +75,88 @@ if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
              (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
               J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
              ++j) {
-            local0 = local0 +A[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
-                                    ((int)threadIdx.y))])] * (B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + 
+            local0 = local0 +(B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + 
+                                                         ((int)threadIdx.y))])] * 
+                      dcols) + (((int)blockIdx.y) * 32)) + ((int)threadIdx.x) + 0)]);
+             }
+
+C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+(((int)blockIdx.y) * 32)) +
+((int)threadIdx.x) + 0)] = local0;
+   }
+}
+
+extern "C" __global__ void __launch_bounds__(256)
+aggregate_node_mul_sum_direct_coarse2_kernel1(float *__restrict__ C,
+                    int *__restrict__ J_indptr_data,
+float *__restrict__ B,
+                    int *__restrict__ J_indices_data, int nrows,
+                    int dcols) {
+if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
+    float local0 = C[(((((((int)blockIdx.x) * 8)+ ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 0)];
+    float local1 = C[(((((((int)blockIdx.x) * 8)+ ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x)) + 32)];
+        for (int j = 0;
+             j <
+             (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
+              J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
+             ++j) {
+            local0 = local0 +(B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + 
+                                                         ((int)threadIdx.y))])] * 
+                      dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x) + 0)]);
+            local1 = local1 +(B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + 
+                                                         ((int)threadIdx.y))])] * 
+                      dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x) + 32)]);
+             }
+
+C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+(((int)blockIdx.y) * 64)) +
+((int)threadIdx.x) + 0)] = local0;
+
+C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+(((int)blockIdx.y) * 64)) +
+((int)threadIdx.x) + 32)] = local1;
+   }
+}
+
+extern "C" __global__ void __launch_bounds__(256)
+aggregate_node_mul_sum_direct_coarse2_kernel0_offset(float *__restrict__ C,
+                    int *__restrict__ J_indptr_data,
+float *__restrict__ B,
+                    int *__restrict__ J_indices_data, int nrows,
+                    int dcols, int offset) {
+if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
+    float local0 = C[(((((((int)blockIdx.x) * 8)+ ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 32)) + ((int)threadIdx.x)) + 0) + offset];
+for (int j = 0;
+ j <
+ (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
+  J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
+ ++j) {
+local0 = local0 +(B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + 
+                                             ((int)threadIdx.y))])] * 
+          dcols) + (((int)blockIdx.y) * 32)) + ((int)threadIdx.x) + 0) + offset]);
+             }
+
+C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
+(((int)blockIdx.y) * 32)) +
+((int)threadIdx.x) + 0) + offset] = local0;
+   }
+}
+
+
+extern "C" __global__ void __launch_bounds__(256)
+aggregate_node_mul_sum_coarse2_kernel0(float *__restrict__ C,
+                    int *__restrict__ J_indptr_data,
+float *__restrict__ B,
+                    int *__restrict__ J_indices_data, int nrows,
+                    int dcols) {
+if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
+    float local0 = C[(((((((int)blockIdx.x) * 8)+ ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * 32)) + ((int)threadIdx.x)) + 0)];
+        for (int j = 0;
+             j <
+             (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
+              J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
+             ++j) {
+            local0 = local0 +(B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + 
                                                          ((int)threadIdx.y))])] * 
                       dcols) + (((int)blockIdx.y) * 32)) + ((int)threadIdx.x) + 0)]);
              }
@@ -225,7 +170,7 @@ C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
 extern "C" __global__ void __launch_bounds__(256)
 aggregate_node_mul_sum_coarse2_kernel1(float *__restrict__ C,
                     int *__restrict__ J_indptr_data,
-                                float *__restrict__ A, float *__restrict__ B,
+float *__restrict__ B,
                     int *__restrict__ J_indices_data, int nrows,
                     int dcols) {
 if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
@@ -236,12 +181,10 @@ if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
              (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
               J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
              ++j) {
-            local0 = local0 +A[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
-                                    ((int)threadIdx.y))])] * (B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + 
+            local0 = local0 +(B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + 
                                                          ((int)threadIdx.y))])] * 
                       dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x) + 0)]);
-            local1 = local1 +A[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
-                                    ((int)threadIdx.y))])] * (B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + 
+            local1 = local1 +(B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + 
                                                          ((int)threadIdx.y))])] * 
                       dcols) + (((int)blockIdx.y) * 64)) + ((int)threadIdx.x) + 32)]);
              }
@@ -259,7 +202,7 @@ C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
 extern "C" __global__ void __launch_bounds__(256)
 aggregate_node_mul_sum_coarse2_kernel0_offset(float *__restrict__ C,
                     int *__restrict__ J_indptr_data,
-                                float *__restrict__ A, float *__restrict__ B,
+float *__restrict__ B,
                     int *__restrict__ J_indices_data, int nrows,
                     int dcols, int offset) {
 if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {
@@ -269,8 +212,7 @@ for (int j = 0;
  (J_indptr_data[(((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) + 1)] -
   J_indptr_data[((((int)blockIdx.x) * 8) + ((int)threadIdx.y))]);
  ++j) {
-local0 = local0 +A[(j + J_indptr_data[((((int)blockIdx.x) * 8) +
-                                    ((int)threadIdx.y))])] * (B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + 
+local0 = local0 +(B[(((J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) + 
                                              ((int)threadIdx.y))])] * 
           dcols) + (((int)blockIdx.y) * 32)) + ((int)threadIdx.x) + 0) + offset]);
              }
@@ -282,207 +224,90 @@ C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +
 }
 
 
-torch::Tensor node_spmv_backward_of_sddmm_eaggr(torch::Tensor offset_graph,
-                                          torch::Tensor columns_graph,
-                                          torch::Tensor value_graph,
-                                          torch::Tensor bounds, int nrows,
-                                          int segments) {
-  // Output
-  auto options = torch::TensorOptions()
-                     .dtype(torch::kFloat)
-                     .requires_grad(true)
-                     .device(torch::kCUDA, 0);
-  auto output_dense = torch::zeros({nrows, 1}, options);
-  float *oden_array = output_dense.data_ptr<float>();
-
-  // Sparse
-  int *offset_ptr = offset_graph.data_ptr<int>();
-  int *col_ptr = columns_graph.data_ptr<int>();
-  float *val_ptr = value_graph.data_ptr<float>();
-  int *bounds_ptr = bounds.data_ptr<int>();
-
-  for (int i = 0; i < segments; i++) {
-    int i1 = i;
-    int start_vals = bounds_ptr[i1 * 2];
-
-    cudaStream_t stream1;
-
-    cudaStreamCreate(&stream1);
-    dim3 gridDim_rem(((int)(nrows - 1) / 32) + 1);
-    dim3 blockDim_rem(32);
-    default_function_kernel_spmm_backward_sddmm_32_eaggr<<<gridDim_rem, blockDim_rem,
-                                                     0, stream1>>>(
-        oden_array, &offset_ptr[i1 * (nrows + 1)], &val_ptr[start_vals],
-        &col_ptr[start_vals], nrows);
-  }
-
-  return output_dense;
-}
-torch::Tensor edge_sddvv(torch::Tensor input_dense1, torch::Tensor input_dense2,
-torch::Tensor offset_graph,
-torch::Tensor columns_graph, torch::Tensor value_graph,
-torch::Tensor bounds, int nrows, int segments) {
-    auto nvals = columns_graph.numel();
-    // // Dense
-    // Input
-    float *iden_ptr1 = input_dense1.data_ptr<float>();
-    float *iden_ptr2 = input_dense2.data_ptr<float>();
-    // Output
-    auto options = torch::TensorOptions()
-                       .dtype(torch::kFloat)
-                       .requires_grad(true)
-                       .device(torch::kCUDA, 0);
-    auto output_sparse = torch::zeros({nvals}, options);
-    float *oden_array = output_sparse.data_ptr<float>();
-    // Sparse
-    int *offset_ptr = offset_graph.data_ptr<int>();
-    int *col_ptr = columns_graph.data_ptr<int>();
-    float *val_ptr = value_graph.data_ptr<float>();
-    int *bounds_ptr = bounds.data_ptr<int>();
-    for (int i = 0; i < segments; i++) {
-        int i1 = i;
-        int start_vals = bounds_ptr[i1 * 2];
-        cudaStream_t stream1;
-        cudaStreamCreate(&stream1);
-        dim3 gridDim(((int)(nrows - 1) / 8) + 1);
+torch::Tensor aggregate_node_mul_sum_direct_coarse2_call(torch::Tensor input_dense,
+                   torch::Tensor offset_graph,
+                   torch::Tensor columns_graph,
+                   torch::Tensor value_graph
+, torch::Tensor bounds,
+ int segments) {
+auto nrows = global_nrows;
+auto nvals = columns_graph.numel();
+auto full_iden = input_dense.numel();
+auto dcols = full_iden / nrows;
+// // Dense
+// Input
+float *iden_ptr = input_dense.data_ptr<float>();
+// Output
+auto options = torch::TensorOptions()
+         .dtype(torch::kFloat)
+         .requires_grad(true)
+         .device(torch::kCUDA, 0);
+auto output_dense = torch::zeros({nrows, dcols}, options);
+float *oden_array = output_dense.data_ptr<float>();
+// Sparse
+int *offset_ptr = offset_graph.data_ptr<int>();
+int *col_ptr = columns_graph.data_ptr<int>();
+float *val_ptr = value_graph.data_ptr<float>();
+int *bounds_ptr = bounds.data_ptr<int>();
+for (int i = 0; i < segments; i++) {
+  int i1 = i;
+  int start_vals = bounds_ptr[i1 * 2];cudaStream_t stream0, stream1, stream2;
+  if ((int)dcols / 64) {
+    cudaStreamCreate(&stream2);
+    dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 64);
         dim3 blockDim(32, 8);
-        default_function_kernel_sddvv_plus_undir<<<gridDim, blockDim, 0,
-                                                   stream1>>>(
-            &oden_array[start_vals], &offset_ptr[i1 * (nrows + 1)], iden_ptr1,
-            iden_ptr2, &col_ptr[start_vals], nrows);
-    }
-    return output_sparse;
-}
-torch::Tensor edge_sddmm(torch::Tensor input_dense1, torch::Tensor input_dense2,
-torch::Tensor offset_graph,
-torch::Tensor columns_graph, torch::Tensor value_graph,
-torch::Tensor bounds, int nrows, int segments) {
-    auto nvals = columns_graph.numel();
-    auto full_iden = input_dense1.numel();
-    auto dcols = full_iden / nrows;
-    // // Dense
-    // Input
-    float *iden_ptr1 = input_dense1.data_ptr<float>();
-    float *iden_ptr2 = input_dense2.data_ptr<float>();
-    // Output
-    auto options = torch::TensorOptions()
-                       .dtype(torch::kFloat)
-                       .requires_grad(true)
-                       .device(torch::kCUDA, 0);
-    auto output_sparse = torch::zeros({nvals}, options);
-    float *oden_array = output_sparse.data_ptr<float>();
-    // Sparse
-    int *offset_ptr = offset_graph.data_ptr<int>();
-    int *col_ptr = columns_graph.data_ptr<int>();
-    float *val_ptr = value_graph.data_ptr<float>();
-    int *bounds_ptr = bounds.data_ptr<int>();
-    for (int i = 0; i < segments; i++) {
-        int i1 = i;
-        int start_vals = bounds_ptr[i1 * 2];
-        cudaStream_t stream1;
-        cudaStreamCreate(&stream1);
-        dim3 gridDim(((int)(nrows - 1) / 8) + 1);
-        dim3 blockDim(32, 8);
-        int shared_memory_size = dcols * sizeof(float);
-        default_function_kernel_sddmm_mult_undir_shared<<<
-            gridDim, blockDim, shared_memory_size, stream1>>>(
-            &oden_array[start_vals], &offset_ptr[i1 * (nrows + 1)], iden_ptr1,
-            iden_ptr2, &col_ptr[start_vals], nrows, dcols);
-    }
-    return output_sparse;
-}
-
-torch::Tensor node_spmv_backward_of_sddmm_nln(torch::Tensor offset_graph,
-                                          torch::Tensor columns_graph,
-                                          torch::Tensor value_graph,
-                                          torch::Tensor bounds, int nrows,
-                                          int segments) {
-  // Output
-  auto options = torch::TensorOptions()
-                     .dtype(torch::kFloat)
-                     .requires_grad(true)
-                     .device(torch::kCUDA, 0);
-  auto output_dense = torch::zeros({nrows, 1}, options);
-  float *oden_array = output_dense.data_ptr<float>();
-
-  // Sparse
-  int *offset_ptr = offset_graph.data_ptr<int>();
-  int *col_ptr = columns_graph.data_ptr<int>();
-  float *val_ptr = value_graph.data_ptr<float>();
-  int *bounds_ptr = bounds.data_ptr<int>();
-
-  for (int i = 0; i < segments; i++) {
-    int i1 = i;
-    int start_vals = bounds_ptr[i1 * 2];
-
-    cudaStream_t stream1;
-
+    aggregate_node_mul_sum_direct_coarse2_kernel1<<<gridDim, blockDim, 0, stream2>>>(
+        oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr, &col_ptr[start_vals], nrows, dcols);
+  if ((dcols % 64 ) > 32) {
     cudaStreamCreate(&stream1);
-    dim3 gridDim_rem(((int)(nrows - 1) / 32) + 1);
-    dim3 blockDim_rem(32);
-    default_function_kernel_spmm_backward_sddmm_32_nln<<<gridDim_rem, blockDim_rem,
-                                                     0, stream1>>>(
-        oden_array, &offset_ptr[i1 * (nrows + 1)], &val_ptr[start_vals],
-        &col_ptr[start_vals], nrows);
+    dim3 gridDim(((int)(nrows - 1) / 8) + 1, 1);
+    dim3 blockDim(32, 8);
+    aggregate_node_mul_sum_direct_coarse2_kernel0_offset<<<gridDim, blockDim, 0, stream1>>>(
+        oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr, &col_ptr[start_vals], nrows, dcols, ((int)dcols /64) * 64);
+  if ((dcols % 32 ) > 0) {
+    cudaStreamCreate(&stream0);
+    dim3 gridDim(((int)(nrows - 1) / 8) + 1, 1);
+    dim3 blockDim(dcols %32, 8);
+    aggregate_node_mul_sum_direct_coarse2_kernel0_offset<<<gridDim, blockDim, 0, stream0>>>(
+        oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr, &col_ptr[start_vals], nrows, dcols, ((int)dcols /32) * 32);
   }
-
-  return output_dense;
+  }
+else {
+  if ((dcols % 64 ) > 0) {
+    cudaStreamCreate(&stream0);
+    dim3 gridDim(((int)(nrows - 1) / 8) + 1, 1);
+    dim3 blockDim(dcols %64, 8);
+    aggregate_node_mul_sum_direct_coarse2_kernel0_offset<<<gridDim, blockDim, 0, stream0>>>(
+        oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr, &col_ptr[start_vals], nrows, dcols, ((int)dcols /64) * 64);
+  }
 }
-torch::Tensor inplace_softmax_sddvv(torch::Tensor row_val,
-                                    torch::Tensor offset_graph,
-                                    torch::Tensor columns_graph,
-                                    torch::Tensor value_graph,
-                                    torch::Tensor bounds, int nrows,
-                                    int segments) {
-    float *row_val_ptr = row_val.data_ptr<float>();
-    // Sparse
-    int *offset_ptr = offset_graph.data_ptr<int>();
-    int *col_ptr = columns_graph.data_ptr<int>();
-    float *val_ptr = value_graph.data_ptr<float>();
-    int *bounds_ptr = bounds.data_ptr<int>();
-    for (int i = 0; i < segments; i++) {
-        int i1 = i;
-        int start_vals = bounds_ptr[i1 * 2];
-        // int end_vals = bounds_ptr[i1 * 2 + 1];
-        // int nvals = end_vals - start_vals;
-        cudaStream_t stream1;
-        cudaStreamCreate(&stream1);
-        dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1);
-        dim3 blockDim_rem(32, 8);
-        default_function_kernel_softmax_sddvv_undir<<<gridDim_rem, blockDim_rem, 0,
-                                                      stream1>>>(
-            &val_ptr[start_vals], &offset_ptr[i1 * (nrows + 1)], row_val_ptr,
-            &col_ptr[start_vals], nrows);
-    }
-    return value_graph;
+  }
+else {
+  if ((int)dcols / 32) {
+    cudaStreamCreate(&stream1);
+    dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 32);
+        dim3 blockDim(32, 8);
+    aggregate_node_mul_sum_direct_coarse2_kernel0<<<gridDim, blockDim, 0, stream1>>>(
+        oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr, &col_ptr[start_vals], nrows, dcols);
+  if ((dcols % 32 ) > 0) {
+    cudaStreamCreate(&stream0);
+    dim3 gridDim(((int)(nrows - 1) / 8) + 1, 1);
+    dim3 blockDim(dcols %32, 8);
+    aggregate_node_mul_sum_direct_coarse2_kernel0_offset<<<gridDim, blockDim, 0, stream0>>>(
+        oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr, &col_ptr[start_vals], nrows, dcols, ((int)dcols /32) * 32);
+  }
+  }
+else {
+  if ((int)dcols) {
+    cudaStreamCreate(&stream0);
+    dim3 gridDim(((int)(nrows - 1) / 8) + 1, 1);
+        dim3 blockDim((int)dcols, 8);
+    aggregate_node_mul_sum_direct_coarse2_kernel0<<<gridDim, blockDim, 0, stream0>>>(
+        oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr, &col_ptr[start_vals], nrows, dcols);
+  }
 }
-torch::Tensor inplace_softmax_sddvv_mult(torch::Tensor row_val,
-                                        torch::Tensor offset_graph,
-                                        torch::Tensor columns_graph,
-                                        torch::Tensor value_graph,
-                                        torch::Tensor bounds, int nrows,
-                                        int segments) {
-    float *row_val_ptr = row_val.data_ptr<float>();
-    // Sparse
-    int *offset_ptr = offset_graph.data_ptr<int>();
-    int *col_ptr = columns_graph.data_ptr<int>();
-    float *val_ptr = value_graph.data_ptr<float>();
-    int *bounds_ptr = bounds.data_ptr<int>();
-    for (int i = 0; i < segments; i++) {
-        int i1 = i;
-        int start_vals = bounds_ptr[i1 * 2];
-        // int end_vals = bounds_ptr[i1 * 2 + 1];
-        // int nvals = end_vals - start_vals;
-        cudaStream_t stream1;
-        cudaStreamCreate(&stream1);
-        dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1);
-        dim3 blockDim_rem(32, 8);
-        default_function_kernel_mult_sddvv_undir<<<gridDim_rem, blockDim_rem, 0,
-                                                   stream1>>>(
-            &val_ptr[start_vals], &offset_ptr[i1 * (nrows + 1)], row_val_ptr,
-            &col_ptr[start_vals], nrows);
-    }
-    return value_graph;
+}
+}return output_dense;
 }
 torch::Tensor aggregate_node_mul_sum_coarse2_call(torch::Tensor input_dense,
                    torch::Tensor offset_graph,
@@ -517,19 +342,19 @@ for (int i = 0; i < segments; i++) {
     dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 64);
         dim3 blockDim(32, 8);
     aggregate_node_mul_sum_coarse2_kernel1<<<gridDim, blockDim, 0, stream2>>>(
-        oden_array, &offset_ptr[i1 * (nrows + 1)],&val_ptr[start_vals],  iden_ptr, &col_ptr[start_vals], nrows, dcols);
+        oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr, &col_ptr[start_vals], nrows, dcols);
   if ((dcols % 64 ) > 32) {
     cudaStreamCreate(&stream1);
     dim3 gridDim(((int)(nrows - 1) / 8) + 1, 1);
     dim3 blockDim(32, 8);
     aggregate_node_mul_sum_coarse2_kernel0_offset<<<gridDim, blockDim, 0, stream1>>>(
-        oden_array, &offset_ptr[i1 * (nrows + 1)],&val_ptr[start_vals],  iden_ptr, &col_ptr[start_vals], nrows, dcols, ((int)dcols /64) * 64);
+        oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr, &col_ptr[start_vals], nrows, dcols, ((int)dcols /64) * 64);
   if ((dcols % 32 ) > 0) {
     cudaStreamCreate(&stream0);
     dim3 gridDim(((int)(nrows - 1) / 8) + 1, 1);
     dim3 blockDim(dcols %32, 8);
     aggregate_node_mul_sum_coarse2_kernel0_offset<<<gridDim, blockDim, 0, stream0>>>(
-        oden_array, &offset_ptr[i1 * (nrows + 1)],&val_ptr[start_vals],  iden_ptr, &col_ptr[start_vals], nrows, dcols, ((int)dcols /32) * 32);
+        oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr, &col_ptr[start_vals], nrows, dcols, ((int)dcols /32) * 32);
   }
   }
 else {
@@ -538,7 +363,7 @@ else {
     dim3 gridDim(((int)(nrows - 1) / 8) + 1, 1);
     dim3 blockDim(dcols %64, 8);
     aggregate_node_mul_sum_coarse2_kernel0_offset<<<gridDim, blockDim, 0, stream0>>>(
-        oden_array, &offset_ptr[i1 * (nrows + 1)],&val_ptr[start_vals],  iden_ptr, &col_ptr[start_vals], nrows, dcols, ((int)dcols /64) * 64);
+        oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr, &col_ptr[start_vals], nrows, dcols, ((int)dcols /64) * 64);
   }
 }
   }
@@ -548,13 +373,13 @@ else {
     dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 32);
         dim3 blockDim(32, 8);
     aggregate_node_mul_sum_coarse2_kernel0<<<gridDim, blockDim, 0, stream1>>>(
-        oden_array, &offset_ptr[i1 * (nrows + 1)],&val_ptr[start_vals],  iden_ptr, &col_ptr[start_vals], nrows, dcols);
+        oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr, &col_ptr[start_vals], nrows, dcols);
   if ((dcols % 32 ) > 0) {
     cudaStreamCreate(&stream0);
     dim3 gridDim(((int)(nrows - 1) / 8) + 1, 1);
     dim3 blockDim(dcols %32, 8);
     aggregate_node_mul_sum_coarse2_kernel0_offset<<<gridDim, blockDim, 0, stream0>>>(
-        oden_array, &offset_ptr[i1 * (nrows + 1)],&val_ptr[start_vals],  iden_ptr, &col_ptr[start_vals], nrows, dcols, ((int)dcols /32) * 32);
+        oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr, &col_ptr[start_vals], nrows, dcols, ((int)dcols /32) * 32);
   }
   }
 else {
@@ -563,100 +388,20 @@ else {
     dim3 gridDim(((int)(nrows - 1) / 8) + 1, 1);
         dim3 blockDim((int)dcols, 8);
     aggregate_node_mul_sum_coarse2_kernel0<<<gridDim, blockDim, 0, stream0>>>(
-        oden_array, &offset_ptr[i1 * (nrows + 1)],&val_ptr[start_vals],  iden_ptr, &col_ptr[start_vals], nrows, dcols);
+        oden_array, &offset_ptr[i1 * (nrows + 1)], iden_ptr, &col_ptr[start_vals], nrows, dcols);
   }
 }
 }
 }return output_dense;
 }
-class aggregate_edge_sum_AutoGrad : public torch::autograd::Function<aggregate_edge_sum_AutoGrad> {
-public:
-  static torch::Tensor forward(torch::autograd::AutogradContext *ctx,
-                               torch::Tensor input_dense1,
-                               torch::Tensor input_dense2,
-                               int li) {
-        ctx->saved_data["li"] = li;
-        torch::Tensor offset_graph = global_offset_graph[2 * li];
-        torch::Tensor columns_graph = global_columns_graph[2 * li];
-        torch::Tensor value_graph = global_value_graph[2 * li];
-        torch::Tensor bounds = global_bounds[2 * li];
-        int segments = global_segments[2 * li];
-        return edge_sddvv(input_dense1, input_dense2, offset_graph, columns_graph,
-                            value_graph, bounds, global_nrows, segments);}
- static torch::autograd::tensor_list
-                    backward(torch::autograd::AutogradContext *ctx,
-                             torch::autograd::tensor_list grad_outputs) {
-                    torch::Tensor d_value_graph = grad_outputs[0];
- int li = ctx->saved_data["li"].toInt();
-        torch::Tensor offset_graph = global_offset_graph[2 * li + 1];
-        torch::Tensor columns_graph = global_columns_graph[2 * li + 1];
-        torch::Tensor bounds = global_bounds[2 * li + 1];
-        int segments = global_segments[2 * li + 1];
-        torch::Tensor back_res = node_spmv_backward_of_sddmm_eaggr(
-                    offset_graph, columns_graph, // This should be the reverse graph
-                    d_value_graph, bounds, global_nrows, segments);
-        return {back_res,
-                back_res,
-                torch::Tensor()};
-    }
-};
-
-class non_lnr_op_softmax_AutoGrad : public torch::autograd::Function<non_lnr_op_softmax_AutoGrad> {
-public:
-  static torch::Tensor forward(torch::autograd::AutogradContext *ctx,
-                               torch::Tensor value_graph,
-                               int li) {
-        ctx->saved_data["li"] = li;
-        torch::Tensor offset_graph = global_offset_graph[2 * li];
-        torch::Tensor columns_graph = global_columns_graph[2 * li];
-        torch::Tensor bounds = global_bounds[2 * li];
-        int segments = global_segments[2 * li];
-    torch::Tensor val_exp = torch::exp(value_graph);
-    val_exp = torch::clamp(val_exp, 0.0, 1e12);
-    torch::Tensor row_sum = node_spmv_backward_of_sddmm_nln(
-        offset_graph, columns_graph, val_exp, bounds, global_nrows,
-        segments);
-    auto options = torch::TensorOptions()
-                       .dtype(torch::kFloat)
-                       .requires_grad(true)
-                       .device(torch::kCUDA, 0);
-    row_sum = torch::reciprocal(row_sum);
-    val_exp = inplace_softmax_sddvv(row_sum, offset_graph, columns_graph, 
-                                    val_exp, bounds, global_nrows, segments);
-    ctx->save_for_backward({val_exp});
-    return val_exp;
-  }
-  static torch::autograd::tensor_list
-  backward(torch::autograd::AutogradContext *ctx,
-           torch::autograd::tensor_list grad_outputs) {
-    torch::Tensor d_value_graph = grad_outputs[0];
-    auto saved = ctx->get_saved_variables();
- int li = ctx->saved_data["li"].toInt();
-        torch::Tensor offset_graph = global_offset_graph[2 * li + 1];
-        torch::Tensor columns_graph = global_columns_graph[2 * li + 1];
-        torch::Tensor bounds = global_bounds[2 * li + 1];
-        int segments = global_segments[2 * li + 1];
-    torch::Tensor value_graph = saved[0]; // n x 1
-    torch::Tensor sds = value_graph * d_value_graph; // e x 1
-    torch::Tensor accum = node_spmv_backward_of_sddmm_nln(
-        offset_graph, columns_graph, sds, bounds, global_nrows, segments); // n x 1
-    torch::Tensor res = inplace_softmax_sddvv_mult(
-        accum, offset_graph, columns_graph, value_graph, bounds, global_nrows,
-        segments);
-    res = sds - res;
-    return {res, torch::Tensor()};
-  }
-};
-
 class aggregate_node_mul_sum_coarse2_AutoGrad : public torch::autograd::Function<aggregate_node_mul_sum_coarse2_AutoGrad> {
     public:
         static torch::Tensor forward(torch::autograd::AutogradContext *ctx,
-                                     torch::Tensor input_dense, torch::Tensor value_graph, int li) {
+                                     torch::Tensor input_dense, int li) {
             ctx->saved_data["li"] = li;
             torch::Tensor offset_graph = global_offset_graph[2 * li];
             torch::Tensor columns_graph = global_columns_graph[2 * li];
-            ctx->save_for_backward(
-                {value_graph, input_dense});
+            torch::Tensor value_graph = global_value_graph[2 * li];
         torch::Tensor bounds = global_bounds[2 * li];
             int segments = global_segments[2 * li];
              return aggregate_node_mul_sum_coarse2_call(input_dense, offset_graph, columns_graph,
@@ -666,69 +411,68 @@ class aggregate_node_mul_sum_coarse2_AutoGrad : public torch::autograd::Function
         static torch::autograd::tensor_list
         backward(torch::autograd::AutogradContext *ctx,
                  torch::autograd::tensor_list grad_outputs) {
-            torch::Tensor dZ = grad_outputs[0];
-            auto saved = ctx->get_saved_variables();
-            torch::Tensor value_graph = saved[0];
-            torch::Tensor X = saved[1];
+            torch::Tensor input_dense = grad_outputs[0];
             int li = ctx->saved_data["li"].toInt();
             torch::Tensor offset_graph = global_offset_graph[2 * li + 1];
-            torch::Tensor columns_graph = global_columns_graph[2 * li + 1];        torch::Tensor bounds = global_bounds[2 * li];
-            int segments = global_segments[2 * li];
-            return {aggregate_node_mul_sum_coarse2_call(dZ, offset_graph, columns_graph, value_graph,
- bounds, segments),
- edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,
-           global_nrows, segments),
- torch::Tensor()};        }
+            torch::Tensor columns_graph = global_columns_graph[2 * li + 1];
+            torch::Tensor value_graph = global_value_graph[2 * li + 1];
+        torch::Tensor bounds = global_bounds[2 * li + 1];
+            int segments = global_segments[2 * li + 1];
+            return {aggregate_node_mul_sum_coarse2_call(input_dense, offset_graph, columns_graph, value_graph, bounds, segments), torch::Tensor()};        }
     };
 struct GALAGNN : torch::nn::Module {
 torch::nn::Linear fc0{nullptr};
-torch::nn::Linear efc0{nullptr};
-torch::nn::Linear efc1{nullptr};
+torch::nn::Linear sfc0{nullptr};
 torch::nn::Linear fc1{nullptr};
-torch::nn::Linear efc2{nullptr};
-torch::nn::Linear efc3{nullptr};
+torch::nn::Linear sfc1{nullptr};
 GALAGNN(int size0, int size1, int size2){
 fc0 = register_module("fc0", torch::nn::Linear(size0, size1));
-efc0 = register_module("efc0", torch::nn::Linear(size1, 1));
-efc1 = register_module("efc1", torch::nn::Linear(size1, 1));
+sfc0 = register_module("sfc0", torch::nn::Linear(size0, size1));
 fc1 = register_module("fc1", torch::nn::Linear(size1, size2));
-efc2 = register_module("efc2", torch::nn::Linear(size2, 1));
-efc3 = register_module("efc3", torch::nn::Linear(size2, 1));
+sfc1 = register_module("sfc1", torch::nn::Linear(size1, size2));
    }
 std::vector<torch::Tensor>
 forward(torch::Tensor t_iden, int ep, int mod_v){
 
+    torch::Tensor ones;
+    torch::Tensor degrees;
+    torch::Tensor norm;
+    torch::Tensor res_n;
     torch::Tensor res;
-    torch::Tensor attenL;
-    torch::Tensor attenR;
-    torch::Tensor attn;
-    torch::Tensor attenL_2;
-    torch::Tensor attenR_2;
-res = fc0->forward(t_iden);
-attenL = efc0->forward(res);
-attenR = efc1->forward(res);
-attn = aggregate_edge_sum_AutoGrad::apply(attenL, attenR, 0);
-     torch::nn::LeakyReLU leaky_relu(torch::nn::LeakyReLUOptions().negative_slope(0.2));
-     attn = leaky_relu->forward(attn);
-attn = non_lnr_op_softmax_AutoGrad::apply(attn, 0);
+    auto options_ones = torch::TensorOptions()
+                       .dtype(torch::kFloat)
+                       .requires_grad(false)
+                       .device(torch::kCUDA, 0);
+ones = torch::ones({global_nrows, 1}, options_ones);
+            torch::Tensor offset_graph_ones = global_offset_graph[2 * 0];
+          torch::Tensor columns_graph_ones = global_columns_graph[2 * 0];
+          torch::Tensor value_graph_ones = global_value_graph[2 * 0];
+        torch::Tensor bounds_ones = global_bounds[2 * 0];
+        int segments_ones = global_segments[2 * 0];
+        degrees = aggregate_node_mul_sum_direct_coarse2_call(ones, offset_graph_ones, columns_graph_ones,
+                            value_graph_ones, bounds_ones, segments_ones);
+
+        norm = torch::pow(degrees, -1.000000);
+res_n = fc0->forward(t_iden_n);
     if (ep % mod_v == 0) {
-      res = aggregate_node_mul_sum_coarse2_AutoGrad::apply(res, attn, 0);
+      res_n = aggregate_node_mul_sum_coarse2_AutoGrad::apply(res_n, 0);
     } else {
-      res = aggregate_node_mul_sum_coarse2_AutoGrad::apply(res, attn, 0);
+      res_n = aggregate_node_mul_sum_coarse2_AutoGrad::apply(res_n, 0);
     }
+        res_n = norm * res_n;
+res = t_iden;
+res = sfc0->forward(res);
+res = res_n + res;
         res = torch::relu(res);
-res = fc1->forward(res);
-attenL_2 = efc2->forward(res);
-attenR_2 = efc3->forward(res);
-attn = aggregate_edge_sum_AutoGrad::apply(attenL_2, attenR_2, 0);
-     attn = leaky_relu->forward(attn);
-attn = non_lnr_op_softmax_AutoGrad::apply(attn, 0);
     if (ep % mod_v == 0) {
-      res = aggregate_node_mul_sum_coarse2_AutoGrad::apply(res, attn, 0);
+      res_n = aggregate_node_mul_sum_coarse2_AutoGrad::apply(res, 0);
     } else {
-      res = aggregate_node_mul_sum_coarse2_AutoGrad::apply(res, attn, 0);
+      res_n = aggregate_node_mul_sum_coarse2_AutoGrad::apply(res, 0);
     }
-res = fc1->forward(res);
+        res_n = norm * res_n;
+res_n = fc1->forward(res_n);
+res = sfc1->forward(res);
+res = res_n + res;
 return {res};
     }
 };
@@ -746,7 +490,7 @@ int main(int argc, char **argv) {
     torch::TensorOptions().dtype(torch::kFloat).requires_grad(true);
 
     SM adj0;
-    std::string filename = "../../Data/Reddit/";
+    std::string filename = "../../Data/Products/";
     readSM_npy32<SM>(filename, &adj0);
 
     // Adj info
@@ -792,7 +536,7 @@ int main(int argc, char **argv) {
       torch::Tensor total_vals_graph_tile;
       torch::Tensor total_bounds_graph_tile;
       std::vector<iT> tile_offsets_graph_tile =
-        static_ord_col_breakpoints<SM>(&adj0, 370000.000000);
+        static_ord_col_breakpoints<SM>(&adj0, 10000000.000000);
       iT segments_graph_tile = tile_offsets_graph_tile.size() - 1;
       total_offsets_graph_tile = torch::zeros({(adj0.nrows() + 1) * (segments_graph_tile)}, options_int_tile);
       total_cols_graph_tile = torch::zeros({adj0.nvals()}, options_int_tile);
@@ -862,8 +606,6 @@ int *dL;
       torch::from_blob(d_test_mask, {nrows}, options_cu_bool);
 
 
-
-
   int *dA_csrOffsets0, *dA_columns0; 
   float *dA_values0;
 
@@ -904,7 +646,7 @@ int *dL;
 
 
 int num_iters = 100;
-auto net = std::make_shared<GALAGNN>(602, 32, 41);net->to(device);torch::optim::Adam optimizer(
+auto net = std::make_shared<GALAGNN>(100, 32, 47);net->to(device);torch::optim::Adam optimizer(
     net->parameters(), torch::optim::AdamOptions(0.010000).weight_decay(5e-4));
  int mod_v = 1;
  int skip_cache_warmup = 5;
