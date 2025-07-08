@@ -205,8 +205,8 @@ def evalSTIR(args):
                 job_args = ['python',
                             '../../tests/Baselines/SparseTIR/'+model+'.py',
                             '--dataset', dgl_map[dset],
-                            "--logfile", args.stat_log + "_" + args.hw + "_sea.csv"]
-                outfile = open(args.stat_log + "_" + args.hw + "_sea.csv", 'a+')
+                            "--logfile", args.stat_log + "_" + args.hw + "_stir.csv"]
+                outfile = open(args.stat_log + "_" + args.hw + "_stir.csv", 'a+')
                 outfile.write(dset + "," + model + "," + args.hw + ",")
                 outfile.close()
                 run(job_args, logfile, errfile)
