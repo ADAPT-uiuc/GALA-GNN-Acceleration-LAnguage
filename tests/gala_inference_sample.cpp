@@ -50,6 +50,7 @@ bool GALAFEContext::train_code_motion = true;
 bool GALAFEContext::training_subgraph = true;
 bool GALAFEContext::print_accuracy = true;
 bool GALAFEContext::print_memory = false;
+bool GALAFEContext::use_long = false;
 
 std::string GALAFEContext::opt_input = "";
 

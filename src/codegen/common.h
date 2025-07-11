@@ -544,7 +544,52 @@ nvals0 = adj0.nvals();\n";
             // graphNamePathMap[cNode->getParam(0)]
 
             // This doesn't need to change
-            std::string fileLoadCode = "    SM adj0;\n\
+            std::string fileLoadCode;
+            if (GALAFEContext::use_long)
+            {
+                fileLoadCode = "    SM adj0;\n\
+    std::string filename = \"../../Data/" + cNode->getParam(0) +  "/\";\n\
+    readSM_npy32<SM>(filename, &adj0);\n\
+\n\
+    // Adj info\n\
+    int64_t nrows = (int64_t)adj0.nrows();\n\
+    global_nrows = (iT)nrows;\n\
+    int64_t ncols = (int64_t)adj0.ncols();\n\
+    int64_t nvals0 = (int64_t)adj0.nvals();\n\
+\n\
+    // Init input with random numbers\n\
+    DM input_emb;\n\
+    readDM_npy<DM>(filename + \"Feat.npy\", &input_emb,\n\
+                   DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);\n\
+    int64_t emb_size = (int64_t)input_emb.ncols();\n\
+\n\
+    DL labels;\n\
+    readDM_npy<DL>(filename + \"Lab.npy\", &labels,\n\
+                   DenseMatrix<ind1_t, ind2_t, lab_t>::DENSE_MTX_TYPE::RM);\n\
+\n\
+    DBL train_mask_load;\n\
+    readDM_npy<DBL>(filename + \"TnMsk.npy\", &train_mask_load,\n\
+                    DBL::DENSE_MTX_TYPE::RM);\n\
+    DBL valid_mask_load;\n\
+    readDM_npy<DBL>(filename + \"VlMsk.npy\", &valid_mask_load,\n\
+                    DBL::DENSE_MTX_TYPE::RM);\n\
+    DBL test_mask_load;\n\
+    readDM_npy<DBL>(filename + \"TsMsk.npy\", &test_mask_load,\n\
+                    DBL::DENSE_MTX_TYPE::RM);\n\
+\n\
+    DB train_mask;\n\
+    repopulate<DBL, DB>(&train_mask_load, &train_mask);\n\
+    DB valid_mask;\n\
+    repopulate<DBL, DB>(&valid_mask_load, &valid_mask);\n\
+    DB test_mask;\n\
+    repopulate<DBL, DB>(&test_mask_load, &test_mask);\n\
+    int classes =\n\
+    *std::max_element(labels.vals_ptr(), labels.vals_ptr() + labels.nvals()) + 1;\n\
+    global_classes = classes;\n\
+    global_emb_size = emb_size;";
+            } else
+            {
+                fileLoadCode = "    SM adj0;\n\
     std::string filename = \"../../Data/" + cNode->getParam(0) +  "/\";\n\
     readSM_npy32<SM>(filename, &adj0);\n\
 \n\
@@ -584,6 +629,7 @@ nvals0 = adj0.nvals();\n";
     *std::max_element(labels.vals_ptr(), labels.vals_ptr() + labels.nvals()) + 1;\n\
     global_classes = classes;\n\
     global_emb_size = emb_size;";
+            }
             preCode.addCode(fileLoadCode);
 
             // Graph output
@@ -1704,7 +1750,37 @@ forward(torch::Tensor t_iden";
     {
         // Will not change for now
         // TODO need to change the types based on the data
-        std::string tempStdCommon = "#include <algorithm>\n\
+        std::string tempStdCommon;
+        if (GALAFEContext::use_long)
+        {
+            tempStdCommon = "#include <algorithm>\n\
+typedef int ind1_t;\n\
+typedef int ind2_t;\n\
+typedef long lab_t;\n\
+typedef float val_t;\n\
+typedef int mask_load_t;\n\
+typedef bool mask_t;\n\
+// Dense matrix with double values.\n\
+typedef DenseMatrix<int64_t, int64_t, val_t> DM;\n\
+typedef DenseMatrix<int64_t, int64_t, lab_t> DL;\n\
+typedef DenseMatrix<int64_t, int64_t, mask_load_t> DBL;\n\
+typedef DenseMatrix<int64_t, int64_t, mask_t> DB;\n\
+typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;\n\
+int global_nrows;\n\
+int global_classes;\n\
+int global_emb_size;\n\
+int global_ra;\n\
+int global_rb;\n\
+std::vector<int> global_segments;\n\
+bool global_is_directed;\n\
+\n\
+std::vector<torch::Tensor> global_offset_graph;\n\
+std::vector<torch::Tensor> global_columns_graph;\n\
+std::vector<torch::Tensor> global_value_graph;\n\
+std::vector<torch::Tensor> global_bounds;\n";
+        } else
+        {
+            tempStdCommon = "#include <algorithm>\n\
 typedef int ind1_t;\n\
 typedef int ind2_t;\n\
 typedef long lab_t;\n\
@@ -1729,6 +1805,7 @@ std::vector<torch::Tensor> global_offset_graph;\n\
 std::vector<torch::Tensor> global_columns_graph;\n\
 std::vector<torch::Tensor> global_value_graph;\n\
 std::vector<torch::Tensor> global_bounds;\n";
+        }
 
         importCode.addCode(tempStdCommon);
 

@@ -28,6 +28,7 @@ class GALAFEContext {
 		static bool train_code_motion;
 		static bool print_memory;
 		static bool print_accuracy;
+		static bool use_long;
 
 		static std::string opt_input;
 };

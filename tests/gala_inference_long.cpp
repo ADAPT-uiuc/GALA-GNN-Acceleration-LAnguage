@@ -49,8 +49,8 @@ bool GALAFEContext::sparse_rewrites = true;
 bool GALAFEContext::train_code_motion = true;
 bool GALAFEContext::training_subgraph = true;
 bool GALAFEContext::print_accuracy = false;
-bool GALAFEContext::print_memory = true;
-bool GALAFEContext::use_long = false;
+bool GALAFEContext::print_memory = false;
+bool GALAFEContext::use_long = true;
 
 std::string GALAFEContext::opt_input = "";
 
@@ -80,6 +80,55 @@ int main(int argc, char **argv) {
 	yyin = myfile;
 	yyparse();
 	fclose(myfile);
+
+	if (GALAFEContext::opt_input != ""){
+		typedef int ind1_t;
+		typedef int ind2_t;
+		typedef long lab_t;
+		typedef float val_t;
+		typedef int mask_load_t;
+		typedef bool mask_t;
+
+		// Dense matrix with double values.
+		typedef DenseMatrix<ind1_t, ind2_t, val_t> DM;
+		typedef DenseMatrix<ind1_t, ind2_t, lab_t> DL;
+		typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;
+
+		typedef typename SM::itype iT;
+		typedef typename SM::ntype nT;
+
+		std::string filename;
+		SM adj;
+		filename = GALAFEContext::opt_input;
+		readSM_npy32<SM>(filename, &adj);
+
+		// Adj info
+		iT nrows = adj.nrows();
+		iT ncols = adj.ncols();
+		nT nvals = adj.nvals();
+
+		// Init input with random numbers
+		DM input_emb;
+		readDM_npy<DM>(filename + "Feat.npy", &input_emb,
+					   DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
+		iT emb_size = input_emb.ncols();
+
+		DL labels;
+		readDM_npy<DL>(filename + "Lab.npy", &labels,
+					   DenseMatrix<ind1_t, ind2_t, lab_t>::DENSE_MTX_TYPE::RM);
+		int classes = *std::max_element(labels.vals_ptr(), labels.vals_ptr() + labels.nvals()) + 1;
+
+		// Set to true in the current version as the datasets do not store graph values
+		m1.graph_transformations[UNDIRECTED] = true;
+		m1.graph_transformations[UNWEIGHTED] = true;
+		m1.compute_transformations[COARSE] = 2;
+		m1.graph_transformations[FEAT_SIZE] = emb_size;
+		m1.graph_transformations[LABEL_SIZE] = classes;
+		if (((float)nvals / ((long)nrows * nrows)) > 0.001) {
+
+			m1.addDataTransformation(COL_TILE, nrows / 4);
+		}
+	}
 
 	cout << " ---------------- printing model config ----------------------\n";
 	cout << m1.to_string() << '\n';
@@ -133,16 +182,6 @@ int main(int argc, char **argv) {
 	{
 		GALATransformations::sparsityAwareRewrites(GALAFEContext::program, GALAFEContext::dependencies,
 		GALAFEContext::associations, GALAFEContext::transforms);
-	}
-	if (GALAFEContext::train_code_motion)
-	{
-		GALATransformations::trainingInvariantCodeMotion(GALAFEContext::program, GALAFEContext::dependencies,
-			GALAFEContext::associations, GALAFEContext::transforms);
-	}
-	if (GALAFEContext::training_subgraph)
-	{
-		GALATransformations::trainingSubGraph(GALAFEContext::program, GALAFEContext::dependencies,
-			GALAFEContext::associations, GALAFEContext::transforms);
 	}
 	genCode.writeCode(GALAFEContext::program, GALAFEContext::dependencies,
 		GALAFEContext::associations, GALAFEContext::transforms);
