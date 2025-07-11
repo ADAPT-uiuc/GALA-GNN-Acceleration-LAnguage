@@ -228,8 +228,7 @@ torch::Tensor aggregate_node_mul_sum_direct_coarse2_call(torch::Tensor input_den
                    torch::Tensor offset_graph,
                    torch::Tensor columns_graph,
                    torch::Tensor value_graph
-, torch::Tensor bounds,
- int segments) {
+) {
 auto nrows = global_nrows;
 auto nvals = columns_graph.numel();
 auto full_iden = input_dense.numel();
@@ -248,10 +247,8 @@ float *oden_array = output_dense.data_ptr<float>();
 int *offset_ptr = offset_graph.data_ptr<int>();
 int *col_ptr = columns_graph.data_ptr<int>();
 float *val_ptr = value_graph.data_ptr<float>();
-int *bounds_ptr = bounds.data_ptr<int>();
-for (int i = 0; i < segments; i++) {
-  int i1 = i;
-  int start_vals = bounds_ptr[i1 * 2];cudaStream_t stream0, stream1, stream2;
+int i1 = 0;
+int start_vals = 0;cudaStream_t stream0, stream1, stream2;
   if ((int)dcols / 64) {
     cudaStreamCreate(&stream2);
     dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 64);
@@ -307,14 +304,13 @@ else {
   }
 }
 }
-}return output_dense;
+return output_dense;
 }
 torch::Tensor aggregate_node_mul_sum_coarse2_call(torch::Tensor input_dense,
                    torch::Tensor offset_graph,
                    torch::Tensor columns_graph,
                    torch::Tensor value_graph
-, torch::Tensor bounds,
- int segments) {
+) {
 auto nrows = global_nrows;
 auto nvals = columns_graph.numel();
 auto full_iden = input_dense.numel();
@@ -333,10 +329,8 @@ float *oden_array = output_dense.data_ptr<float>();
 int *offset_ptr = offset_graph.data_ptr<int>();
 int *col_ptr = columns_graph.data_ptr<int>();
 float *val_ptr = value_graph.data_ptr<float>();
-int *bounds_ptr = bounds.data_ptr<int>();
-for (int i = 0; i < segments; i++) {
-  int i1 = i;
-  int start_vals = bounds_ptr[i1 * 2];cudaStream_t stream0, stream1, stream2;
+int i1 = 0;
+int start_vals = 0;cudaStream_t stream0, stream1, stream2;
   if ((int)dcols / 64) {
     cudaStreamCreate(&stream2);
     dim3 gridDim(((int)(nrows - 1) / 8) + 1, (int)dcols / 64);
@@ -392,7 +386,7 @@ else {
   }
 }
 }
-}return output_dense;
+return output_dense;
 }
 class aggregate_node_mul_sum_coarse2_AutoGrad : public torch::autograd::Function<aggregate_node_mul_sum_coarse2_AutoGrad> {
     public:
@@ -402,10 +396,8 @@ class aggregate_node_mul_sum_coarse2_AutoGrad : public torch::autograd::Function
             torch::Tensor offset_graph = global_offset_graph[2 * li];
             torch::Tensor columns_graph = global_columns_graph[2 * li];
             torch::Tensor value_graph = global_value_graph[2 * li];
-        torch::Tensor bounds = global_bounds[2 * li];
-            int segments = global_segments[2 * li];
-             return aggregate_node_mul_sum_coarse2_call(input_dense, offset_graph, columns_graph,
-                                value_graph, bounds, segments);
+        return aggregate_node_mul_sum_coarse2_call(input_dense, offset_graph, columns_graph,
+                                      value_graph);
     }
     
         static torch::autograd::tensor_list
@@ -416,9 +408,9 @@ class aggregate_node_mul_sum_coarse2_AutoGrad : public torch::autograd::Function
             torch::Tensor offset_graph = global_offset_graph[2 * li + 1];
             torch::Tensor columns_graph = global_columns_graph[2 * li + 1];
             torch::Tensor value_graph = global_value_graph[2 * li + 1];
-        torch::Tensor bounds = global_bounds[2 * li + 1];
-            int segments = global_segments[2 * li + 1];
-            return {aggregate_node_mul_sum_coarse2_call(input_dense, offset_graph, columns_graph, value_graph, bounds, segments), torch::Tensor()};        }
+            return {aggregate_node_mul_sum_coarse2_call(input_dense, offset_graph, columns_graph,
+                                       value_graph), torch::Tensor()};
+        }
     };
 struct GALAGNN : torch::nn::Module {
 torch::nn::Linear fc0{nullptr};
@@ -442,10 +434,8 @@ ones = torch::ones({global_nrows, 1}, options_ones);
             torch::Tensor offset_graph_ones = global_offset_graph[2 * 0];
           torch::Tensor columns_graph_ones = global_columns_graph[2 * 0];
           torch::Tensor value_graph_ones = global_value_graph[2 * 0];
-        torch::Tensor bounds_ones = global_bounds[2 * 0];
-        int segments_ones = global_segments[2 * 0];
         degrees = aggregate_node_mul_sum_direct_coarse2_call(ones, offset_graph_ones, columns_graph_ones,
-                            value_graph_ones, bounds_ones, segments_ones);
+                                  value_graph_ones);
 
         norm = torch::pow(degrees, -0.500000);
 res = fc0->forward(t_iden);
@@ -482,7 +472,7 @@ int main(int argc, char **argv) {
     torch::TensorOptions().dtype(torch::kFloat).requires_grad(true);
 
     SM adj0;
-    std::string filename = "../../Data/Reddit/";
+    std::string filename = "../../Data/Products/";
     readSM_npy32<SM>(filename, &adj0);
 
     // Adj info
@@ -521,28 +511,6 @@ int main(int argc, char **argv) {
     *std::max_element(labels.vals_ptr(), labels.vals_ptr() + labels.nvals()) + 1;
     global_classes = classes;
     global_emb_size = emb_size;
-  std::vector<SM *> tiled_graph_tile;
-      tiled_graph_tile.push_back(&adj0);
-      torch::Tensor total_offsets_graph_tile;
-      torch::Tensor total_cols_graph_tile;
-      torch::Tensor total_vals_graph_tile;
-      torch::Tensor total_bounds_graph_tile;
-      std::vector<iT> tile_offsets_graph_tile =
-        static_ord_col_breakpoints<SM>(&adj0, 58241.000000);
-      iT segments_graph_tile = tile_offsets_graph_tile.size() - 1;
-      total_offsets_graph_tile = torch::zeros({(adj0.nrows() + 1) * (segments_graph_tile)}, options_int_tile);
-      total_cols_graph_tile = torch::zeros({adj0.nvals()}, options_int_tile);
-      total_vals_graph_tile = torch::zeros({adj0.nvals()}, options_float_tile);
-      total_bounds_graph_tile = torch::zeros({2 * (segments_graph_tile)}, options_int_tile);
-      ord_col_tiling_torch(tile_offsets_graph_tile, total_offsets_graph_tile, total_cols_graph_tile, total_vals_graph_tile,
-        total_bounds_graph_tile, &adj0);
-      iT *offset_ptr_graph_tile = total_offsets_graph_tile.data_ptr<iT>();
-      iT *col_ptr_graph_tile = total_cols_graph_tile.data_ptr<iT>();
-      vT *val_ptr_graph_tile = total_vals_graph_tile.data_ptr<vT>();
-  global_segments.push_back(segments_graph_tile);
-  global_bounds.push_back(total_bounds_graph_tile);
-  global_segments.push_back(segments_graph_tile);
-  global_bounds.push_back(total_bounds_graph_tile);
 
   torch::Device device(torch::kCUDA);
   auto options_cu_int = torch::TensorOptions()
@@ -603,17 +571,16 @@ int *dL;
 
   CUDA_CHECK(cudaMalloc((void **)&dA_columns0, nvals0 * sizeof(int)));
   CUDA_CHECK(cudaMalloc((void **)&dA_values0, nvals0 * sizeof(float)));
+  CUDA_CHECK(cudaMalloc((void **)&dA_csrOffsets0, (nrows + 1) * sizeof(int)));
 
-  CUDA_CHECK(cudaMalloc((void **)&dA_csrOffsets0, (nrows + 1) * segments_graph_tile * sizeof(int)));
-
-  CUDA_CHECK(cudaMemcpy(dA_csrOffsets0, offset_ptr_graph_tile,
-                        (nrows + 1) * segments_graph_tile * sizeof(int), cudaMemcpyHostToDevice));
-  CUDA_CHECK(cudaMemcpy(dA_columns0, col_ptr_graph_tile, nvals0 * sizeof(int),
+  CUDA_CHECK(cudaMemcpy(dA_csrOffsets0, adj0.offset_ptr(),
+                        (nrows + 1) * sizeof(int), cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpy(dA_columns0, adj0.ids_ptr(), nvals0 * sizeof(int),
                         cudaMemcpyHostToDevice));
-  CUDA_CHECK(cudaMemcpy(dA_values0, val_ptr_graph_tile, nvals0 * sizeof(float),
+  CUDA_CHECK(cudaMemcpy(dA_values0, adj0.vals_ptr(), nvals0 * sizeof(float),
                         cudaMemcpyHostToDevice));
   torch::Tensor t_offsets0 =
-      torch::from_blob(dA_csrOffsets0, {(nrows+ 1) * segments_graph_tile}, options_cu_int);
+      torch::from_blob(dA_csrOffsets0, {nrows+ 1}, options_cu_int);
   torch::Tensor t_cols0 = torch::from_blob(dA_columns0, {nvals0}, options_cu_int);
 
   torch::Tensor t_vals0 =
@@ -636,7 +603,7 @@ int *dL;
 
 
 int num_iters = 100;
-auto net = std::make_shared<GALAGNN>(602, 32, 41);net->to(device);torch::optim::Adam optimizer(
+auto net = std::make_shared<GALAGNN>(100, 32, 47);net->to(device);torch::optim::Adam optimizer(
     net->parameters(), torch::optim::AdamOptions(0.010000).weight_decay(5e-4));
  int mod_v = 1;
  int skip_cache_warmup = 5;

@@ -143,8 +143,8 @@ def createFigure(args):
 
     plt.rcParams['hatch.linewidth'] = 3
 
-    plt.text(2.85, 3, "1.22× faster", ha = 'center', rotation=90, fontsize=15, fontweight='bold')
-    plt.text(2.2, 3.7, "2.03× less\nmemory", ha = 'center', rotation=90, fontsize=15, fontweight='bold')
+    plt.text(2.85, 3, "{:.2f}".format(time["memory"]/time["time"]) + "× faster", ha = 'center', rotation=90, fontsize=15, fontweight='bold')
+    plt.text(2.2, 3.7, "{:.2f}".format(memory["time"]/memory["memory"]) + "× less\nmemory", ha = 'center', rotation=90, fontsize=15, fontweight='bold')
     # ax1.text(2, ml, "graph", color='black', ha='left', fontsize=14)
 
     plt.axvline(x= 0.5, color='b', linestyle='--')

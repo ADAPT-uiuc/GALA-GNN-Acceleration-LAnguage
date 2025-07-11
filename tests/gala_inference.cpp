@@ -126,7 +126,7 @@ int main(int argc, char **argv) {
 		m1.graph_transformations[LABEL_SIZE] = classes;
 		if (((float)nvals / ((long)nrows * nrows)) > 0.001) {
 
-			m1.addDataTransformation(COL_TILE, nrows / 4);
+			m1.addDataTransformation(COL_TILE, nrows / 5);
 		}
 	}
 
