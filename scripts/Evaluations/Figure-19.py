@@ -116,7 +116,7 @@ if __name__ == '__main__':
     parser.add_argument("--stat-log", type=str,
                         default="timing_info", help="File to store timing data")
     parser.add_argument("--job", type=str, choices=['gala', 'dgl', 'wise', 'stat'], default="gala",
-                        help="Task to generate Figures 16 to 17.")
+                        help="Task to generate Figure 19.")
     parser.add_argument("--out-path", type=str,
                         default="../../", help="Output path for the generated code")
     parser.add_argument("--stdout-log", type=str,
