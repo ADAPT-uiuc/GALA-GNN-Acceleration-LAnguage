@@ -1000,10 +1000,10 @@ torch::Tensor bounds, int nrows, int segments) {\n\
         if (GALAFEContext::print_memory)
         {
             cudaInitFunctions += "\n\
-void printMemoryUsage() {\n\
+int printMemoryUsage() {\n\
                 size_t freeMem, totalMem;\n\
                 cudaMemGetInfo(&freeMem, &totalMem);\n\
-                std::cout << (totalMem - freeMem) / (1024 * 1024);\n\
+                return (int)((totalMem - freeMem) / (1024 * 1024));\n\
             }\n";
         }
         kernelCode.addCode(cudaInitFunctions);

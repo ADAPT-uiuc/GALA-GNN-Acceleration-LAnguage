@@ -129,7 +129,7 @@ new { return NEW; }
     yylval.sval = strdup(yytext);
     return IDENTIFIER;
 }
-(\.\/|\.\.\/)[A-Za-z0-9_.-]*([A-Za-z0-9_-]+\/)*[A-Za-z0-9_.-]+|[A-Za-z0-9_-]+\/([A-Za-z0-9_-]+\/)*[A-Za-z0-9_.-]+ {
+(\.\/|\.\.\/)[A-Za-z0-9_.-]*([A-Za-z0-9_.-]+\/)* {
     yylval.sval = strdup(yytext);
     return FILEPATH;
 }

@@ -1622,8 +1622,8 @@ forward(torch::Tensor t_iden";
         }
         else if (GALAFEContext::print_memory)
         {
-            printTimes = "  std::cout << calc_mean(times_arr) << \",\"\n\
-            << printMemoryUsage() << std::endl;\n";
+            printTimes = "  std::cout << printMemoryUsage() << \",\"\n\
+            << calc_mean(times_arr) + calc_mean(times_arr_train) << std::endl;\n";
         }
         else
         {

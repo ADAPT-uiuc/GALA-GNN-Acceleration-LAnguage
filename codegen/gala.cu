@@ -428,16 +428,40 @@ fc0 = register_module("fc0", torch::nn::Linear(size0, size1));
 fc1 = register_module("fc1", torch::nn::Linear(size1, size2));
    }
 std::vector<torch::Tensor>
-forward(torch::Tensor t_iden, torch::Tensor norm, int ep, int mod_v){
+forward(torch::Tensor t_iden, int ep, int mod_v){
 
+    torch::Tensor ones;
+    torch::Tensor degrees;
+    torch::Tensor norm;
     torch::Tensor res;
+    auto options_ones = torch::TensorOptions()
+                       .dtype(torch::kFloat)
+                       .requires_grad(false)
+                       .device(torch::kCUDA, 0);
+ones = torch::ones({global_nrows, 1}, options_ones);
+            torch::Tensor offset_graph_ones = global_offset_graph[2 * 0];
+          torch::Tensor columns_graph_ones = global_columns_graph[2 * 0];
+          torch::Tensor value_graph_ones = global_value_graph[2 * 0];
+        torch::Tensor bounds_ones = global_bounds[2 * 0];
+        int segments_ones = global_segments[2 * 0];
+        degrees = aggregate_node_mul_sum_direct_coarse2_call(ones, offset_graph_ones, columns_graph_ones,
+                            value_graph_ones, bounds_ones, segments_ones);
+
+        norm = torch::pow(degrees, -0.500000);
 res = fc0->forward(t_iden);
+        res = norm * res;
+    if (ep % mod_v == 0) {
+      res = aggregate_node_mul_sum_coarse2_AutoGrad::apply(res, 0);
+    } else {
+      res = aggregate_node_mul_sum_coarse2_AutoGrad::apply(res, 0);
+    }
+        res = norm * res;
         res = torch::relu(res);
         res = norm * res;
     if (ep % mod_v == 0) {
       res = aggregate_node_mul_sum_coarse2_AutoGrad::apply(res, 0);
     } else {
-      res = aggregate_node_mul_sum_coarse2_AutoGrad::apply(res, 2);
+      res = aggregate_node_mul_sum_coarse2_AutoGrad::apply(res, 0);
     }
         res = norm * res;
 res = fc1->forward(res);
@@ -504,7 +528,7 @@ int main(int argc, char **argv) {
       torch::Tensor total_vals_graph_tile;
       torch::Tensor total_bounds_graph_tile;
       std::vector<iT> tile_offsets_graph_tile =
-        static_ord_col_breakpoints<SM>(&adj0, 37000.000000);
+        static_ord_col_breakpoints<SM>(&adj0, 58241.000000);
       iT segments_graph_tile = tile_offsets_graph_tile.size() - 1;
       total_offsets_graph_tile = torch::zeros({(adj0.nrows() + 1) * (segments_graph_tile)}, options_int_tile);
       total_cols_graph_tile = torch::zeros({adj0.nvals()}, options_int_tile);
@@ -519,95 +543,6 @@ int main(int argc, char **argv) {
   global_bounds.push_back(total_bounds_graph_tile);
   global_segments.push_back(segments_graph_tile);
   global_bounds.push_back(total_bounds_graph_tile);
- std::vector<SM *> forward_adj;
-      std::vector<SM *> backward_adj;
-      getMaskSubgraphs(&adj0, &train_mask, 2, forward_adj, backward_adj);
-  SM adj1 = *forward_adj[1];
-      SM adj1_b = *backward_adj[1];
-      nT nvals1 = adj1.nvals();
-  SM adj2 = *forward_adj[0];
-      SM adj2_b = *backward_adj[0];
-      nT nvals2 = adj2.nvals();
-  std::vector<SM *> tiled_graph_tile1;
-      tiled_graph_tile1.push_back(&adj1);
-      torch::Tensor total_offsets_graph_tile1;
-      torch::Tensor total_cols_graph_tile1;
-      torch::Tensor total_vals_graph_tile1;
-      torch::Tensor total_bounds_graph_tile1;
-      std::vector<iT> tile_offsets_graph_tile1 =
-        static_ord_col_breakpoints<SM>(&adj1, 37000.000000);
-      iT segments_graph_tile1 = tile_offsets_graph_tile1.size() - 1;
-      total_offsets_graph_tile1 = torch::zeros({(adj1.nrows() + 1) * (segments_graph_tile1)}, options_int_tile);
-      total_cols_graph_tile1 = torch::zeros({adj1.nvals()}, options_int_tile);
-      total_vals_graph_tile1 = torch::zeros({adj1.nvals()}, options_float_tile);
-      total_bounds_graph_tile1 = torch::zeros({2 * (segments_graph_tile1)}, options_int_tile);
-      ord_col_tiling_torch(tile_offsets_graph_tile1, total_offsets_graph_tile1, total_cols_graph_tile1, total_vals_graph_tile1,
-        total_bounds_graph_tile1, &adj1);
-      iT *offset_ptr_graph_tile1 = total_offsets_graph_tile1.data_ptr<iT>();
-      iT *col_ptr_graph_tile1 = total_cols_graph_tile1.data_ptr<iT>();
-      vT *val_ptr_graph_tile1 = total_vals_graph_tile1.data_ptr<vT>();
-  global_segments.push_back(segments_graph_tile1);
-  global_bounds.push_back(total_bounds_graph_tile1);
-  std::vector<SM *> tiled_graph_tile1_b;
-      tiled_graph_tile1_b.push_back(&adj1_b);
-      torch::Tensor total_offsets_graph_tile1_b;
-      torch::Tensor total_cols_graph_tile1_b;
-      torch::Tensor total_vals_graph_tile1_b;
-      torch::Tensor total_bounds_graph_tile1_b;
-      std::vector<iT> tile_offsets_graph_tile1_b =
-        static_ord_col_breakpoints<SM>(&adj1_b, 37000.000000);
-      iT segments_graph_tile1_b = tile_offsets_graph_tile1_b.size() - 1;
-      total_offsets_graph_tile1_b = torch::zeros({(adj1_b.nrows() + 1) * (segments_graph_tile1_b)}, options_int_tile);
-      total_cols_graph_tile1_b = torch::zeros({adj1_b.nvals()}, options_int_tile);
-      total_vals_graph_tile1_b = torch::zeros({adj1_b.nvals()}, options_float_tile);
-      total_bounds_graph_tile1_b = torch::zeros({2 * (segments_graph_tile1_b)}, options_int_tile);
-      ord_col_tiling_torch(tile_offsets_graph_tile1_b, total_offsets_graph_tile1_b, total_cols_graph_tile1_b, total_vals_graph_tile1_b,
-        total_bounds_graph_tile1_b, &adj1_b);
-      iT *offset_ptr_graph_tile1_b = total_offsets_graph_tile1_b.data_ptr<iT>();
-      iT *col_ptr_graph_tile1_b = total_cols_graph_tile1_b.data_ptr<iT>();
-      vT *val_ptr_graph_tile1_b = total_vals_graph_tile1_b.data_ptr<vT>();
-  global_segments.push_back(segments_graph_tile1_b);
-  global_bounds.push_back(total_bounds_graph_tile1_b);
-  std::vector<SM *> tiled_graph_tile2;
-      tiled_graph_tile2.push_back(&adj2);
-      torch::Tensor total_offsets_graph_tile2;
-      torch::Tensor total_cols_graph_tile2;
-      torch::Tensor total_vals_graph_tile2;
-      torch::Tensor total_bounds_graph_tile2;
-      std::vector<iT> tile_offsets_graph_tile2 =
-        static_ord_col_breakpoints<SM>(&adj2, 37000.000000);
-      iT segments_graph_tile2 = tile_offsets_graph_tile2.size() - 1;
-      total_offsets_graph_tile2 = torch::zeros({(adj2.nrows() + 1) * (segments_graph_tile2)}, options_int_tile);
-      total_cols_graph_tile2 = torch::zeros({adj2.nvals()}, options_int_tile);
-      total_vals_graph_tile2 = torch::zeros({adj2.nvals()}, options_float_tile);
-      total_bounds_graph_tile2 = torch::zeros({2 * (segments_graph_tile2)}, options_int_tile);
-      ord_col_tiling_torch(tile_offsets_graph_tile2, total_offsets_graph_tile2, total_cols_graph_tile2, total_vals_graph_tile2,
-        total_bounds_graph_tile2, &adj2);
-      iT *offset_ptr_graph_tile2 = total_offsets_graph_tile2.data_ptr<iT>();
-      iT *col_ptr_graph_tile2 = total_cols_graph_tile2.data_ptr<iT>();
-      vT *val_ptr_graph_tile2 = total_vals_graph_tile2.data_ptr<vT>();
-  global_segments.push_back(segments_graph_tile2);
-  global_bounds.push_back(total_bounds_graph_tile2);
-  std::vector<SM *> tiled_graph_tile2_b;
-      tiled_graph_tile2_b.push_back(&adj2_b);
-      torch::Tensor total_offsets_graph_tile2_b;
-      torch::Tensor total_cols_graph_tile2_b;
-      torch::Tensor total_vals_graph_tile2_b;
-      torch::Tensor total_bounds_graph_tile2_b;
-      std::vector<iT> tile_offsets_graph_tile2_b =
-        static_ord_col_breakpoints<SM>(&adj2_b, 37000.000000);
-      iT segments_graph_tile2_b = tile_offsets_graph_tile2_b.size() - 1;
-      total_offsets_graph_tile2_b = torch::zeros({(adj2_b.nrows() + 1) * (segments_graph_tile2_b)}, options_int_tile);
-      total_cols_graph_tile2_b = torch::zeros({adj2_b.nvals()}, options_int_tile);
-      total_vals_graph_tile2_b = torch::zeros({adj2_b.nvals()}, options_float_tile);
-      total_bounds_graph_tile2_b = torch::zeros({2 * (segments_graph_tile2_b)}, options_int_tile);
-      ord_col_tiling_torch(tile_offsets_graph_tile2_b, total_offsets_graph_tile2_b, total_cols_graph_tile2_b, total_vals_graph_tile2_b,
-        total_bounds_graph_tile2_b, &adj2_b);
-      iT *offset_ptr_graph_tile2_b = total_offsets_graph_tile2_b.data_ptr<iT>();
-      iT *col_ptr_graph_tile2_b = total_cols_graph_tile2_b.data_ptr<iT>();
-      vT *val_ptr_graph_tile2_b = total_vals_graph_tile2_b.data_ptr<vT>();
-  global_segments.push_back(segments_graph_tile2_b);
-  global_bounds.push_back(total_bounds_graph_tile2_b);
 
   torch::Device device(torch::kCUDA);
   auto options_cu_int = torch::TensorOptions()
@@ -692,124 +627,15 @@ int *dL;
 
 
 
-  int *dA_csrOffsets1, *dA_columns1; 
-  float *dA_values1;
-
-  CUDA_CHECK(cudaMalloc((void **)&dA_columns1, nvals1 * sizeof(int)));
-  CUDA_CHECK(cudaMalloc((void **)&dA_values1, nvals1 * sizeof(float)));
-
-  CUDA_CHECK(cudaMalloc((void **)&dA_csrOffsets1, (nrows + 1) * segments_graph_tile1 * sizeof(int)));
-
-  CUDA_CHECK(cudaMemcpy(dA_csrOffsets1, offset_ptr_graph_tile1,
-                        (nrows + 1) * segments_graph_tile1 * sizeof(int), cudaMemcpyHostToDevice));
-  CUDA_CHECK(cudaMemcpy(dA_columns1, col_ptr_graph_tile1, nvals1 * sizeof(int),
-                        cudaMemcpyHostToDevice));
-  CUDA_CHECK(cudaMemcpy(dA_values1, val_ptr_graph_tile1, nvals1 * sizeof(float),
-                        cudaMemcpyHostToDevice));
-  torch::Tensor t_offsets1 =
-      torch::from_blob(dA_csrOffsets1, {(nrows+ 1) * segments_graph_tile1}, options_cu_int);
-  torch::Tensor t_cols1 = torch::from_blob(dA_columns1, {nvals1}, options_cu_int);
-
-  torch::Tensor t_vals1 =
-      torch::from_blob(dA_values1, {nvals1}, options_cu_float_ngrad);
-  global_offset_graph.push_back(t_offsets1);
-  global_columns_graph.push_back(t_cols1);
-  global_value_graph.push_back(t_vals1);
-  int *dA_csrOffsets1_b, *dA_columns1_b; 
-  float *dA_values1_b;
-
-  CUDA_CHECK(cudaMalloc((void **)&dA_columns1_b, nvals1 * sizeof(int)));
-  CUDA_CHECK(cudaMalloc((void **)&dA_values1_b, nvals1 * sizeof(float)));
-
-  CUDA_CHECK(cudaMalloc((void **)&dA_csrOffsets1_b, (nrows + 1) * segments_graph_tile1_b * sizeof(int)));
-
-  CUDA_CHECK(cudaMemcpy(dA_csrOffsets1_b, offset_ptr_graph_tile1_b,
-                        (nrows + 1) * segments_graph_tile1_b * sizeof(int), cudaMemcpyHostToDevice));
-  CUDA_CHECK(cudaMemcpy(dA_columns1_b, col_ptr_graph_tile1_b, nvals1 * sizeof(int),
-                        cudaMemcpyHostToDevice));
-  CUDA_CHECK(cudaMemcpy(dA_values1_b, val_ptr_graph_tile1_b, nvals1 * sizeof(float),
-                        cudaMemcpyHostToDevice));
-  torch::Tensor t_offsets1_b =
-      torch::from_blob(dA_csrOffsets1_b, {(nrows+ 1) * segments_graph_tile1_b}, options_cu_int);
-  torch::Tensor t_cols1_b = torch::from_blob(dA_columns1_b, {nvals1}, options_cu_int);
-
-  torch::Tensor t_vals1_b =
-      torch::from_blob(dA_values1_b, {nvals1}, options_cu_float_ngrad);
-  global_offset_graph.push_back(t_offsets1_b);
-  global_columns_graph.push_back(t_cols1_b);
-  global_value_graph.push_back(t_vals1_b);
 
 
 
 
 
-  int *dA_csrOffsets2, *dA_columns2; 
-  float *dA_values2;
-
-  CUDA_CHECK(cudaMalloc((void **)&dA_columns2, nvals2 * sizeof(int)));
-  CUDA_CHECK(cudaMalloc((void **)&dA_values2, nvals2 * sizeof(float)));
-
-  CUDA_CHECK(cudaMalloc((void **)&dA_csrOffsets2, (nrows + 1) * segments_graph_tile2 * sizeof(int)));
-
-  CUDA_CHECK(cudaMemcpy(dA_csrOffsets2, offset_ptr_graph_tile2,
-                        (nrows + 1) * segments_graph_tile2 * sizeof(int), cudaMemcpyHostToDevice));
-  CUDA_CHECK(cudaMemcpy(dA_columns2, col_ptr_graph_tile2, nvals2 * sizeof(int),
-                        cudaMemcpyHostToDevice));
-  CUDA_CHECK(cudaMemcpy(dA_values2, val_ptr_graph_tile2, nvals2 * sizeof(float),
-                        cudaMemcpyHostToDevice));
-  torch::Tensor t_offsets2 =
-      torch::from_blob(dA_csrOffsets2, {(nrows+ 1) * segments_graph_tile2}, options_cu_int);
-  torch::Tensor t_cols2 = torch::from_blob(dA_columns2, {nvals2}, options_cu_int);
-
-  torch::Tensor t_vals2 =
-      torch::from_blob(dA_values2, {nvals2}, options_cu_float_ngrad);
-  global_offset_graph.push_back(t_offsets2);
-  global_columns_graph.push_back(t_cols2);
-  global_value_graph.push_back(t_vals2);
-  int *dA_csrOffsets2_b, *dA_columns2_b; 
-  float *dA_values2_b;
-
-  CUDA_CHECK(cudaMalloc((void **)&dA_columns2_b, nvals2 * sizeof(int)));
-  CUDA_CHECK(cudaMalloc((void **)&dA_values2_b, nvals2 * sizeof(float)));
-
-  CUDA_CHECK(cudaMalloc((void **)&dA_csrOffsets2_b, (nrows + 1) * segments_graph_tile2_b * sizeof(int)));
-
-  CUDA_CHECK(cudaMemcpy(dA_csrOffsets2_b, offset_ptr_graph_tile2_b,
-                        (nrows + 1) * segments_graph_tile2_b * sizeof(int), cudaMemcpyHostToDevice));
-  CUDA_CHECK(cudaMemcpy(dA_columns2_b, col_ptr_graph_tile2_b, nvals2 * sizeof(int),
-                        cudaMemcpyHostToDevice));
-  CUDA_CHECK(cudaMemcpy(dA_values2_b, val_ptr_graph_tile2_b, nvals2 * sizeof(float),
-                        cudaMemcpyHostToDevice));
-  torch::Tensor t_offsets2_b =
-      torch::from_blob(dA_csrOffsets2_b, {(nrows+ 1) * segments_graph_tile2_b}, options_cu_int);
-  torch::Tensor t_cols2_b = torch::from_blob(dA_columns2_b, {nvals2}, options_cu_int);
-
-  torch::Tensor t_vals2_b =
-      torch::from_blob(dA_values2_b, {nvals2}, options_cu_float_ngrad);
-  global_offset_graph.push_back(t_offsets2_b);
-  global_columns_graph.push_back(t_cols2_b);
-  global_value_graph.push_back(t_vals2_b);
 
 
 
 int num_iters = 100;
-    auto options_ones = torch::TensorOptions()
-                       .dtype(torch::kFloat)
-                       .requires_grad(false)
-                       .device(torch::kCUDA, 0);
-torch::Tensor ones = torch::ones({global_nrows, 1}, options_ones);
-  torch::Tensor offset_graph_ones = global_offset_graph[2 * 0];
-  torch::Tensor columns_graph_ones = global_columns_graph[2 * 0];
-  torch::Tensor value_graph_ones = global_value_graph[2 * 0];
-  torch::Tensor bounds_ones = global_bounds[2 * 0];
-  int segments_ones = global_segments[2 * 0];
-torch::Tensor degrees = aggregate_node_mul_sum_direct_coarse2_call(ones, offset_graph_ones, columns_graph_ones,
-    value_graph_ones, bounds_ones, segments_ones);
-
-   torch::Tensor norm = torch::pow(degrees, -0.500000).detach();
-  t_iden = (norm * t_iden).detach();
-t_iden = aggregate_node_mul_sum_coarse2_AutoGrad::apply(t_iden, 0);
-  t_iden = (norm * t_iden).detach();
 auto net = std::make_shared<GALAGNN>(602, 32, 41);net->to(device);torch::optim::Adam optimizer(
     net->parameters(), torch::optim::AdamOptions(0.010000).weight_decay(5e-4));
  int mod_v = 1;
@@ -824,7 +650,7 @@ auto net = std::make_shared<GALAGNN>(602, 32, 41);net->to(device);torch::optim::
     cudaDeviceSynchronize();
     start = get_time();
     torch::Tensor prediction =
-        net->forward(t_iden,norm, epoch, mod_v)[0];
+        net->forward(t_iden, epoch, mod_v)[0];
     cudaDeviceSynchronize();
     end = get_time();
     cudaDeviceSynchronize();

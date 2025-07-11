@@ -58,7 +58,7 @@ def compile_and_get_time(args):
                         '-j56']
             run_at(job_args, logfile, errfile, output_path + "build/")
             job_args = ['./gala_model']
-            outfile.write(graph + "," + modes + ",")
+            outfile.write(graph + "," + mode + ",")
             outfile.flush()
             run_at(job_args, outfile, errfile, output_path + "build/")
 
@@ -81,7 +81,11 @@ def compile_and_get_time(args):
         if row['mode'] == "schedule":
             vals[row['graph']] = row['inference_time']
         else:
-            print("Speedup of the input aware compilation for graph:", row['graph'], ", is:", row['inference_time'] / vals[row['graph']])
+            print("Speedup of the input aware compilation for graph:", row['graph'], ", is:", vals[row['graph']] / row['inference_time'])
+
+
+def main(args):
+    compile_and_get_time(args)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Graph Benchmark Runner')
