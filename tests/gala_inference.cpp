@@ -120,10 +120,11 @@ int main(int argc, char **argv) {
 		// Set to true in the current version as the datasets do not store graph values
 		m1.graph_transformations[UNDIRECTED] = true;
 		m1.graph_transformations[UNWEIGHTED] = true;
-		m1.compute_transformations[COARSE] = 4;
+		m1.compute_transformations[COARSE] = 2;
 		m1.graph_transformations[FEAT_SIZE] = emb_size;
 		m1.graph_transformations[LABEL_SIZE] = classes;
-		if ((nvals / (nrows * nrows)) > 50) {
+		if (((float)nvals / ((long)nrows * nrows)) > 0.001) {
+
 			m1.addDataTransformation(COL_TILE, nrows / 4);
 		}
 	}

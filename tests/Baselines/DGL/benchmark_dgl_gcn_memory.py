@@ -176,7 +176,6 @@ def full_trainer(graph,
                  n_classes,
                  h_layers,
                  n_epochs,
-                 weight_path,
                  dataset,
                  log_e2e_time=True,
                  train_model=False,
@@ -272,7 +271,7 @@ def full_trainer(graph,
 
             if epoch > discard_k:
                 epoch_times.append(t_end - t_start)
-                epoch_memory.append(torch.cuda.max_memory_allocated(device=None))
+                epoch_memory.append(torch.cuda.max_memory_allocated(device=None)/(1024*1024))
 
             if train_model:
                 acc = evaluate(graph, features, labels, test_mask, model)
@@ -340,14 +339,13 @@ def main(args):
                       n_classes=n_classes,
                       h_layers=args.layers,
                       n_epochs=n_epochs,
-                      weight_path=output_path,
                       dataset=str(args.dataset),
                       log_e2e_time=True,
                       train_model=train_model,
                       discard_k=args.discard,
                       use_opt=False)
     log_file_ptr = open(args.logfile, 'a+')
-    log_file_ptr.write(str(r1['time_mean']) + "," + str(r1['memory_mean']) + "\n")
+    log_file_ptr.write(str(r1['memory_mean']) + "," + str(r1['time_mean']) + "\n")
     log_file_ptr.close()
 
     # print(str(r1['time_mean']),",",str(np.mean(r1['iter'])))

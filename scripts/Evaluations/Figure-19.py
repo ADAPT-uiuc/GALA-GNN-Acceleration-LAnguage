@@ -48,7 +48,7 @@ def compile_and_get_time(args):
         logfile.write(curr+"\n")
         errfile.write(curr+"\n")
 
-        job_args = ['../../build/tests/gala_train',
+        job_args = ['../../build/tests/gala_train_memory',
                     '../../tests/GALA-DSL/ablations/memory-consumption/' + exec +'.txt',
                     output_path]
         run(job_args, logfile, errfile)
@@ -71,20 +71,16 @@ def evalDGL(args):
     logfile = open(args.stdout_log, 'a+')
     errfile = open(args.stderr_log, 'a+')
 
-    print(curr)
-    logfile.write(curr+"\n")
-    errfile.write(curr+"\n")
-
     job_args = ['python',
-                '../../tests/Baselines/DGL/benchmark_dgl_'+model+'_memory.py',
-                '--dataset', dgl_map[dset],
+                '../../tests/Baselines/DGL/benchmark_dgl_gcn_memory.py',
+                '--dataset', "RedditDataset",
                 '--n-hidden', str(32),
                 '--layers', str(1),
                 '--n-epochs', str(100),
                 "--logfile", args.stat_log + "_memory.csv",
                 "--device", "cuda",
                 "--discard", str(5)]
-    outfile = open(args.stat_log + "_memory.csv", 'w+')
+    outfile = open(args.stat_log + "_memory.csv", 'a+')
     outfile.write("dgl,")
     outfile.close()
     run(job_args, logfile, errfile)
@@ -96,15 +92,15 @@ def evalDGL(args):
     errfile.close()
 
 def createFigure(args):
-
+    import pandas as pd
     wise_df = pd.read_csv(args.stat_log + "_memory.csv")
     for index, row in wise_df.iterrows():
-        print(row['exec'],'-- memory:',row['memory'],'-- time:',row['total_time'])
+        print(row['exec'],'-- memory:', int(row['memory']),'-- time:',row['total_time']*1000)
 
     wise_df = pd.read_csv("results_fig16_17.csv")
     for index, row in wise_df.iterrows():
-        if row['hidden_feat'] == 32 and row['num_layer'] == 2 and row['model'] == 'gcn' and row['dataset'] == 'reddit':
-            print('WiseGraph -- memory:',row['memory_used'],'-- time:',row['total_time'])
+        if row['hidden_feat'] == 32 and row['num_layer'] == 2 and row['model'] == 'GCN' and row['dataset'] == 'reddit':
+            print('WiseGraph -- memory:',int(row['memory_used']),'-- time:',row['total_time']*1000)
 
 def main(args):
     if (args.job == "gala"):
