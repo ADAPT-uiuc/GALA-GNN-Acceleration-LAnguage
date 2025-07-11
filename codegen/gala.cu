@@ -482,7 +482,7 @@ int main(int argc, char **argv) {
     torch::TensorOptions().dtype(torch::kFloat).requires_grad(true);
 
     SM adj0;
-    std::string filename = "../../Data/Reddit/";
+    std::string filename = "../../Data/papers100M_20/";
     readSM_npy32<SM>(filename, &adj0);
 
     // Adj info
@@ -528,7 +528,7 @@ int main(int argc, char **argv) {
       torch::Tensor total_vals_graph_tile;
       torch::Tensor total_bounds_graph_tile;
       std::vector<iT> tile_offsets_graph_tile =
-        static_ord_col_breakpoints<SM>(&adj0, 58241.000000);
+        static_ord_col_breakpoints<SM>(&adj0, 1000000000.000000);
       iT segments_graph_tile = tile_offsets_graph_tile.size() - 1;
       total_offsets_graph_tile = torch::zeros({(adj0.nrows() + 1) * (segments_graph_tile)}, options_int_tile);
       total_cols_graph_tile = torch::zeros({adj0.nvals()}, options_int_tile);
@@ -636,7 +636,7 @@ int *dL;
 
 
 int num_iters = 100;
-auto net = std::make_shared<GALAGNN>(602, 32, 41);net->to(device);torch::optim::Adam optimizer(
+auto net = std::make_shared<GALAGNN>(128, 32, 172);net->to(device);torch::optim::Adam optimizer(
     net->parameters(), torch::optim::AdamOptions(0.010000).weight_decay(5e-4));
  int mod_v = 1;
  int skip_cache_warmup = 5;
