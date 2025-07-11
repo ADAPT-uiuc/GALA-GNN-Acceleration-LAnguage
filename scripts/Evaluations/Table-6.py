@@ -91,11 +91,11 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Graph Benchmark Runner')
     parser.add_argument("--stat-log", type=str,
-                        default="timing_info_graph_scale", help="File to store timing data")
+                        default="timing_info_graph", help="File to store timing data")
     parser.add_argument("--hw", type=str,
                         default="h100", help="Target hardware")
     parser.add_argument("--job", type=str, choices=['gala', 'stat'], default="gala",
-                        help="Task to generate Figures 16 to 17.")
+                        help="Task to generate Table 6.")
     parser.add_argument("--train", action='store_true',
                         help="Train the model")
     parser.set_defaults(train=False)
