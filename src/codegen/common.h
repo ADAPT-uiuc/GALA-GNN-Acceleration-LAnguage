@@ -560,12 +560,12 @@ nvals0 = adj0.nvals();\n";
     // Init input with random numbers\n\
     DM input_emb;\n\
     readDM_npy<DM>(filename + \"Feat.npy\", &input_emb,\n\
-                   DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);\n\
+                   DM::DENSE_MTX_TYPE::RM);\n\
     int64_t emb_size = (int64_t)input_emb.ncols();\n\
 \n\
     DL labels;\n\
     readDM_npy<DL>(filename + \"Lab.npy\", &labels,\n\
-                   DenseMatrix<ind1_t, ind2_t, lab_t>::DENSE_MTX_TYPE::RM);\n\
+                   DL::DENSE_MTX_TYPE::RM);\n\
 \n\
     DBL train_mask_load;\n\
     readDM_npy<DBL>(filename + \"TnMsk.npy\", &train_mask_load,\n\
