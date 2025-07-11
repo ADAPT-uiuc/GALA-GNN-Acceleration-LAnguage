@@ -6,6 +6,8 @@ import shutil
 parser = argparse.ArgumentParser(description="Run WiseGraph test with specified hardware")
 parser.add_argument("--a100", action="store_true", help="Use A100 hardware")
 parser.add_argument("--h100", action="store_true", help="Use H100 hardware")
+parser.add_argument("--job", type=str, choices=['F16n17', 'F18n19', 'T5'], default="F16n17",
+                    help="Tasks to generate the WiseGraph Numbers")
 args = parser.parse_args()
 
 if args.a100:
@@ -15,7 +17,16 @@ elif args.h100:
 else:
     raise ValueError("Please specify either --a100 or --h100")
 
-script_path = os.path.abspath("../Environments/WiseGraph/" + hardware + "/CxGNN-Compute/test/ae/E1_overall/run_wisegraph.sh")
+if args.job == "T5":
+    script_path = os.path.abspath("../Environments/WiseGraph/" + hardware + "/CxGNN-Compute/test/ae/E1_overall/run_wisegraph-T5.sh")
+    output_files = ["results_table5.csv"]
+elif args.job == "F18n19":
+    script_path = os.path.abspath("../Environments/WiseGraph/" + hardware + "/CxGNN-Compute/test/ae/E1_overall/run_wisegraph-F18-F19.sh")
+    output_files = ["results_fig18_19.csv"]
+else:
+    script_path = os.path.abspath("../Environments/WiseGraph/" + hardware + "/CxGNN-Compute/test/ae/E1_overall/run_wisegraph-F16-F17.sh")
+    output_files = ["results_fig16_17.csv"]
+
 working_dir = os.path.dirname(script_path)
 
 try:
@@ -34,7 +45,6 @@ except subprocess.CalledProcessError as e:
     print("Script failed with return code:", e.returncode)
     print("Error output:\n", e.stderr)
 
-output_files = ["results_fig16_17.csv", "results_fig18_19.csv", "results_table5.csv"]
 for fname in output_files:
     src_path = os.path.join(working_dir, fname)
     dst_path = os.path.join(os.getcwd(), fname)
