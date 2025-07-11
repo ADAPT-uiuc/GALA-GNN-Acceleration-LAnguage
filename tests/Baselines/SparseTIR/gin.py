@@ -459,9 +459,9 @@ def main():
     end_event = torch.cuda.Event(enable_timing=True)
     start_event.record()
     for _ in range(active):
-        # loss = train(args.dataset, model, feats, labels, train_idx, optimizer, g)
-        model.eval()
-        _ = model(feats)
+        loss = train(args.dataset, model, feats, labels, train_idx, optimizer, g)
+        # model.eval()
+        # _ = model(feats)
     end_event.record()
     torch.cuda.synchronize()
     dur = start_event.elapsed_time(end_event) / active

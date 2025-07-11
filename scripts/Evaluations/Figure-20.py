@@ -7,8 +7,6 @@ build_path = r"../../build/"
 graphs = ["Reddit", "Products"]
 modes = ["schedule", "input-aware"]
 
-sample_precen = ["1", "2", "5", "10", "20"]
-
 def run(args, logfile, errfile):
     proc = subprocess.Popen(args, stdout=logfile, stderr=errfile)
     proc.wait()
@@ -38,7 +36,7 @@ def compile_and_get_time(args):
 
     for mode in modes:
         for graph in graphs:
-            curr = f">>>Running [{sp} sample size] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+            curr = f">>>Running [{mode} {graph}] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
             print(curr)
             logfile.write(curr+"\n")
             errfile.write(curr+"\n")

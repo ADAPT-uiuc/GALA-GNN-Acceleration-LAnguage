@@ -71,7 +71,6 @@ def evalDGL(args):
     logfile = open(args.stdout_log, 'a+')
     errfile = open(args.stderr_log, 'a+')
 
-    curr = f">>>Testing [{dset} ; ({32},{1}) ] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
     print(curr)
     logfile.write(curr+"\n")
     errfile.write(curr+"\n")
@@ -110,8 +109,9 @@ def createFigure(args):
 def main(args):
     if (args.job == "gala"):
         compile_and_get_time(args)
-    elif (args.job == "dgl"):
         evalDGL(args)
+    # elif (args.job == "dgl"):
+    #     evalDGL(args)
     elif (args.job == "stat"):
         createFigure(args)
 

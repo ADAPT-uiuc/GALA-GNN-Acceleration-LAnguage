@@ -22,6 +22,13 @@ dgl_map = {"Cora":"CoraGraphDataset",
            "Arxiv":"ogbn-arxiv",
            "Products":"ogbn-products"}
 
+stir_map = {"Cora":"cora",
+           "Pubmed":"pubmed",
+           "CoraFull":"corafull",
+           "Reddit":"reddit",
+           "Arxiv":"arxiv",
+           "Products":"products"}
+
 # dataset_list = ["Cora"]
 # models = ["gcn"]
 
@@ -197,14 +204,14 @@ def evalSTIR(args):
             logfile.write(curr+"\n")
             errfile.write(curr+"\n")
 
-            if (model == "gat" or model == "sage"):
+            if (model == "gat"):
                 outfile = open(args.stat_log + "_" + args.hw + "_stir.csv", 'a+')
                 outfile.write(dset + "," + model + "," + args.hw + ",0,0\n")
                 outfile.close()
             else:
                 job_args = ['python',
                             '../../tests/Baselines/SparseTIR/'+model+'.py',
-                            '--dataset', dgl_map[dset],
+                            '--dataset', stir_map[dset],
                             "--logfile", args.stat_log + "_" + args.hw + "_stir.csv"]
                 outfile = open(args.stat_log + "_" + args.hw + "_stir.csv", 'a+')
                 outfile.write(dset + "," + model + "," + args.hw + ",")
@@ -224,19 +231,33 @@ def createFigure(args):
     import scipy
     from scipy import stats
 
-    graph_name = {'CoraGraphDataset': 'Cora',
-                  'PubmedGraphDataset': 'PubMed',
-                  'CoraFullDataset': 'CoraFull',
-                  'RedditDataset': 'Reddit',
-                  'ogbn-arxiv': 'OGBN-Arxiv',
-                  'ogbn-products': 'OGBN-Products'}
+    graph_name = {'Cora': 'Cora',
+                  'Pubmed': 'Pubmed',
+                  'CoraFull': 'CoraFull',
+                  'Reddit': 'Reddit',
+                  'Arxiv': 'OGBN-Arxiv',
+                  'Products': 'OGBN-Products'}
+    
+    graph_name_wise = {'cora': 'Cora',
+                    'pubmed': 'Pubmed',
+                    'corafull': 'CoraFull',
+                    'reddit': 'Reddit',
+                    'ogbn-arxiv': 'Arxiv',
+                    'ogbn-products': 'Products'}
 
     graph_name_rev = {'Cora': 'CoraGraphDataset',
-                  'PubMed':'PubmedGraphDataset',
+                  'Pubmed':'PubmedGraphDataset',
                   'CoraFull':'CoraFullDataset',
                   'Reddit':'RedditDataset',
-                  'ogbn-arxiv':'ogbn-arxiv',
-                  'ogbn-products':'ogbn-products'}
+                  'Arxiv':'ogbn-arxiv',
+                  'Products':'ogbn-products'}
+    
+    model_name = {
+        'gat':'GAT',
+        'gcn':'GCN',
+        'sage':'SAGE',
+        'gin':'GIN'
+    }
 
     sname = "GALA"
 
@@ -244,11 +265,11 @@ def createFigure(args):
 
     data = {}
     for mod in models:
-        data[mod] = {}
+        data[model_name[mod]] = {}
         for sys in systems:
-            data[mod][sys] = {}
+            data[model_name[mod]][sys] = {}
             for graph in graph_name:
-                data[mod][sys][graph] = 0
+                data[model_name[mod]][sys][graph] = 0
 
     # Read GALA
     if args.train:
@@ -258,29 +279,29 @@ def createFigure(args):
         gala_df = pd.read_csv(args.stat_log + "_" + args.hw + "_GALA_inf.csv")
         time_field = "inference_time"
     for index, row in gala_df.iterrows():
-        data[row['model']]["GALA"][graph_name_rev[row['dataset']]] = row[time_field]
+        data[model_name[row['model']]]["GALA"][row['dataset']] = row[time_field]
 
     # Read DGL
     dgl_df = pd.read_csv(args.stat_log + "_" + args.hw + "_DGL.csv")
     for index, row in dgl_df.iterrows():
-        data[row['model']]["DGL"][graph_name_rev[row['dataset']]] = row[time_field]
+        data[model_name[row['model']]]["DGL"][row['dataset']] = row[time_field]
 
 # dataset,model,hidden_feat,num_layer,hardware,inference_time,total_time,runtime,memory_used
     # Read WiseGraph
     wise_df = pd.read_csv("results_fig16_17.csv")
     for index, row in wise_df.iterrows():
         if row['hidden_feat'] == 32 and row['num_layer'] == 2:
-            data[row['model']]["WiseGraph"][graph_name_rev[row['dataset']]] = row[time_field]
+            data[row['model']]["WiseGraph"][graph_name_wise[row['dataset']]] = row[time_field]
 
     # Read SeaStar
     dgl_df = pd.read_csv(args.stat_log + "_" + args.hw + "_sea.csv")
     for index, row in dgl_df.iterrows():
-        data[row['model']]["SeaStar"][graph_name_rev[row['dataset']]] = row[time_field]
+        data[model_name[row['model']]]["SeaStar"][row['dataset']] = row[time_field]
 
     # Read SparseTIR
     dgl_df = pd.read_csv(args.stat_log + "_" + args.hw + "_stir.csv")
     for index, row in dgl_df.iterrows():
-        data[row['model']]["SeaStar"][graph_name_rev[row['dataset']]] = row[time_field]
+        data[model_name[row['model']]]["SparseTIR"][row['dataset']] = row[time_field]/1000
 
     df_data = []
     df_cols = ["Graph", "Model", "System", "Speedup"]
@@ -289,15 +310,19 @@ def createFigure(args):
 
     skip_sys = [sname]
 
+    max_spd = 0
+
     for g in graph_name:
         for mdl in data:
             for sy in data[mdl]:
                 if sy in skip_sys:
                     continue
-                if ((sy == 'SparseTIR')  and mdl=='GAT') or (sy == 'SeaStar' and mdl=='GAT' and dev == 1):
+                if ((sy == 'SparseTIR')  and mdl=='GAT') or (sy == 'SeaStar' and mdl=='GAT' and args.hw == "h100"):
                     df_data.append([graph_name[g], mdl, sy, 0])
                 else:
                     df_data.append([graph_name[g], mdl, sy, (data[mdl][sy][g])/(data[mdl][bline][g])])
+                    if ((data[mdl][sy][g])/(data[mdl][bline][g]) > max_spd):
+                        max_spd = (data[mdl][sy][g])/(data[mdl][bline][g])
     df = pd.DataFrame(df_data, columns=df_cols)
 
     df["x"] = df["Graph"] + "_" + df["Model"]

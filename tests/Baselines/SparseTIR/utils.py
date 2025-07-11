@@ -20,6 +20,7 @@ def get_dataset(dataset_name: str):
     """
     home = os.path.expanduser("~")
     ogb_path = os.path.join(home, "ogb")
+    ogb_path = "../../Data/ogb/"
     if not os.path.exists(ogb_path):
         os.makedirs(ogb_path)
     if dataset_name == "pubmed":
@@ -40,6 +41,42 @@ def get_dataset(dataset_name: str):
             "test": g.ndata["test_mask"],
         }
         return g, g.ndata["feat"], g.ndata["label"], split_idx, cora.num_labels
+    elif dataset_name == "corafull":
+        cora = dgl.data.CoraFullDataset()
+        g = cora[0].int()
+        n_nodes = g.num_nodes()
+        train_ratio = 0.7
+        val_ratio = 0.15
+        # test_ratio = 0.15
+
+        # Create indices for the dataset
+        indices = torch.randperm(n_nodes)
+
+        # Calculate the sizes of each split
+        train_size = int(train_ratio * n_nodes)
+        val_size = int(val_ratio * n_nodes)
+        # test_size = n_nodes - train_size - val_size
+
+        # Split the indices
+        train_indices = indices[:train_size]
+        val_indices = indices[train_size:train_size + val_size]
+        test_indices = indices[train_size + val_size:]
+
+        # Create masks for each split
+        train_mask = torch.zeros(n_nodes, dtype=torch.bool)
+        val_mask = torch.zeros(n_nodes, dtype=torch.bool)
+        test_mask = torch.zeros(n_nodes, dtype=torch.bool)
+
+        # Assign True to the corresponding indices for each split
+        train_mask[train_indices] = True
+        val_mask[val_indices] = True
+        test_mask[test_indices] = True
+        split_idx = {
+            "train": train_mask,
+            "valid": val_mask,
+            "test": test_mask,
+        }
+        return g, g.ndata["feat"], g.ndata["label"], split_idx, cora.num_classes
     elif dataset_name == "citeseer":
         citeseer = dgl.data.CiteseerGraphDataset()
         g = citeseer[0].int()
@@ -96,6 +133,6 @@ def get_dataset(dataset_name: str):
             "valid": g.ndata["val_mask"],
             "test": g.ndata["test_mask"],
         }
-        return g, g.ndata["feat"], g.ndata["label"], split_idx, reddit.num_labels
+        return g, g.ndata["feat"], g.ndata["label"], split_idx, reddit.num_classes
     else:
         raise KeyError("Unknown dataset: {}".format(dataset_name))

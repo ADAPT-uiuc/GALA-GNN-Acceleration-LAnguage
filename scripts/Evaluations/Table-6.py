@@ -46,13 +46,13 @@ def compile_and_get_time(args):
 
     for dst in datasets:
         for sm in samples:
-            curr = f">>>Running [{sp} sample size] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+            curr = f">>>Running [{sm} sample size] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
             print(curr)
             logfile.write(curr+"\n")
             errfile.write(curr+"\n")
 
-            job_args = ['../../build/tests/gala_inference',
-                        '../../tests/GALA-DSL/ablations/sampling/' + sm + + '/' + dst + '.txt',
+            job_args = ['../../build/tests/gala_inference_sample',
+                        '../../tests/GALA-DSL/ablations/sampling/' + sm + '/' + dst + '.txt',
                         output_path]
 
             run(job_args, logfile, errfile)
@@ -80,7 +80,7 @@ def createFigure(args):
 
     gala_df = pd.read_csv(args.stat_log + "_sampling.csv")
     for index, row in gala_df.iterrows():
-        print("Method:",row['sampling'],"Dataset:",row['dataset'],"Runtime:",row['inference_time'],"Accuracy:",row['accuracy'])
+        print("Method:",row['sampling'],"Dataset:",row['dataset'],"Runtime:",row['inference_time']*1000,"Accuracy:",row['accuracy'])
 
 def main(args):
     if (args.job == "gala"):

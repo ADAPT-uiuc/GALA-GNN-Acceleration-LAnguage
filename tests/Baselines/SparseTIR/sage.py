@@ -174,6 +174,7 @@ class GraphSAGE(nn.Module):
             bn.reset_parameters()
 
     def forward(self, x):
+        torch.cuda.synchronize()
         start = time.time()
         for i, layer in enumerate(self.layers[:-1]):
             x = layer(x)
@@ -181,6 +182,7 @@ class GraphSAGE(nn.Module):
             x = F.relu(x)
             x = self.dropout(x)
         x = self.layers[-1](x)
+        torch.cuda.synchronize()
         forward_pass_times.append(time.time() - start)
 
         return x.log_softmax(dim=-1)
@@ -364,6 +366,8 @@ bucketing_config = {
     "cora": [1, 2, 4],
     "citeseer": [1, 2, 4],
     "reddit": [1, 2, 4, 8, 16, 32, 64, 128, 256, 512],
+    "products": [1, 2, 4, 8, 16, 32],
+    "corafull": [1, 2, 4, 8, 16, 32, 64],
 }
 
 col_part = {
@@ -374,8 +378,9 @@ col_part = {
     "citeseer": 1,
     "ppi": 8,
     "reddit": 8,
+    "products": 16,
+    "corafull": 4,
 }
-
 
 def main():
     parser = argparse.ArgumentParser(description="OGBN-Arxiv (GraphSAGE Full-Batch)")
