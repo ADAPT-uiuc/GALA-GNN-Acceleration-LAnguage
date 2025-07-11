@@ -81,9 +81,9 @@ def createFigure(args):
     import pandas as pd
     vals = {}
     for l in layers:
-        vals[l] = {}
+        vals[int(l)] = {}
         for dim in hidden_dims:
-            vals[l][dim] = 0
+            vals[int(l)][int(dim)] = 0
 
     wise_df = pd.read_csv("results_fig18_19.csv")
     for index, row in wise_df.iterrows():
@@ -91,8 +91,7 @@ def createFigure(args):
             vals[row['num_layer']][row['hidden_feat']] = row['inference_time']
     gala_df = pd.read_csv(args.stat_log + "_scalability_GALA.csv")
     for index, row in gala_df.iterrows():
-        if row['dataset'] == "reddit":
-            print("Layers:", row['num_layer'],"Hidden dim",['hidden_feat'],"Speedup", vals[row['num_layer']][row['hidden_feat']] / row['inference_time'])
+        print("Layers:", int(row['layers']),"Hidden dim:",int(row['hidden']),"Speedup:", vals[row['layers']][row['hidden']] / row['inference_time'])
 
 def main(args):
     if (args.job == "gala"):

@@ -1,7 +1,6 @@
 import argparse
 import dgl
 import dgl.function as fn
-from dgl.utils import expand_as_pair
 import numpy as np
 import time
 import torch
@@ -23,10 +22,8 @@ from tvm.sparse import (
     column_part_hyb,
     format_decompose,
 )
-from dgl.nn.pytorch.glob import SumPooling
 
 forward_pass_times = []
-
 @T.prim_func
 def csrmm(
     a: T.handle,
@@ -112,121 +109,99 @@ class SpMM(torch.autograd.Function):
         f(*args)
         return dX
 
-class MLP(nn.Module):
-    """Construct two-layer MLP-type aggreator for GIN model"""
 
-    def __init__(self, input_dim, output_dim):
-        super().__init__()
-        self.linear = nn.Linear(input_dim, output_dim, bias=False)
+class SAGEConv(nn.Module):
+    def __init__(self, in_feats, out_feats):
+        super(SAGEConv, self).__init__()
 
-    def forward(self, x):
-        h = x
-        h = F.relu(self.linear(h))
-        return h
-
-class GINConv(nn.Module):
-    def __init__(self, apply_func = None, init_eps = 0, learn_eps = False, activation=None, aggregator_type="sum"):
-        super(GINConv, self).__init__()
-        self.apply_func = apply_func
-        self._aggregator_type = aggregator_type
-        if learn_eps:
-            self.eps = torch.nn.Parameter(torch.FloatTensor([init_eps]))
-        else:
-            self.register_buffer("eps", torch.FloatTensor([init_eps]))
-        #self._bias = nn.Parameter(torch.Tensor(out_feats))
-        self._activation = activation
+        self._in_src_feats, self._in_dst_feats = in_feats, in_feats
+        self._out_feats = out_feats
+        self.fc_self = nn.Linear(self._in_dst_feats, out_feats, bias=False)
+        self.fc_neigh = nn.Linear(self._in_src_feats, out_feats, bias=False)
         self.reset_parameters()
 
     def reset_parameters(self):
         """Reinitialize learnable parameters."""
-        #gain = nn.init.calculate_gain("relu")
-        #nn.init.xavier_uniform_(self.fc_self.weight, gain=gain)
-        #nn.init.xavier_uniform_(self.fc_neigh.weight, gain=gain)
-        pass
+        gain = nn.init.calculate_gain("relu")
+        nn.init.xavier_uniform_(self.fc_self.weight, gain=gain)
+        nn.init.xavier_uniform_(self.fc_neigh.weight, gain=gain)
 
-    def forward(self, feat, graph, edge_weight=None):
-        _reducer = getattr(fn, self._aggregator_type)
-        with graph.local_scope():
-            aggregate_fn = fn.copy_u("h", "m")
-            if edge_weight is not None:
-                assert edge_weight.shape[0] == graph.num_edges()
-                graph.edata["_edge_weight"] = edge_weight
-                aggregate_fn = fn.u_mul_e("h", "_edge_weight", "m")
+    def forward(self, feat):
+        r"""Compute GraphSAGE layer.
 
-            feat_src, feat_dst = expand_as_pair(feat, graph)
-            graph.srcdata["h"] = feat_src
-            #graph.update_all(aggregate_fn, _reducer("m", "neigh"))
-            graph.dstdata["neigh"] = SpMM.apply(feat_src)
-            rst = (1 + self.eps) * feat_dst + graph.dstdata["neigh"]
-            if self.apply_func is not None:
-                rst = self.apply_func(rst)
-            # activation
-            if self._activation is not None:
-                rst = self._activation(rst)
-            return rst
+        Parameters
+        ----------
+        graph : DGLGraph
+            The graph.
+        feat : torch.Tensor or pair of torch.Tensor
+            If a torch.Tensor is given, the input feature of shape :math:`(N, D_{in})` where
+            :math:`D_{in}` is size of input feature, :math:`N` is the number of nodes.
+            If a pair of torch.Tensor is given, the pair must contain two tensors of shape
+            :math:`(N_{in}, D_{in_{src}})` and :math:`(N_{out}, D_{in_{dst}})`.
+
+        Returns
+        -------
+        torch.Tensor
+            The output feature of shape :math:`(N, D_{out})` where :math:`D_{out}`
+            is size of output feature.
+        """
+        rst = self.fc_self(feat) + self.fc_neigh(SpMM.apply(feat))
+
+        return rst
 
 
-class GIN(nn.Module):
-    def __init__(self, in_feats, hidden_feats, out_feats, num_layers, dropout, g):
-        super(GIN, self).__init__()
+class GraphSAGE(nn.Module):
+    def __init__(self, in_feats, hidden_feats, out_feats, num_layers, dropout):
+        super(GraphSAGE, self).__init__()
 
-        self.graph = g
         self.layers = nn.ModuleList()
-        self.linear_prediction = nn.ModuleList()
-        #self.bns = nn.ModuleList()
+        self.bns = nn.ModuleList()
         # input layer
-        mlp_in = MLP(in_feats, hidden_feats)
-        self.layers.append(GINConv(apply_func=mlp_in, aggregator_type="sum", learn_eps=False, activation=F.relu))
-
-        mlp_hid = MLP(hidden_feats, out_feats)
-        self.layers.append(GINConv(apply_func=mlp_hid, aggregator_type="sum", learn_eps=False, activation=F.relu))
-        
-        #self.linear_prediction.append(nn.Linear(in_feats, hidden_feats))
-        #self.linear_prediction.append(nn.Linear(hidden_feats, out_feats))
-
-        self.pool = (SumPooling())
-        #self.dropout = nn.Dropout(p=dropout)
+        self.layers.append(SAGEConv(in_feats, hidden_feats))
+        self.bns.append(nn.BatchNorm1d(hidden_feats))
+        # hidden layers
+        for _ in range(num_layers - 2):
+            self.layers.append(SAGEConv(hidden_feats, hidden_feats))
+            self.bns.append(nn.BatchNorm1d(hidden_feats))
+        # output layer
+        self.layers.append(SAGEConv(hidden_feats, out_feats))
+        self.dropout = nn.Dropout(p=dropout)
 
     def reset_parameters(self):
         for layer in self.layers:
             layer.reset_parameters()
-        #for bn in self.bns:
-            #bn.reset_parameters()
+        for bn in self.bns:
+            bn.reset_parameters()
 
     def forward(self, x):
-
         torch.cuda.synchronize()
         start = time.time()
-        #hidden_rep = [x]
-        for i, layer in enumerate(self.layers):
-            x = layer(feat=x, graph=self.graph)
+        for i, layer in enumerate(self.layers[:-1]):
+            x = layer(x)
+            x = self.bns[i](x)
             x = F.relu(x)
-            #hidden_rep.append(x)
-
+            x = self.dropout(x)
+        x = self.layers[-1](x)
         torch.cuda.synchronize()
-        forward_pass_times.append(time.time()-start)
+        forward_pass_times.append(time.time() - start)
 
-        return x 
+        return x.log_softmax(dim=-1)
 
 
-def train(dataset, model, feats, y_true, train_idx, optimizer,graph):
+def train(dataset, model, feats, y_true, train_idx, optimizer):
     model.train()
 
     optimizer.zero_grad()
     out = model(feats)[train_idx]
-    '''
     if dataset == "ppi":
         loss = F.binary_cross_entropy_with_logits(out, y_true[train_idx])
     else:
         loss = F.nll_loss(out, y_true[train_idx])
-    '''
-    criterion = nn.CrossEntropyLoss()
-    loss = criterion(out, y_true[train_idx])
-    #loss.requires_grad = True
     loss.backward()
     optimizer.step()
 
     return loss.item()
+
 
 def create_kernels(g, feat_sizes, bucket_sizes=[], num_col_parts=1):
     global kernels
@@ -371,6 +346,7 @@ def create_kernels(g, feat_sizes, bucket_sizes=[], num_col_parts=1):
 
             kernels[(feat_size, forward)] = f
 
+
 def pad_length(x: int):
     if x <= 32:
         return 32
@@ -380,6 +356,7 @@ def pad_length(x: int):
     while ret < x:
         ret = ret + 128
     return ret
+
 
 bucketing_config = {
     "arxiv": [1, 2, 4, 8, 16, 32],
@@ -405,10 +382,9 @@ col_part = {
     "corafull": 4,
 }
 
-
 def main():
-    parser = argparse.ArgumentParser(description="OGBN-Cora (GraphConv Full-Batch)")
-    parser.add_argument("-d", "--dataset", type=str, default="cora")
+    parser = argparse.ArgumentParser(description="OGBN-Arxiv (GraphSAGE Full-Batch)")
+    parser.add_argument("-d", "--dataset", type=str, default="reddit")
     parser.add_argument("--logfile", type=str, default='logger.txt',
                         help="Logging file")
     args = parser.parse_args()
@@ -433,18 +409,17 @@ def main():
 
     create_kernels(
         g,
-        [feats.shape[-1], 32, num_classes],
+        [feats.shape[-1], 128, num_classes],
         bucketing_config[args.dataset],
         col_part[args.dataset],
     )
 
-    model = GIN(
+    model = GraphSAGE(
         in_feats=feats.size(-1),
-        hidden_feats=32,
+        hidden_feats=128,
         out_feats=num_classes,
-        num_layers=2,
-        dropout=0,
-        g=g,
+        num_layers=3,
+        dropout=0.5,
     ).to(device)
 
     model.reset_parameters()
@@ -453,19 +428,17 @@ def main():
     active = 200
 
     for _ in range(warmup):
-        loss = train(args.dataset, model, feats, labels, train_idx, optimizer, g)
+        loss = train(args.dataset, model, feats, labels, train_idx, optimizer)
 
     start_event = torch.cuda.Event(enable_timing=True)
     end_event = torch.cuda.Event(enable_timing=True)
     start_event.record()
     for _ in range(active):
-        loss = train(args.dataset, model, feats, labels, train_idx, optimizer, g)
-        # model.eval()
-        # _ = model(feats)
+        loss = train(args.dataset, model, feats, labels, train_idx, optimizer)
     end_event.record()
     torch.cuda.synchronize()
     dur = start_event.elapsed_time(end_event) / active
-    print("------GIN------dataset: {}------SparseTIR---------------".format(args.dataset))
+    print("---------------SAGE---dataset: {}------SparseTIR---------------".format(args.dataset))
     print("Training time: {} ms/epoch".format(dur))
     print("Forward Pass time: {}".format(np.mean(np.array(forward_pass_times[1:]))*1000))
     print("----------------------------------------------")
