@@ -1,16 +1,16 @@
 #!/bin/bash
 
-conda create -n gala python=3.11
+conda create -n gala python=3.11 --yes
 conda activate gala
-conda install nvidia/label/cuda-12.4.0::cuda-toolkit
+conda install nvidia/label/cuda-12.4.0::cuda-toolkit --yes
 pip install torch==2.4.1 --index-url https://download.pytorch.org/whl/cu124
-conda install -c dglteam/label/th24_cu124 dgl
+conda install -c dglteam/label/th24_cu124 dgl --yes
 pip install ogb
-conda install packaging
-conda install conda-forge::bison
-conda install conda-forge::seaborn
-conda install anaconda::pandas
-conda install anaconda::scipy
+conda install packaging --yes
+conda install conda-forge::bison --yes
+conda install conda-forge::seaborn --yes
+conda install anaconda::pandas --yes
+conda install anaconda::scipy --yes
 cd ../../Environments
 mkdir libtorch
 cd libtorch
