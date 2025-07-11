@@ -99,11 +99,11 @@ def createFigure(args):
 
     for g in graph_tune:
         if g == 'Products':
-            df_data.append(['OGBN-\nProducts',"Hand-select", data_hand[g]])
-            df_data.append(['OGBN-\nProducts',"Input-aware", data_auto[g]])
+            df_data.append(['OGBN-\nProducts',"Hand-select", data_hand[g]*1000])
+            df_data.append(['OGBN-\nProducts',"Input-aware", data_auto[g]*1000])
         else:
-            df_data.append([g,"Hand-select", data_hand[g]])
-            df_data.append([g,"Input-aware", data_auto[g]])
+            df_data.append([g,"Hand-select", data_hand[g]*1000])
+            df_data.append([g,"Input-aware", data_auto[g]*1000])
 
     # df = pd.DataFrame(data['GCN'], columns=["DGL","GALA"])
     df = pd.DataFrame(df_data, columns=df_cols)
