@@ -79,19 +79,52 @@ def compile_and_get_time(args):
 
 def createFigure(args):
     import pandas as pd
-    vals = {}
+    vals_wise = {}
+    vals_gala = {}
     for l in layers:
-        vals[int(l)] = {}
+        vals_wise[int(l)] = {}
+        vals_gala[int(l)] = {}
         for dim in hidden_dims:
-            vals[int(l)][int(dim)] = 0
+            vals_wise[int(l)][int(dim)] = 0
+            vals_gala[int(l)][int(dim)] = 0
 
     wise_df = pd.read_csv("results_fig18_19.csv")
     for index, row in wise_df.iterrows():
         if row['dataset'] == "reddit":
-            vals[row['num_layer']][row['hidden_feat']] = row['inference_time']
+            vals_wise[row['num_layer']][row['hidden_feat']] = row['inference_time']
+
     gala_df = pd.read_csv(args.stat_log + "_scalability_GALA.csv")
     for index, row in gala_df.iterrows():
-        print("Layers:", int(row['layers']),"Hidden dim:",int(row['hidden']),"Speedup:", vals[row['layers']][row['hidden']] / row['inference_time'])
+        print("Layers:", int(row['layers']),"Hidden dim:",int(row['hidden']),"Speedup:", vals_wise[row['layers']][row['hidden']] / row['inference_time'])
+        vals_gala[row['layers']][row['hidden']] = row['inference_time']
+
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    import numpy as np
+
+    row_labels = [li for li in vals_gala]
+    col_labels = [hi for hi in vals_gala[2]]
+    data = np.zeros(shape=(len(row_labels), len(col_labels)))
+
+    li_i = 0
+    for li in vals_gala:
+        hi_i = 0
+        for hi in vals_gala[li]:
+            data[li_i, hi_i] = vals_wise[li][hi] / vals_gala[li][hi]
+            hi_i += 1
+        li_i += 1
+    df = pd.DataFrame(data, index=row_labels, columns=col_labels)
+    
+    # Create the heatmap
+    plt.figure(figsize=(6, 3))
+    sns.heatmap(df, annot=True, fmt=".1f", cmap="YlGnBu", linewidths=.5)
+    
+    # Add a title
+    # plt.title(g)
+    plt.ylabel("Layers")
+    plt.xlabel("Hidden dimensions")
+    plt.savefig("Figure 18.pdf", format="pdf", bbox_inches="tight", pad_inches=0, dpi=1000)
 
 def main(args):
     if (args.job == "gala"):

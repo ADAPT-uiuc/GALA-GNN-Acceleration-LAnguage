@@ -93,14 +93,68 @@ def evalDGL(args):
 
 def createFigure(args):
     import pandas as pd
+
+    time = {}
+    memory = {}
+
     wise_df = pd.read_csv(args.stat_log + "_memory.csv")
     for index, row in wise_df.iterrows():
         print(row['exec'],'-- memory:', int(row['memory']),'-- time:',row['total_time']*1000)
+        time[row['exec']] = row['total_time']*1000
+        memory[row['exec']] = row['memory']
 
     wise_df = pd.read_csv("results_fig16_17.csv")
     for index, row in wise_df.iterrows():
         if row['hidden_feat'] == 32 and row['num_layer'] == 2 and row['model'] == 'GCN' and row['dataset'] == 'reddit':
             print('WiseGraph -- memory:',int(row['memory_used']),'-- time:',row['total_time']*1000)
+            time["WiseGraph"] = row['total_time']*1000
+            memory["WiseGraph"] = row['memory_used']
+
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    import numpy as np
+
+    data_mem = {
+        'Implementation': ['DGL', "Wise-\nGraph",  "GALA\nmemory" , "GALA\ntime"],
+        'Time': [time["dgl"], time["WiseGraph"], time["memory"], time["time"]],
+        'Memory': [memory["dgl"], memory["WiseGraph"], memory["memory"], memory["time"]]  # e.g., in MB
+    }
+    df = pd.DataFrame(data_mem)
+    df['Memory'] = df['Memory'] / 1024 
+
+    # Width for each bar (to separate them slightly)
+    bar_width = 0.35
+    categories = np.arange(len(df['Implementation']))
+
+    # Create the figure and axes
+    fig, ax1 = plt.subplots(figsize=(5, 4))
+
+    # Plot the 'Time' bars on the primary y-axis
+    ax1.bar(categories - bar_width/2, df['Time'], width=bar_width, color='dodgerblue', label="Time(ms)", edgecolor='black')
+    # ax1.set_xlabel("Category")
+    ax1.set_ylabel("Runtime(ms)", color="dodgerblue")
+    ax1.set_xticks(categories)
+    ax1.set_xticklabels(df['Implementation'])
+
+    # Create a second y-axis for the 'Memory' bars
+    ax2 = ax1.twinx()
+    ax2.bar(categories + bar_width/2, df['Memory'], width=bar_width, color='red', hatch='//', label="Memory(GB)")
+    ax2.set_ylabel("Memory Used(GB)", color="red")
+
+    plt.rcParams['hatch.linewidth'] = 3
+
+    plt.text(2.85, 3, "1.22× faster", ha = 'center', rotation=90, fontsize=15, fontweight='bold')
+    plt.text(2.2, 3.7, "2.03× less\nmemory", ha = 'center', rotation=90, fontsize=15, fontweight='bold')
+    # ax1.text(2, ml, "graph", color='black', ha='left', fontsize=14)
+
+    plt.axvline(x= 0.5, color='b', linestyle='--')
+    plt.axvline(x= 1.5, color='b', linestyle='--')
+    plt.axvline(x= 2.5, color='b', linestyle='--')
+
+    # Add a combined legend
+    fig.legend(bbox_to_anchor=(1,1), bbox_transform=ax1.transAxes, fontsize=16, labelspacing=0.1, handletextpad=0.1, handleheight=1.1, handlelength=2)
+
+    plt.savefig("Figure 19.pdf", format="pdf", bbox_inches="tight", pad_inches=0, dpi=1000)
 
 def main(args):
     if (args.job == "gala"):
