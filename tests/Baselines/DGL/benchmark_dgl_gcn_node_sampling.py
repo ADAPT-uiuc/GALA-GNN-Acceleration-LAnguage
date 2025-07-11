@@ -417,9 +417,7 @@ def main(args):
     # Send graph to GPU
     graph = graph.to(device)
 
-    train_model = True
-    if args.skip_train:
-        train_model = False
+    train_model = False
 
 
     # Edge-SPMM (default)

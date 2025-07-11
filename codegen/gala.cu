@@ -24,10 +24,10 @@ typedef float val_t;
 typedef int mask_load_t;
 typedef bool mask_t;
 // Dense matrix with double values.
-typedef DenseMatrix<int64_t, int64_t, val_t> DM;
-typedef DenseMatrix<int64_t, int64_t, lab_t> DL;
-typedef DenseMatrix<int64_t, int64_t, mask_load_t> DBL;
-typedef DenseMatrix<int64_t, int64_t, mask_t> DB;
+typedef DenseMatrix<ind1_t, ind2_t, val_t> DM;
+typedef DenseMatrix<ind1_t, ind2_t, lab_t> DL;
+typedef DenseMatrix<ind1_t, ind2_t, mask_load_t> DBL;
+typedef DenseMatrix<ind1_t, ind2_t, mask_t> DB;
 typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;
 int global_nrows;
 int global_classes;
@@ -482,24 +482,24 @@ int main(int argc, char **argv) {
     torch::TensorOptions().dtype(torch::kFloat).requires_grad(true);
 
     SM adj0;
-    std::string filename = "../../Data/papers100M_20/";
+    std::string filename = "../../Data/Reddit/";
     readSM_npy32<SM>(filename, &adj0);
 
     // Adj info
-    int64_t nrows = (int64_t)adj0.nrows();
-    global_nrows = (iT)nrows;
-    int64_t ncols = (int64_t)adj0.ncols();
-    int64_t nvals0 = (int64_t)adj0.nvals();
+    iT nrows = adj0.nrows();
+    global_nrows = nrows;
+    iT ncols = adj0.ncols();
+    nT nvals0 = adj0.nvals();
 
     // Init input with random numbers
     DM input_emb;
     readDM_npy<DM>(filename + "Feat.npy", &input_emb,
-                   DM::DENSE_MTX_TYPE::RM);
-    int64_t emb_size = (int64_t)input_emb.ncols();
+                   DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
+    iT emb_size = input_emb.ncols();
 
     DL labels;
     readDM_npy<DL>(filename + "Lab.npy", &labels,
-                   DL::DENSE_MTX_TYPE::RM);
+                   DenseMatrix<ind1_t, ind2_t, lab_t>::DENSE_MTX_TYPE::RM);
 
     DBL train_mask_load;
     readDM_npy<DBL>(filename + "TnMsk.npy", &train_mask_load,
@@ -528,7 +528,7 @@ int main(int argc, char **argv) {
       torch::Tensor total_vals_graph_tile;
       torch::Tensor total_bounds_graph_tile;
       std::vector<iT> tile_offsets_graph_tile =
-        static_ord_col_breakpoints<SM>(&adj0, 1000000000.000000);
+        static_ord_col_breakpoints<SM>(&adj0, 58241.000000);
       iT segments_graph_tile = tile_offsets_graph_tile.size() - 1;
       total_offsets_graph_tile = torch::zeros({(adj0.nrows() + 1) * (segments_graph_tile)}, options_int_tile);
       total_cols_graph_tile = torch::zeros({adj0.nvals()}, options_int_tile);
@@ -636,7 +636,7 @@ int *dL;
 
 
 int num_iters = 100;
-auto net = std::make_shared<GALAGNN>(128, 32, 172);net->to(device);torch::optim::Adam optimizer(
+auto net = std::make_shared<GALAGNN>(602, 32, 41);net->to(device);torch::optim::Adam optimizer(
     net->parameters(), torch::optim::AdamOptions(0.010000).weight_decay(5e-4));
  int mod_v = 1;
  int skip_cache_warmup = 5;

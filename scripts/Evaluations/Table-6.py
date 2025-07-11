@@ -77,10 +77,28 @@ def createFigure(args):
     import math
     import scipy
     from scipy import stats
-
+# "{:.2f}".format() 
     gala_df = pd.read_csv(args.stat_log + "_sampling.csv")
+
+    times = {}
+    acc = {}
+
+    for sm in samples:
+        times[sm] = {}
+        acc[sm] = {}
+
+    # for index, row in gala_df.iterrows():
+    #     print("Method:",row['sampling'],"Dataset:",row['dataset'],"Runtime:", "{:.3f}".format(row['inference_time']*1000),"Accuracy:", "{:.2f}".format(row['accuracy']))
+
     for index, row in gala_df.iterrows():
-        print("Method:",row['sampling'],"Dataset:",row['dataset'],"Runtime:",row['inference_time']*1000,"Accuracy:",row['accuracy'])
+        times[row['sampling']][row['dataset']] = "{:.3f}".format(row['inference_time']*1000)
+        acc[row['sampling']][row['dataset']] = "{:.2f}".format(row['accuracy'])
+
+    for sm in samples:
+        print("Method:", sm, end="  |")
+        for dst in datasets:
+            print("Dataset:", dst,"Runtime:", times[sm][dst],"Accuracy:", acc[sm][dst], end=" | ")
+        print()
 
 def main(args):
     if (args.job == "gala"):
@@ -91,7 +109,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Graph Benchmark Runner')
     parser.add_argument("--stat-log", type=str,
-                        default="timing_info_graph", help="File to store timing data")
+                        default="timing_info", help="File to store timing data")
     parser.add_argument("--hw", type=str,
                         default="h100", help="Target hardware")
     parser.add_argument("--job", type=str, choices=['gala', 'stat'], default="gala",
