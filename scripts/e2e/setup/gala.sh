@@ -2,7 +2,6 @@
 
 conda create -n gala python=3.11 --yes
 source ~/miniforge3/bin/activate gala # Please give the correct path to activate the env if different
-conda install nvidia/label/cuda-12.4.0::cuda-toolkit --yes
 pip install torch==2.4.1 --index-url https://download.pytorch.org/whl/cu124
 conda install -c dglteam/label/th24_cu124 dgl --yes
 pip install ogb
@@ -24,4 +23,4 @@ make -j5
 cd ../codegen
 mkdir build
 cd build
-cmake -DCMAKE_PREFIX_PATH="$PWD/../../scripts/Environments/libtorch" ..
+cmake -DCMAKE_PREFIX_PATH="$PWD/../../scripts/Environments/libtorch/libtorch" ..
