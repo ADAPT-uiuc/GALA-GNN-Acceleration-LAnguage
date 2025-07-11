@@ -1620,6 +1620,11 @@ forward(torch::Tensor t_iden";
             printTimes = "  std::cout << calc_mean(times_arr) << \",\"\n\
             << max_acc << std::endl;\n";
         }
+        else if (GALAFEContext::print_memory)
+        {
+            printTimes = "  std::cout << calc_mean(times_arr) << \",\"\n\
+            << printMemoryUsage() << std::endl;\n";
+        }
         else
         {
             printTimes = "  std::cout << calc_mean(times_arr) << \",\"\n\
