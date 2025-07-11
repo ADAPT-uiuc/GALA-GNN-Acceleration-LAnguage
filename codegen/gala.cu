@@ -24,10 +24,10 @@ typedef float val_t;
 typedef int mask_load_t;
 typedef bool mask_t;
 // Dense matrix with double values.
-typedef DenseMatrix<ind1_t, ind2_t, val_t> DM;
-typedef DenseMatrix<ind1_t, ind2_t, lab_t> DL;
-typedef DenseMatrix<ind1_t, ind2_t, mask_load_t> DBL;
-typedef DenseMatrix<ind1_t, ind2_t, mask_t> DB;
+typedef DenseMatrix<int64_t, int64_t, val_t> DM;
+typedef DenseMatrix<int64_t, int64_t, lab_t> DL;
+typedef DenseMatrix<int64_t, int64_t, mask_load_t> DBL;
+typedef DenseMatrix<int64_t, int64_t, mask_t> DB;
 typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM;
 int global_nrows;
 int global_classes;
@@ -486,20 +486,20 @@ int main(int argc, char **argv) {
     readSM_npy32<SM>(filename, &adj0);
 
     // Adj info
-    iT nrows = adj0.nrows();
-    global_nrows = nrows;
-    iT ncols = adj0.ncols();
-    nT nvals0 = adj0.nvals();
+    int64_t nrows = (int64_t)adj0.nrows();
+    global_nrows = (iT)nrows;
+    int64_t ncols = (int64_t)adj0.ncols();
+    int64_t nvals0 = (int64_t)adj0.nvals();
 
     // Init input with random numbers
     DM input_emb;
     readDM_npy<DM>(filename + "Feat.npy", &input_emb,
-                   DenseMatrix<ind1_t, ind2_t, val_t>::DENSE_MTX_TYPE::RM);
-    iT emb_size = input_emb.ncols();
+                   DM::DENSE_MTX_TYPE::RM);
+    int64_t emb_size = (int64_t)input_emb.ncols();
 
     DL labels;
     readDM_npy<DL>(filename + "Lab.npy", &labels,
-                   DenseMatrix<ind1_t, ind2_t, lab_t>::DENSE_MTX_TYPE::RM);
+                   DL::DENSE_MTX_TYPE::RM);
 
     DBL train_mask_load;
     readDM_npy<DBL>(filename + "TnMsk.npy", &train_mask_load,
