@@ -18,5 +18,5 @@ export LD_LIBRARY_PATH="$PREV_LD_LIBRARY_PATH"
 source ../Environments/WiseGraph/a100/.venv/cxgnn2/bin/activate
 python WiseGraph.py --job F16n17 --a100
 source ~/miniforge3/bin/activate gala
-python Figures-16-17.py --hw a100 --job stat
-python Figures-16-17.py --hw a100 --job stat --train
+python Figures-16-17.py --hw a100 --job fig
+python Figures-16-17.py --hw a100 --job fig --train
