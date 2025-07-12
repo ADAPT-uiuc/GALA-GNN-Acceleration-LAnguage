@@ -8,8 +8,8 @@
 #python fig_parser.py --log_file results_fig18_19.log --hardware h100 --output results_fig18_19.csv
 #python fig_parser.py --log_file results_table5.log --hardware h100 --output results_table5.csv
 
-# ----------- Figure 18 & 19 -----------
-echo "Running experiments for Figure 18 & 19..."
+# ----------- Figure 18 -----------
+echo "Running experiments for Figure 18..."
 dsets=(reddit)
 models=(GCN)
 graph_types=(CSR_Layer)
@@ -23,13 +23,13 @@ for graph_type in "${graph_types[@]}"; do
                 for hidden_feat in "${hidden_feats[@]}"; do
                     echo "Running: dataset=${dset}, model=${model}, graph_type=${graph_type}, hidden_feat=${hidden_feat}, num_layer=${num_layer}"
                     python3 test_model.py --dataset "$dset" --model "$model" --graph_type "$graph_type" --hidden_feat "$hidden_feat" --num_layer "$num_layer" \
-                        >> results_fig18_19.log 2>&1
+                        >> results_fig18.log 2>&1
                 done
             done
         done
     done
 done
 
-python fig_parser.py --log_file results_fig18_19.log --hardware h100 --output results_fig18_19.csv
+python fig_parser.py --log_file results_fig18.log --hardware h100 --output results_fig18.csv
 
 echo "Task completed."

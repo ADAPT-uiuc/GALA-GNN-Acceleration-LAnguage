@@ -6,7 +6,7 @@ import shutil
 parser = argparse.ArgumentParser(description="Run WiseGraph test with specified hardware")
 parser.add_argument("--a100", action="store_true", help="Use A100 hardware")
 parser.add_argument("--h100", action="store_true", help="Use H100 hardware")
-parser.add_argument("--job", type=str, choices=['F16n17', 'F18n19', 'T5'], default="F16n17",
+parser.add_argument("--job", type=str, choices=['F16n17', 'F19', 'F18', 'T5'], default="F16n17",
                     help="Tasks to generate the WiseGraph Numbers")
 args = parser.parse_args()
 
@@ -20,9 +20,12 @@ else:
 if args.job == "T5":
     script_path = os.path.abspath("../Environments/WiseGraph/" + hardware + "/CxGNN-Compute/test/ae/E1_overall/run_wisegraph-T5.sh")
     output_files = ["results_table5.csv"]
-elif args.job == "F18n19":
-    script_path = os.path.abspath("../Environments/WiseGraph/" + hardware + "/CxGNN-Compute/test/ae/E1_overall/run_wisegraph-F18-F19.sh")
-    output_files = ["results_fig18_19.csv"]
+elif args.job == "F18":
+    script_path = os.path.abspath("../Environments/WiseGraph/" + hardware + "/CxGNN-Compute/test/ae/E1_overall/run_wisegraph-F18.sh")
+    output_files = ["results_fig18.csv"]
+elif args.job == "F19":
+    script_path = os.path.abspath("../Environments/WiseGraph/" + hardware + "/CxGNN-Compute/test/ae/E1_overall/run_wisegraph-F19.sh")
+    output_files = ["results_fig19.csv"]
 else:
     script_path = os.path.abspath("../Environments/WiseGraph/" + hardware + "/CxGNN-Compute/test/ae/E1_overall/run_wisegraph-F16-F17.sh")
     output_files = ["results_fig16_17.csv"]
