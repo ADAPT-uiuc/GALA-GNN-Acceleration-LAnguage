@@ -1,2 +1,9 @@
 #!/bin/bash
 
+source ~/miniforge3/bin/activate gala
+cd ../Evaluations
+python Figure-18.py
+source ../Environments/WiseGraph/h100/.venv/cxgnn2/bin/activate
+python WiseGraph.py --job F18 --h100
+source ~/miniforge3/bin/activate gala
+python Figure-18.py --job stat
