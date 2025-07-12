@@ -171,7 +171,7 @@ def evalSea(args):
             else:
                 job_args = ['python',
                             '../../tests/Baselines/SeaStar/benchmark_sea_'+model+'.py',
-                            '--dataset', dgl_map[dset],
+                            '--dataset', dset,
                             '--n-hidden', str(32),
                             '--n-layers', str(1),
                             '--n-epochs', str(100),
