@@ -5,7 +5,7 @@ cd ../Evaluations
 python Figures-16-17.py
 python Figures-16-17.py --hw a100 --train
 python Figures-16-17.py --hw a100 --job dgl
-source ~/miniforge3/bin/activate seastar-gala-ae
+source ~/miniforge3/bin/activate seastar-gala-ae # might require Cuda toolkit v11.8 if causing issues (used v12.4 till now)
 python Figures-16-17.py --job sea
 source ~/miniforge3/bin/activate stir-gala-ae
 export PREV_LIBRARY_PATH="$LIBRARY_PATH"

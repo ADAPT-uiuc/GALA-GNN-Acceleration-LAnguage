@@ -5,11 +5,11 @@ cd ../Evaluations
 python Figures-16-17.py
 python Figures-16-17.py --train
 python Figures-16-17.py --job dgl
-#source ~/miniforge3/bin/activate seastar-gala-ae
-source ~/miniforge3/bin/activate seastar-ae
+source ~/miniforge3/bin/activate seastar-gala-ae # might require Cuda toolkit v11.8 if causing issues (used v12.4 till now)
+#source ~/miniforge3/bin/activate seastar-ae
 python Figures-16-17.py --job sea
-#source ~/miniforge3/bin/activate stir-gala-ae
-source ~/miniforge3/bin/activate stir
+source ~/miniforge3/bin/activate stir-gala-ae
+#source ~/miniforge3/bin/activate stir
 export PREV_LIBRARY_PATH="$LIBRARY_PATH"
 export PREV_LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
 export LIBRARY_PATH="$CONDA_PREFIX/lib:$CONDA_PREFIX/lib64:$LIBRARY_PATH"
