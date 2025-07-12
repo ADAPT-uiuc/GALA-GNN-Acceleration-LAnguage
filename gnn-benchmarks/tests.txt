@@ -1,2 +1,0 @@
-dgl gcn [32] Cora 200
-dgl gat [32] Cora 200 [8,1]

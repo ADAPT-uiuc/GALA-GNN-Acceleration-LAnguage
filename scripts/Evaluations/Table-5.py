@@ -99,11 +99,11 @@ def evalDGL(args):
                     '--pi', sp,
                     '--layers', str(1),
                     '--n-epochs', str(100),
-                    "--logfile", args.stat_log + "_" + args.hw + "_DGL_node_sampling.csv",
+                    "--logfile", args.stat_log + "_DGL_node_sampling.csv",
                     "--device", "cuda",
                     "--skip_train",
                     "--discard", str(5)]
-        outfile = open(args.stat_log + "_" + args.hw + "_DGL_node_sampling.csv", 'a+')
+        outfile = open(args.stat_log + "_DGL_node_sampling.csv", 'a+')
         outfile.write(sp + ",")
         outfile.close()
         run(job_args, logfile, errfile)

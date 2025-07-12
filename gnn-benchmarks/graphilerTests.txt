@@ -1,2 +1,0 @@
-graphiler gcn [16] cora 200
-graphiler gat [16] citeseer 200 [8,1]
