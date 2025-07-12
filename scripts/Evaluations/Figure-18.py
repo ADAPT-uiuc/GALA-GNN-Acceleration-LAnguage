@@ -88,7 +88,7 @@ def createFigure(args):
             vals_wise[int(l)][int(dim)] = 0
             vals_gala[int(l)][int(dim)] = 0
 
-    wise_df = pd.read_csv("results_fig18_19.csv")
+    wise_df = pd.read_csv("results_fig18.csv")
     for index, row in wise_df.iterrows():
         if row['dataset'] == "reddit":
             vals_wise[row['num_layer']][row['hidden_feat']] = row['inference_time']

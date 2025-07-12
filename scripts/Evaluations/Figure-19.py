@@ -103,7 +103,7 @@ def createFigure(args):
         time[row['exec']] = row['total_time']*1000
         memory[row['exec']] = row['memory']
 
-    wise_df = pd.read_csv("results_fig16_17.csv")
+    wise_df = pd.read_csv("results_fig19.csv")
     for index, row in wise_df.iterrows():
         if row['hidden_feat'] == 32 and row['num_layer'] == 2 and row['model'] == 'GCN' and row['dataset'] == 'reddit':
             print('WiseGraph -- memory:',int(row['memory_used']),'-- time:',row['total_time']*1000)
