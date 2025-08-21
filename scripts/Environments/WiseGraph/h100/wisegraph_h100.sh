@@ -7,7 +7,7 @@ mkdir .venv
 python3 -m venv .venv/cxgnn2
 source .venv/cxgnn2/bin/activate
 
-git clone https://github.com/chamikasudusinghe/CxGNN-Compute.git --recurse-submodules
+git clone https://github.com/chamikasudusinghe/CxGNN-Compute.git --recurse-submodules -b h100
 git clone https://github.com/xxcclong/CxGNN-DL.git --recurse-submodules
 git clone --recurse-submodules https://github.com/xxcclong/triton.git triton
 
