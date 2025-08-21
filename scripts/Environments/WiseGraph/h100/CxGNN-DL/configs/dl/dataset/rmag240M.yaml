@@ -1,8 +1,0 @@
-name: rmag240m
-path: ../../../../data/rmag240m/
-split_type: time
-symmetric: True
-num_classes: 153
-feature_dim: 768
-evaluator: acc
-dtype: float16

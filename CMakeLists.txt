@@ -30,7 +30,6 @@ option(ALI_ALLOC "Allocate with alligned_alloc" ON)
 
 # Use compressed data representation formats
 option(C_COMP "Compress Sparse Matrix further. Ex - CSR -> DCSR" ON)
-# TODO Somehow try to get C_COMP into the spade code generation? Or even ignore it?
 
 option(READ_NPY "Export torch." OFF)
 if (READ_NPY)
@@ -53,14 +52,13 @@ if (NOT SM_TYPE)
 endif ()
 # The preprocessing function for segmented tiling, default 2 (max parallel)
 if (NOT PROC_TILE)
-    set(PROC_TILE 0) # TODO SAND
+    set(PROC_TILE 0)
 endif ()
 # The loop order for executing sparse matrix operations, default 2 (jj, iip, i, j, k)
 if (NOT L_ORDER)
     set(L_ORDER 2)
 endif ()
 # The GCN Normalization method, default 1
-# TODO currently tightly coupled to the sparse ops. Remove it from there.
 if (NOT GCN_NORM)
     set(GCN_NORM 1) # the GCN normalization method
 endif ()
@@ -69,7 +67,7 @@ endif ()
 if (GEN_SPADE)
     option(ACC_RANDOM_BASE "Give random base addresses" ON)
     option(ACC_COLD_STARTS "Always have a cold starts when getting times" OFF)
-    option(ACC_PRE_FETCH_OFF "Disable prefetching" OFF) # TODO This could be removed.
+    option(ACC_PRE_FETCH_OFF "Disable prefetching" OFF)
 
     # Turn off MKL
     option(USE_MKL "MKL option" OFF)
@@ -91,7 +89,7 @@ endif ()
 if (SP_TEST)
     # Turn off MKL
     option(USE_MKL "MKL option" OFF)
-    set(C_COMP OFF)  # TODO SAND
+    set(C_COMP OFF)
 
     message("Build for code for sparse matrix ops and it's dependencies.")
     add_compile_definitions(GNN_Sparse)
@@ -205,7 +203,7 @@ elseif (L_ORDER EQUAL 12)
     message("Loop Order 12 - jj, kkp, ii, i, j, kv")
 endif ()
 
-# GNN Normalization method. # TODO Remove from the sparse section. Currently, it's tightly coupled to this.
+# GNN Normalization method.
 if (GCN_NORM EQUAL 1)
     add_compile_definitions(GN_1)
     message("GCN normalization is calculated once using SDDVV.")
@@ -254,7 +252,7 @@ CHECK_INCLUDE_FILES(sys/syscall.h HAVE_SYSCALL_H)
 
 # Always use -O3
 add_compile_options(-O3)
-option(CHECK_MEM_LEAK "MEM LEAK option" OFF) # TODO Turn on??
+option(CHECK_MEM_LEAK "MEM LEAK option" OFF)
 message(STATUS "Compiling for ${ARCH}")
 
 

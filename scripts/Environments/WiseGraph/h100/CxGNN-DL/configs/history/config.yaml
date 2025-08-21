@@ -1,6 +1,0 @@
-method: grad
-staleness_thres: 200
-rate: 0.9
-limit: 0
-distributed_store: True
-start_history: 0

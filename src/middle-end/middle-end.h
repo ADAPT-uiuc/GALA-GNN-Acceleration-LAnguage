@@ -327,37 +327,23 @@ public:
                         // If one of those places is a aggregate operation, if going from smaller to larger,
                         // and is sparse, then do recompute
                         // TODO add the computation that adds the dependency to the object?
-                        //  std::cout << "works3.9" << std::endl;
                         int outputUses = 0;
                         auto output = cNode->getOutput(0);
-                        // std::cout << "works3.9.1: " << cNode->getOutput(0)->getName() << std::endl;
-                        // std::cout << "works3.9.1: " << cNode->getInput(0)->getName() << std::endl;
                         auto inputDataInfo = cNode->getInput(0)->getDataInfo();
-                        // std::cout << "works3.9.2" << std::endl;
                         auto inputCols = inputDataInfo->getDimCol();
-                        // std::cout << "works3.9.3" << std::endl;
                         auto outputCols = output->getDataInfo()->getDimCol();
                         // std::cout << "works: " << output->getName() << " " << cNode->getInput(0)->getName() << std::endl;
                         for (int iy = ix + 1; iy < lNode->getLoopNodeNum(); iy++)
                         {
                             // use data deppendenciey here
-                            // std::cout << "works3" << std::endl;
                             auto oNode = dynamic_cast<ComputeNode*>(lNode->getNode(iy));
-                            // std::cout << "works3.1" << std::endl;
-                            // if (oNode->getOp() == AGGREGATE_MUL_SUM_OP){
-                            //     std::cout << "works3.11" << std::endl;
-                            //     std::cout << "works3.2 " << oNode->getInput(1)->getName() << std::endl;
-                            // }
                             if (outputUses > 0 &&
                                 oNode->getInput(0) == output &&
                                 oNode->getOp() == AGGREGATE_MUL_SUM_OP &&
                                 inputCols < outputCols &&
                                 !oNode->getInput(1)->getDataInfo()->getSparse())
                             {
-                                // std::cout << "use: " << oNode->getInput(0)->getName() << " op:" << oNode->getOp() << " " << oNode->getInput(0) << " " << output << std::endl;
-                                // std::cout << "out-name1:" << cNode->getOutput(0)->getName() << std::endl;
                                 cNode->getOutput(0)->setName(cNode->getOutput(0)->getName() + "_e");
-                                // std::cout << "out-name2:" << cNode->getOutput(0)->getName() << std::endl;
 
                                 oNode->setInputDataNode(0, cNode->getInput(0));
                                 oNode->getOutput(0)->getDataInfo()->setDims(inputDataInfo->getDimRow(), inputCols);
@@ -380,18 +366,12 @@ public:
                                 dependencies.push_back(inOutWeightDepRelationWeight);
                                 auto inOutWeightAssociation = new RelationEdge(oNode->getOutput(0), ROWS_RELATION, cNode->getInput(1), COLS_RELATION);
                                 associations.push_back(inOutWeightAssociation);
-                                // std::cout << "works2" << std::endl;
-                                // output->setName("res");
                             }
-                            // std::cout << "works3.5" << std::endl;
                             if (oNode->getInput(0) == output)
                             {
-                                // std::cout << "use: " << oNode->getInput(0)->getName() << " op:" << oNode->getOp() << " " << oNode->getInput(0) << " " << output << std::endl;
                                 outputUses++;
                             }
-                            // std::cout << "works3.6" << std::endl;
                         }
-                        // std::cout << "works3.8" << std::endl;
                     }
                     ix++;
                 }
@@ -530,7 +510,6 @@ public:
                 // If doing training invariant code motion, move the
                 if (enableTim)
                 {
-                    // TODO leave alone for now. To be completed in the when implementing TIM
                      do
                     {
                         changed = false;
@@ -601,7 +580,6 @@ public:
                                     auto nextOutput = nextNode->getOutput(0);
 
                                     // What you write to is going to change
-                                    // TODO -- should the inputs ansl change??
                                     output->getDataInfo()->setDims(-1, input->getDataInfo()->getDimCol());
 
                                     // New next node

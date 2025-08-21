@@ -5,7 +5,7 @@ import os
 build_path = r"../../build/"
 
 datasets = ["Reddit", "Products"]
-active_irs = ["none","cir", "dir", "all"]
+samples = ["data", "dynamic", "kernel", "no-sampling"]
 
 def run(args, logfile, errfile):
     proc = subprocess.Popen(args, stdout=logfile, stderr=errfile)
@@ -22,11 +22,10 @@ def run_at(args, logfile, errfile, path):
 def compile_and_get_time(args):
     logfile = open(args.stdout_log, 'w+')
     errfile = open(args.stderr_log, 'w+')
-    outfile = open(args.stat_log + "_ir.csv", 'w+')
-    outfile.write("dataset,opts,inference_time,total_time\n")
+    outfile = open(args.stat_log + "_sampling.csv", 'w+')
+    outfile.write("dataset,sampling,inference_time,accuracy\n")
     outfile.flush()
 
-    # TODO add build
     if not os.path.exists(build_path):
         os.makedirs(build_path)
         job_args = ['cmake',
@@ -45,14 +44,14 @@ def compile_and_get_time(args):
         os.makedirs(output_path + "build/")
 
     for dst in datasets:
-        for air in active_irs:
-            curr = f">>>Running [{air} active IR optimizations] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+        for sm in samples:
+            curr = f">>>Running [{sm} sample size] :>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
             print(curr)
             logfile.write(curr+"\n")
             errfile.write(curr+"\n")
 
-            job_args = ['../../build/tests/gala_inference',
-                        '../../tests/GALA-DSL/ablations/speedups/cir-vs-dir/' + dst + '/' + air + '.txt',
+            job_args = ['../../build/tests/gala_inference_sample',
+                        '../../tests/GALA-DSL/ablations/sampling/' + sm + '/' + dst + '.txt',
                         output_path]
 
             run(job_args, logfile, errfile)
@@ -61,7 +60,7 @@ def compile_and_get_time(args):
                         '-j56']
             run_at(job_args, logfile, errfile, output_path + "build/")
             job_args = ['./gala_model']
-            outfile.write(dst + "," + air + ",")
+            outfile.write(dst + "," + sm + ",")
             outfile.flush()
             run_at(job_args, outfile, errfile, output_path + "build/")
 
@@ -78,23 +77,26 @@ def createFigure(args):
     import scipy
     from scipy import stats
 # "{:.2f}".format() 
-    gala_df = pd.read_csv(args.stat_log + "_ir.csv")
+    gala_df = pd.read_csv(args.stat_log + "_sampling.csv")
 
     times = {}
+    acc = {}
 
-    for ir in active_irs:
-        times[ir] = {}
+    for sm in samples:
+        times[sm] = {}
+        acc[sm] = {}
 
     # for index, row in gala_df.iterrows():
     #     print("Method:",row['sampling'],"Dataset:",row['dataset'],"Runtime:", "{:.3f}".format(row['inference_time']*1000),"Accuracy:", "{:.2f}".format(row['accuracy']))
 
     for index, row in gala_df.iterrows():
-        times[row['opts']][row['dataset']] = "{:.3f}".format(row['inference_time']*1000)
+        times[row['sampling']][row['dataset']] = "{:.3f}".format(row['inference_time']*1000)
+        acc[row['sampling']][row['dataset']] = "{:.2f}".format(row['accuracy'])
 
-    for ir in active_irs[1:]:
-        print("Method:", ir, end="  |")
+    for sm in samples:
+        print("Method:", sm, end="  |")
         for dst in datasets:
-            print("Dataset:", dst,"Speedup:", times['none'][dst]/times[ir][dst], end=" | ")
+            print("Dataset:", dst,"Runtime:", times[sm][dst],"Accuracy:", acc[sm][dst], end=" | ")
         print()
 
 def main(args):

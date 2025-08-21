@@ -1,7 +1,0 @@
-name: friendster
-path: ../../../../data/friendster
-split_type: time
-symmetric: True
-num_classes: 64
-feature_dim: 384
-evaluator: acc

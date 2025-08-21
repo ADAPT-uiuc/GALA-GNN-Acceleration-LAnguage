@@ -1192,7 +1192,6 @@ int printMemoryUsage() {\n\
                 if (inputInfo->getFormat() == CSR_STYPE && !inputInfo->getDerived())
                 {
                     // TODO Check if this is a dependant of an exising graph
-                    
                     int indexData = (int)encounteredStrings.size();
                     if (inputInfo->getIndex() != -1)
                     {

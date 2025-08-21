@@ -2,5 +2,5 @@
 
 source ~/miniforge3/bin/activate gala
 cd ../Evaluations
-python Table-5(new).py
-python Table-5(new).py --job stat
+python Table-7.py
+python Table-7.py --job stat

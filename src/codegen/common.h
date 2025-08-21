@@ -29,7 +29,6 @@ enum Environment
 };
 
 // Context of the execution used by GALA
-// TODO: How to support heterogenous execution? Use multiple contexts for each function?
 class GALAContext
 {
 private:
@@ -55,7 +54,6 @@ public:
         return this->env;
     }
 };
-
 
 // TODO -- For now both CmakeCode and KernelCode have the same operations
 //  Separate this out. CMake is common for all, but the kernel code would also have
@@ -528,21 +526,6 @@ nvals0 = adj0.nvals();\n";
                 }
             }
 
-            // TODO link this up correctly
-            // std::map<std::string, std::string> graphNamePathMap;
-            // graphNamePathMap["Reddit"] = "RedditDataset";
-            // graphNamePathMap["Cora"] = "CoraGraphDataset";
-            // graphNamePathMap["CoraFull"] = "CoraFullDataset";
-            // graphNamePathMap["Pubmed"] = "PubmedGraphDataset";
-            // graphNamePathMap["Arxiv"] = "ogbn-arxiv";
-            // graphNamePathMap["Products"] = "ogbn-products";
-            // graphNamePathMap["papers100M_1"] = "ogbn-papers100M_1";
-            // graphNamePathMap["papers100M_2"] = "ogbn-papers100M_2";
-            // graphNamePathMap["papers100M_5"] = "ogbn-papers100M_5";
-            // graphNamePathMap["papers100M_10"] = "ogbn-papers100M_10";
-            // graphNamePathMap["papers100M_20"] = "ogbn-papers100M_20";
-            // graphNamePathMap[cNode->getParam(0)]
-
             // This doesn't need to change
             std::string fileLoadCode;
             if (GALAFEContext::use_long)
@@ -686,7 +669,6 @@ public:\n\
 };\n";
                 kernelCallCode.addCode(autoGradFunction);
             }
-            // TODO change the names from the input
             auto inGraphIndx = cNode->getInput(2)->getDataInfo()->getIndex();
             std::string tempForwardAggrCall = generateOutputString(cNode, outOfLoop) + " = " + getKernelName(cNode)
             + "_AutoGrad::apply(" + cNode->getInput(0)->getName() + ", " + cNode->getInput(1)->getName() + ", " + std::to_string(inGraphIndx) + ");";
@@ -912,7 +894,6 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
                 }
                 if (outOfLoop)
                 {
-                    // TODO later make this better
                     // TODO Check if the output name is res, if not then pass this along to the output
                     auto inGraphIndx = cNode->getInput(1)->getDataInfo()->getIndex();
                     std::string tempForwardAggrCall;
@@ -927,7 +908,7 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
                     } else
                     {
                         tempForwardAggrCall =  "t_iden = " + getKernelName(cNode)
-                   + "_AutoGrad::apply(t_iden, 0);"; // TODO: Alyways do 0 (for now, since it'll be used for all scenarios)
+                   + "_AutoGrad::apply(t_iden, 0);"; // TODO: Always do 0 (for now, since it'll be used for all scenarios)
                     }
 
                     model.getInv()->addCode(tempForwardAggrCall);
@@ -1010,7 +991,7 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
                     } else
                     {
                         tempForwardAggrCall =  "t_iden = " + getKernelName(cNode)
-                   + "_AutoGrad::apply(t_iden, 0);"; // TODO: Alyways do 0 (for now, since it'll be used for all scenarios)
+                   + "_AutoGrad::apply(t_iden, 0);"; // TODO: Always do 0 (for now, since it'll be used for all scenarios)
                     }
                     model.getInv()->addCode(tempForwardAggrCall);
 
@@ -1253,7 +1234,6 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
 
                 inputSizes.push_back(cNode->getInput(1)->getDataInfo()->getDimCol());
 
-                // TODO add the inputs to the forward call based on the actual inputs
                 // std::cout << "cc1: " << generateOutputString(cNode, outOfLoop) << " -- " << std::to_string(fcCount) << std::endl;
                 std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = fc" + std::to_string(fcCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
                 model.getForward()->addCode(forwardCall);
@@ -1263,7 +1243,6 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
         }  else if (cNode->getOp() == FFN_OP_REPEAT)
         {
             // std::cout << "cc2: " << generateOutputString(cNode, outOfLoop) << " -- " << std::to_string(fcCount) << std::endl;
-            // TODO add the inputs to the forward call based on the actual inputs
             std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = fc" + std::to_string(fcCount - 1) + "->forward(" + cNode->getInput(0)->getName() + ");";
             model.getForward()->addCode(forwardCall);
         } else if (cNode->getOp() == FFN_OP_EDGE)
@@ -1276,7 +1255,6 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
             + ", 1));";
             model.getInit()->addCode(fcInit);
 
-            // TODO add the inputs to the forward call based on the actual inputs
             std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = efc" + std::to_string(fcEdgeCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
             model.getForward()->addCode(forwardCall);
             fcEdgeCount++;
@@ -1296,7 +1274,6 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
              + ", size" + std::to_string(fcCount) + "));";
             model.getInit()->addCode(fcInit);
 
-            // TODO add the inputs to the forward call based on the actual inputs
             // TODO Temp fix
             // std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = sfc" + std::to_string(fcEdgeCount) + "->forward(" + cNode->getInput(0)->getName() + ");";
             std::string forwardCall = "res = sfc" + std::to_string(fcSelfCount) + "->forward(res);";
@@ -1311,7 +1288,6 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
             + std::to_string(epCount) + "\", torch::tensor({(float)" + cNode->getParam(0) + "}));";
             model.getInit()->addCode(epInit);
 
-            // TODO add the inputs to the forward call based on the actual inputs
             std::string forwardCall = generateOutputString(cNode, outOfLoop) + " = (1 + eps" + std::to_string(epCount) + ") * " + cNode->getInput(0)->getName() + ";";
             if (outOfLoop)
             {
@@ -1347,7 +1323,6 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
                        .device(torch::kCUDA, 0);";
                 model.getInv()->addCode(tempOptionsOnes);
 
-                // TODO add the inputs to the forward call based on the actual inputs
                 std::string onesCall =  generateOutputString(cNode, outOfLoop) + " = torch::ones({" + rowDims
                 + ", " + colDims + "}, options_" + cNode->getOutput(0)->getName() + ");";
                 model.getInv()->addCode(onesCall);
@@ -1360,7 +1335,6 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
                        .device(torch::kCUDA, 0);";
                 model.getForward()->addCode(tempOptionsOnes);
 
-                // TODO add the inputs to the forward call based on the actual inputs
                 std::string onesCall =  generateOutputString(cNode, outOfLoop) + " = torch::ones({" + rowDims
                 + ", " + colDims + "}, options_" + cNode->getOutput(0)->getName() + ");";
                 model.getForward()->addCode(onesCall);
@@ -1381,7 +1355,6 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
                        .device(torch::kCUDA, 0);";
                 model.getInv()->addCode(tempOptionsOnes);
 
-                // TODO add the inputs to the forward call based on the actual inputs
                 std::string onesCall =  generateOutputString(cNode, outOfLoop) + " = torch::full({" + rowDims
                 + ", " + colDims + "}, " + cNode->getParam(0) + " * global_segments[0], options_" + cNode->getOutput(0)->getName() + ");";
                 model.getInv()->addCode(onesCall);
@@ -1394,7 +1367,6 @@ edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
                        .device(torch::kCUDA, 0);";
                 model.getForward()->addCode(tempOptionsOnes);
 
-                // TODO add the inputs to the forward call based on the actual inputs
                 std::string onesCall =  generateOutputString(cNode, outOfLoop) + " = torch::full({" + rowDims
                 + ", " + colDims + "}, " + cNode->getParam(0) + " * global_segments[0], options_" + cNode->getOutput(0)->getName() + ");";
                 model.getForward()->addCode(onesCall);
@@ -1484,8 +1456,6 @@ forward(torch::Tensor t_iden";
                 std::string closeInitCall = "){\n";
                 model.getInitCall()->addCode(closeInitCall);
 
-                // TODO Change the embedding sizes based on the
-
                 std::string tempModelInit = "auto net = std::make_shared<GALAGNN>(";
                 for (int ei = 0; ei < inputSizes.size(); ei++)
                 {
@@ -1533,15 +1503,6 @@ forward(torch::Tensor t_iden";
                 }
                 model.getPreCall()->addCode(timingInitStr);
 
-
-
-                // TODO generate this using the test loop
-    //             std::string tempTrainLoopPreCall = "for (size_t epoch = 1; epoch <= num_iters; ++epoch) {\n\
-    // // Reset gradients.\n\
-    // optimizer.zero_grad();\n\
-    // torch::Tensor prediction =\n\
-    //     net->forward(t_iden";
-
                 std::string tempTrainLoopPreCall = " for (size_t epoch = 1; epoch <= num_iters; ++epoch) {\n\
     // Reset gradients.\n\
     optimizer.zero_grad();\n\
@@ -1551,37 +1512,6 @@ forward(torch::Tensor t_iden";
     torch::Tensor prediction =\n\
         net->forward(t_iden";
 
-  //               std::string tempTrainLoopPostCall = ", epoch, mod_v)[0];\n\
-  //   cudaDeviceSynchronize();\n\
-  //   end = get_time();\n\
-  //   cudaDeviceSynchronize();\n\
-  //   start_train = get_time();\n\
-  //   torch::Tensor prediction_train = prediction.index({t_train_mask});\n\
-  //   torch::Tensor labels_train = t_labs.index({t_train_mask});\n\
-  //   auto criterion = torch::nn::CrossEntropyLoss();\n\
-  //   torch::Tensor d_loss = criterion(prediction_train, labels_train);\n\
-  //   d_loss.backward();\n\
-  //   optimizer.step();\n\
-  //   cudaDeviceSynchronize();\n\
-  //   end_train = get_time();\n\
-  //   if (epoch % mod_v == 0) {\n\
-  //     torch::Tensor prediction_test = prediction.index({t_test_mask});\n\
-  //     torch::Tensor labels_test = t_labs.index({t_test_mask});\n\
-  //     auto [pred_val, pred_idx] = torch::max({prediction_test}, 1);\n\
-  //     auto correct = torch::sum(pred_idx == labels_test);\n\
-  //     std::cout << \"Epoch \" << epoch << \" Loss: \" << d_loss.item<val_t>()\n\
-  //               << \" Accuracy: \"\n\
-  //               << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])\n\
-  //               << std::endl;\n\
-  //   } else {\n\
-  //     std::cout << \"Epoch \" << epoch << \" Loss: \" << d_loss.item<val_t>()\n\
-  //               << std::endl;\n\
-  //   }\n\
-  //   if (epoch >= skip_cache_warmup) {\n\
-  //     times_arr.push_back(end - start);\n\
-  //     times_arr_train.push_back(end_train - start_train);\n\
-  //   }\n\
-  // }";
                 std::string tempTrainLoopPostCall;
                 if (GALAFEContext::print_accuracy)
                 {
@@ -1633,33 +1563,11 @@ forward(torch::Tensor t_iden";
   }";
                 }
 
-                
-//                 std::string tempTrainLoopPostCall = ")[0];\n\
-//     torch::Tensor prediction_train = prediction.index({t_train_mask});\n\
-//     torch::Tensor labels_train = t_labs.index({t_train_mask});\n\
-//     auto criterion = torch::nn::CrossEntropyLoss();\n\
-//     torch::Tensor d_loss = criterion(prediction_train, labels_train);\n\
-//     d_loss.backward();\n\
-//     optimizer.step();\n\
-//     torch::Tensor prediction_test = prediction.index({t_test_mask});\n\
-//     torch::Tensor labels_test = t_labs.index({t_test_mask});\n\
-//     auto [pred_val, pred_idx] = torch::max({prediction_test}, 1);\n\
-//     auto correct = torch::sum(pred_idx == labels_test);\n\
-//     std::cout << \"Epoch \" << epoch << \" Loss: \" << d_loss.item<val_t>()\n\
-//               << \" Accuracy: \"\n\
-//               << (correct.item<val_t>() * 100.0 / labels_test.sizes()[0])\n\
-//               << std::endl;\n\
-// }";
                 model.getPreCall()->addCode(tempTrainLoopPreCall);
                 model.getPostCall()->addCode(tempTrainLoopPostCall);
             }
         }
 
-  //       std::string printTimes = "  std::cout << \"Inference: \" << calc_mean(times_arr) << \",\"\n\
-  //           << calc_std(times_arr) << std::endl;\n\
-  // std::cout << \"Train: \" << calc_mean(times_arr_train) << \",\"\n\
-  //           << calc_std(times_arr_train) << std::endl;\n\
-  // std::cout << \"Total: \" << calc_mean(times_arr) + calc_mean(times_arr_train) << std::endl;\n";
         std::string printTimes;
         if (GALAFEContext::print_accuracy)
         {
@@ -1721,16 +1629,6 @@ forward(torch::Tensor t_iden";
             }
         }
     }
-
-    //    void addImport(PyCodeLine* pyCode){
-    //        this->moreImports.push_back(pyCode);
-    //    }
-    //    void addPreCode(PyCodeLine* pyCode){
-    //        this->preCode.push_back(pyCode);
-    //    }
-    //    void addPostCode(PyCodeLine* pyCode){
-    //        this->postCode.push_back(pyCode);
-    //    }
 
     // Separate function so it can be extended in the architecture specific components
     virtual void initCMake()

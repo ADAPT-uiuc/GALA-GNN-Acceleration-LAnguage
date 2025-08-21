@@ -48,10 +48,6 @@ enum DataOptimization {
     COL_TILE_DOPT, // Column tile a graph (TODO or slice a tensor?)
     SAMPLE_DOPT, // Sample from a given graph
     SUBGRAPH_DOPT, // Subgraph creation
-    // TODO the optimization types below are planned but not implmeneted yet
-//    PARTITION_DOPT, // Graph - Partition the graph
-//    REORDER_DOPT, // Graph - Reorder the graph
-//    BALANCE_DOPT, // Graph - Load balance the graph
 };
 
 enum NumTypes {

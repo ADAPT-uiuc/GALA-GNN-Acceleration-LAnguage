@@ -54,7 +54,6 @@ def compile_and_get_time(args):
     outfile.write("dataset,model,hw,train,inference_time,total_time\n")
     outfile.flush()
 
-    # TODO add build
     if not os.path.exists(build_path):
         os.makedirs(build_path)
         job_args = ['cmake',

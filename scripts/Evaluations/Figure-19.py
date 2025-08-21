@@ -24,7 +24,6 @@ def compile_and_get_time(args):
     outfile.write("exec,memory,total_time\n")
     outfile.flush()
 
-    # TODO add build
     if not os.path.exists(build_path):
         os.makedirs(build_path)
         job_args = ['cmake',

@@ -127,7 +127,7 @@ public:
     void setParam(int ix, std::string new_val) { this->params.at(ix) = new_val; }
 
     // Data items should be constant once added (No need to remove elements)
-    //  TODO it can change if any data transformations are done on it.
+    // It can change if any data transformations are done on it.
     void addInputData(DataNode *new_input) { this->inputData.push_back(new_input); }
     void addOutputData(DataNode *new_output) { this->outputData.push_back(new_output); }
 
@@ -219,59 +219,5 @@ public:
     }
     void swapNodes(int i, int j) { std::swap(this->loop[i], this->loop[j]); }
 };
-
-//class TrainingLoopNode : public ComputeNode {
-//private:
-//    int numIter;
-//    int stepValid; // The steps in the program validation happens. If not specified the numIter.
-//    // TODO need an easy way to find a node by an ID and then return + remove it.
-//    //  temp solution - Remove everything and then add everything back
-//    std::vector<ComputeNode *> loop;
-//public:
-//    TrainingLoopNode(int point, int numIter) : ComputeNode(TRAIN_CONTROL, point) {
-//        this->numIter = numIter;
-//        this->stepValid = numIter;
-//    }
-//
-//    TrainingLoopNode(int point, int numIter, int stepValid) : ComputeNode(TRAIN_CONTROL, point) {
-//        this->numIter = numIter;
-//        this->stepValid = stepValid;
-//    }
-//
-//    int getIter() { return this->numIter; }
-//
-//    int getValidStep() { return this->stepValid; }
-//
-//    void clearLoopNodes() { this->loop.clear(); }
-//
-//    void addLoopNode(ComputeNode *newNode) { this->loop.push_back(newNode); }
-//
-//    int getLoopNodeNum() { return this->loop.size(); }
-//
-//    std::vector<ComputeNode *> *getLoopNodes() { return &loop; }
-//
-//    ComputeNode *getNode(int i) { return this->loop.at(i); }
-//};
-
-//class TransformOpNode : public ComputeNode {
-//private:
-//    TransformEdge *transformData;
-//public:
-//    TransformOpNode(int point, TransformEdge *trEdge) : ComputeNode(TRANSFORM_OP, point) {
-//        this->transformData = trEdge;
-//    }
-//
-//    TransformEdge *getTransformations() { return this->transformData; }
-//};
-//
-//class PointCounter {
-//private:
-//    int point;
-//public:
-//    PointCounter() { this->point = 0; }
-//
-//    int getPoint() { return this->point++; }
-//};
-
 
 #endif //GNN_ACCELERATION_LANGUAGE_COMPUTE_H

@@ -1,7 +1,0 @@
-name: arxiv
-path: ../../../../data/arxiv
-split_type: time
-symmetric: True
-num_classes: 40
-feature_dim: 128
-evaluator: acc
