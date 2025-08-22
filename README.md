@@ -6,6 +6,7 @@
 project-root/
 ├── codegen/ # output path for GALA code generation
 ├── Data/ # path where datasets are stores
+├── docs/ # Has the artifact documentation
 ├── scripts/ # various scripts for setup and reproduce results
 │   └── Data # download datasets
 │       └── get_all_datasets.py # Main script that downloads datasets
@@ -66,16 +67,8 @@ make -j6
 ./gala_model
 ```
 
-[//]: # (Others models are GIN and GAT.)
-
-[//]: # (This should generate the final executable code in the `test-codegen` folder.)
-
-[//]: # ()
-[//]: # (The test files are in the `tests` folder, with the name `gala_<model>_IR.cpp`.)
-
-[//]: # (Currently, the manual IR in uncommented, and the IR generation from the front-end language is commented &#40;needs to fix some bugs&#41;.  )
-
 ## Data
 Scripts necessary for downloading data can be found in `scripts/Data`.
 
-[//]: # (There is also a notebook to visualize two arrays of src, and dst npy files &#40;Graph represented in COO format&#41; to help get a visual idea of the NNZ distribution in a graph.)
+## Documents
+An artifact documentation is available in `docs`.
