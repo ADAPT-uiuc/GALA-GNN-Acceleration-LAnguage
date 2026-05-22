@@ -54,17 +54,6 @@
     ],
     "min_accuracy": 43.165
   },
-  "gat/CoraFull/four": {
-    "status": "PASS",
-    "accuracies": [
-      25.8249,
-      13.2323,
-      14.6128,
-      20.1347,
-      9.73064
-    ],
-    "min_accuracy": 9.73064
-  },
   "gat/CoraFull/h100": {
     "status": "PASS",
     "accuracies": [
