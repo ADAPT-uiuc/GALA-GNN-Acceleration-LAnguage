@@ -11,7 +11,7 @@
 class CUDAGenerator : public CodeGenerator
 {
 public:
-    CUDAGenerator(GALAContext* context, std::string& outputPath) : CodeGenerator(context, outputPath)
+    CUDAGenerator(GALAContext* context, std::string& outputPath, std::string dataRoot) : CodeGenerator(context, outputPath, dataRoot)
     {
     }
 
@@ -48,7 +48,9 @@ public:
             "add_compile_definitions(GN_1)\n"
             "add_compile_definitions(PT_0)\n"
             "add_compile_definitions(ST_0)\n"
-            "add_compile_definitions(A_ALLOC)";
+            "add_compile_definitions(A_ALLOC)\n"
+            "include_directories(" GALA_SRC_ROOT "/src)\n"
+            "include_directories(" GALA_SRC_ROOT "/tests)";
         std::string cmakeExecutable = "add_executable(gala_model gala.cu)\n"
             "target_compile_features(gala_model PRIVATE cxx_std_14)";
         cmakeCode.addCode(cmakeCudaBase);
@@ -967,12 +969,12 @@ torch::Tensor bounds, int nrows, int segments) {\n\
             "#include <omp.h>\n"
             "#include <stdlib.h>\n"
             "#include <torch/torch.h>\n"
-            "#include \"../src/formats/csrc_matrix.h\"\n"
-            "#include \"../src/formats/dense_matrix.h\"\n"
-            "#include \"../src/ops/aggregators.h\"\n"
-            "#include \"../src/ops/tiling.h\"\n"
-            "#include \"../src/utils/mtx_io.h\"\n"
-            "#include \"../tests/common.h\"\n";
+            "#include \"formats/csrc_matrix.h\"\n"
+            "#include \"formats/dense_matrix.h\"\n"
+            "#include \"ops/aggregators.h\"\n"
+            "#include \"ops/tiling.h\"\n"
+            "#include \"utils/mtx_io.h\"\n"
+            "#include \"common.h\"\n";
         importCode.addCode(importBase);
 
 

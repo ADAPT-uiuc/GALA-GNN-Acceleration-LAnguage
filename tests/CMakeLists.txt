@@ -10,3 +10,7 @@ add_executable(gala_inference_sample gala_inference_sample.cpp ${BISON_Parser_OU
 add_executable(gala_inference_long gala_inference_long.cpp ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS})
 add_executable(gala_train gala_train.cpp ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS})
 add_executable(gala_train_memory gala_train_memory.cpp ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS})
+
+foreach(target gala_inference gala_inference_sample gala_inference_long gala_train gala_train_memory)
+    target_compile_definitions(${target} PRIVATE GALA_SRC_ROOT="${CMAKE_SOURCE_DIR}")
+endforeach()

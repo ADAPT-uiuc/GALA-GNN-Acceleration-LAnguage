@@ -53,6 +53,14 @@ inline int gala_run(int argc, char **argv, bool apply_training_transforms, int c
 		outputPath += '/';
 	std::filesystem::create_directories(outputPath);
 
+	std::string dataRoot = GALA_SRC_ROOT "/Data";
+	for (int i = 3; i < argc - 1; i++) {
+		if (std::string(argv[i]) == "--data-root") {
+			dataRoot = argv[i + 1];
+			break;
+		}
+	}
+
 	m1 = ModelConfig();
 
 	FILE *myfile = fopen(inputFile.c_str(), "r");
@@ -154,7 +162,7 @@ inline int gala_run(int argc, char **argv, bool apply_training_transforms, int c
 	}
 
 	auto ctx = new GALAContext(GPU_DEVICE, SINGLE_NODE_SINGLE);
-	auto genCode = CUDAGenerator(ctx, outputPath);
+	auto genCode = CUDAGenerator(ctx, outputPath, dataRoot);
 	if (GALAFEContext::operator_reordering) {
 		GALATransformations::complexityOperatorReordering(GALAFEContext::program, GALAFEContext::dependencies,
 			GALAFEContext::associations, GALAFEContext::transforms);

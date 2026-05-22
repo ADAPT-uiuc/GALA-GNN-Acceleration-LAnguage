@@ -275,11 +275,15 @@ protected:
 
     std::ofstream outStreamModel;
     std::ofstream outStreamCMake;
+    std::string dataRoot;
 
 public:
-    CodeGenerator(GALAContext* context, std::string& outputPath)
+    CodeGenerator(GALAContext* context, std::string& outputPath, std::string dataRoot)
     {
         this->context = context;
+        this->dataRoot = dataRoot;
+        if (!this->dataRoot.empty() && this->dataRoot.back() == '/')
+            this->dataRoot.pop_back();
         this->openStream(outputPath);
     }
 
@@ -531,7 +535,7 @@ nvals0 = adj0.nvals();\n";
             if (GALAFEContext::use_long)
             {
                 fileLoadCode = "    SM adj0;\n\
-    std::string filename = \"../../Data/" + cNode->getParam(0) +  "/\";\n\
+    std::string filename = \"" + this->dataRoot + "/" + cNode->getParam(0) + "/\";\n\
     readSM_npy32<SM>(filename, &adj0);\n\
 \n\
     // Adj info\n\
@@ -573,7 +577,7 @@ nvals0 = adj0.nvals();\n";
             } else
             {
                 fileLoadCode = "    SM adj0;\n\
-    std::string filename = \"../../Data/" + cNode->getParam(0) +  "/\";\n\
+    std::string filename = \"" + this->dataRoot + "/" + cNode->getParam(0) + "/\";\n\
     readSM_npy32<SM>(filename, &adj0);\n\
 \n\
     // Adj info\n\
