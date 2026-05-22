@@ -8,6 +8,10 @@ For each DSL file under tests/GALA-DSL/{gat,gcn,gin,sage}/:
   4. Run the resulting gala_model binary 5 times, recording the accuracy
      reported by each run and keeping the minimum
 
+A test fails if any pipeline step exits with a non-zero status, or if the
+minimum observed accuracy is below the threshold for that test in
+tests/expected_results.json.
+
 Results are saved to <output-dir>/results.json.
 
 Usage:
@@ -70,7 +74,20 @@ def parse_args():
         action="store_true",
         help="Keep generated output directories even for passing tests",
     )
+    p.add_argument(
+        "--expected",
+        type=Path,
+        default=PROJECT_ROOT / "tests" / "expected_results.json",
+        help="JSON file mapping test names to minimum acceptable accuracy",
+    )
     return p.parse_args()
+
+
+def load_expected(path):
+    """Load expected accuracy thresholds. Returns {} if the file does not exist."""
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text())
 
 
 def discover_tests(filter_str=None):
@@ -205,6 +222,10 @@ def main():
         print("No tests found.")
         sys.exit(1)
 
+    expected = load_expected(args.expected)
+    if not expected:
+        print(f"Note: no expected results loaded from {args.expected}\n")
+
     print(f"Running {len(tests)} tests ({NUM_RUNS} runs each)...\n")
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -216,16 +237,38 @@ def main():
             rel_path, dsl_file, args
         )
         all_results[test_name] = {"status": status}
-        if status == "PASS":
-            all_results[test_name].update(result_data)
-            min_acc = result_data["min_accuracy"]
-            acc_str = f"  min_acc={min_acc:.2f}%" if min_acc is not None else ""
-            print(f"  PASS  {test_name}{acc_str}")
-            passed += 1
-        else:
+
+        if status == "FAIL":
             all_results[test_name]["failed_step"] = failed_step
             print(f"  FAIL  {test_name}  [{failed_step}]  (log: {log_path})")
             failed += 1
+            continue
+
+        # Pipeline passed — record run data and check accuracy threshold.
+        all_results[test_name].update(result_data)
+        min_acc = result_data["min_accuracy"]
+        threshold = expected.get(test_name)
+        if threshold is not None:
+            all_results[test_name]["expected_accuracy"] = threshold
+
+        if threshold is not None and min_acc is not None and min_acc < threshold:
+            all_results[test_name]["status"] = "FAIL"
+            all_results[test_name]["failed_step"] = "accuracy"
+            print(
+                f"  FAIL  {test_name}"
+                f"  [min_acc={min_acc:.2f}% < threshold={threshold:.2f}%]"
+                f"  (log: {log_path})"
+            )
+            failed += 1
+        else:
+            acc_parts = []
+            if min_acc is not None:
+                acc_parts.append(f"min_acc={min_acc:.2f}%")
+            if threshold is not None:
+                acc_parts.append(f"threshold={threshold:.2f}%")
+            suffix = f"  {', '.join(acc_parts)}" if acc_parts else ""
+            print(f"  PASS  {test_name}{suffix}")
+            passed += 1
 
     results_path = args.output_dir / "results.json"
     results_path.write_text(json.dumps(all_results, indent=2))
