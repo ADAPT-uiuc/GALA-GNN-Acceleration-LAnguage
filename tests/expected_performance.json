@@ -1,0 +1,541 @@
+{
+  "gat/Arxiv/a100": {
+    "status": "PASS",
+    "accuracies": [
+      51.503,
+      40.8534,
+      40.0819,
+      57.5952,
+      33.1728
+    ],
+    "min_accuracy": 33.1728
+  },
+  "gat/Arxiv/h100": {
+    "status": "PASS",
+    "accuracies": [
+      36.2838,
+      37.4977,
+      38.2569,
+      34.8127,
+      33.6975
+    ],
+    "min_accuracy": 33.6975
+  },
+  "gat/Cora/a100": {
+    "status": "PASS",
+    "accuracies": [
+      80.8,
+      79.7,
+      79.6,
+      79.8,
+      80.9
+    ],
+    "min_accuracy": 79.6
+  },
+  "gat/Cora/h100": {
+    "status": "PASS",
+    "accuracies": [
+      80.4,
+      80.7,
+      79.6,
+      80.8,
+      81.6
+    ],
+    "min_accuracy": 79.6
+  },
+  "gat/CoraFull/a100": {
+    "status": "PASS",
+    "accuracies": [
+      50.0337,
+      46.4983,
+      43.165,
+      43.6364,
+      44.5455
+    ],
+    "min_accuracy": 43.165
+  },
+  "gat/CoraFull/four": {
+    "status": "PASS",
+    "accuracies": [
+      25.8249,
+      13.2323,
+      14.6128,
+      20.1347,
+      9.73064
+    ],
+    "min_accuracy": 9.73064
+  },
+  "gat/CoraFull/h100": {
+    "status": "PASS",
+    "accuracies": [
+      50.0673,
+      47.5084,
+      48.3165,
+      49.9663,
+      49.9663
+    ],
+    "min_accuracy": 47.5084
+  },
+  "gat/Products/a100": {
+    "status": "PASS",
+    "accuracies": [
+      42.3855,
+      48.5302,
+      47.1402,
+      45.192,
+      51.5219
+    ],
+    "min_accuracy": 42.3855
+  },
+  "gat/Products/h100": {
+    "status": "PASS",
+    "accuracies": [
+      46.5893,
+      43.0655,
+      46.402,
+      43.5704,
+      47.8555
+    ],
+    "min_accuracy": 43.0655
+  },
+  "gat/Pubmed/a100": {
+    "status": "PASS",
+    "accuracies": [
+      76.5,
+      77.0,
+      76.8,
+      77.2,
+      76.8
+    ],
+    "min_accuracy": 76.5
+  },
+  "gat/Pubmed/h100": {
+    "status": "PASS",
+    "accuracies": [
+      77.3,
+      77.5,
+      76.3,
+      77.1,
+      76.3
+    ],
+    "min_accuracy": 76.3
+  },
+  "gat/Reddit/a100": {
+    "status": "PASS",
+    "accuracies": [
+      40.5256,
+      39.5885,
+      23.2842,
+      63.1492,
+      35.3859
+    ],
+    "min_accuracy": 23.2842
+  },
+  "gat/Reddit/h100": {
+    "status": "PASS",
+    "accuracies": [
+      57.7096,
+      49.746,
+      56.7653,
+      69.6928,
+      31.0324
+    ],
+    "min_accuracy": 31.0324
+  },
+  "gcn/Arxiv/a100": {
+    "status": "PASS",
+    "accuracies": [
+      59.0766,
+      58.6507,
+      58.9367,
+      56.8525,
+      59.0745
+    ],
+    "min_accuracy": 56.8525
+  },
+  "gcn/Arxiv/h100": {
+    "status": "PASS",
+    "accuracies": [
+      60.3564,
+      59.9654,
+      59.4716,
+      60.2782,
+      58.7124
+    ],
+    "min_accuracy": 58.7124
+  },
+  "gcn/Cora/a100": {
+    "status": "PASS",
+    "accuracies": [
+      68.2,
+      70.7,
+      72.6,
+      72.4,
+      67.4
+    ],
+    "min_accuracy": 67.4
+  },
+  "gcn/Cora/h100": {
+    "status": "PASS",
+    "accuracies": [
+      81.9,
+      80.7,
+      82.9,
+      81.7,
+      82.6
+    ],
+    "min_accuracy": 80.7
+  },
+  "gcn/CoraFull/a100": {
+    "status": "PASS",
+    "accuracies": [
+      65.0168,
+      63.266,
+      64.6128,
+      64.5455,
+      64.3098
+    ],
+    "min_accuracy": 63.266
+  },
+  "gcn/CoraFull/h100": {
+    "status": "PASS",
+    "accuracies": [
+      64.2088,
+      65.1178,
+      64.8148,
+      63.4343,
+      64.0741
+    ],
+    "min_accuracy": 63.4343
+  },
+  "gcn/Products/a100": {
+    "status": "PASS",
+    "accuracies": [
+      69.6669,
+      69.4567,
+      69.3018,
+      69.9088,
+      69.9201
+    ],
+    "min_accuracy": 69.3018
+  },
+  "gcn/Products/h100": {
+    "status": "PASS",
+    "accuracies": [
+      69.0302,
+      69.0637,
+      69.1641,
+      69.6969,
+      69.6266
+    ],
+    "min_accuracy": 69.0302
+  },
+  "gcn/Pubmed/a100": {
+    "status": "PASS",
+    "accuracies": [
+      65.7,
+      67.7,
+      66.1,
+      66.5,
+      77.3
+    ],
+    "min_accuracy": 65.7
+  },
+  "gcn/Pubmed/h100": {
+    "status": "PASS",
+    "accuracies": [
+      80.2,
+      79.3,
+      80.2,
+      80.3,
+      80.2
+    ],
+    "min_accuracy": 79.3
+  },
+  "gcn/Reddit/a100": {
+    "status": "PASS",
+    "accuracies": [
+      93.7526,
+      93.7239,
+      93.6969,
+      93.6413,
+      93.5569
+    ],
+    "min_accuracy": 93.5569
+  },
+  "gcn/Reddit/h100": {
+    "status": "PASS",
+    "accuracies": [
+      93.6682,
+      93.7077,
+      93.749,
+      93.6772,
+      93.661
+    ],
+    "min_accuracy": 93.661
+  },
+  "gin/Arxiv/a100": {
+    "status": "PASS",
+    "accuracies": [
+      53.5646,
+      58.805,
+      53.0873,
+      56.0192,
+      54.9225
+    ],
+    "min_accuracy": 53.0873
+  },
+  "gin/Arxiv/h100": {
+    "status": "PASS",
+    "accuracies": [
+      53.3897,
+      54.8937,
+      58.9758,
+      58.5478,
+      50.9516
+    ],
+    "min_accuracy": 50.9516
+  },
+  "gin/Cora/a100": {
+    "status": "PASS",
+    "accuracies": [
+      80.3,
+      80.5,
+      79.9,
+      78.9,
+      79.9
+    ],
+    "min_accuracy": 78.9
+  },
+  "gin/Cora/h100": {
+    "status": "PASS",
+    "accuracies": [
+      80.0,
+      79.4,
+      79.1,
+      80.6,
+      79.7
+    ],
+    "min_accuracy": 79.1
+  },
+  "gin/CoraFull/a100": {
+    "status": "PASS",
+    "accuracies": [
+      69.4949,
+      71.0438,
+      70.7744,
+      69.9663,
+      70.9764
+    ],
+    "min_accuracy": 69.4949
+  },
+  "gin/CoraFull/h100": {
+    "status": "PASS",
+    "accuracies": [
+      69.8653,
+      70.8754,
+      70.7744,
+      70.5387,
+      71.3468
+    ],
+    "min_accuracy": 69.8653
+  },
+  "gin/Products/a100": {
+    "status": "PASS",
+    "accuracies": [
+      58.9279,
+      60.8496,
+      60.6852,
+      55.4313,
+      59.4704
+    ],
+    "min_accuracy": 55.4313
+  },
+  "gin/Products/h100": {
+    "status": "PASS",
+    "accuracies": [
+      61.0376,
+      57.1596,
+      56.6553,
+      59.0084,
+      61.1145
+    ],
+    "min_accuracy": 56.6553
+  },
+  "gin/Pubmed/a100": {
+    "status": "PASS",
+    "accuracies": [
+      79.0,
+      78.6,
+      78.2,
+      78.9,
+      78.7
+    ],
+    "min_accuracy": 78.2
+  },
+  "gin/Pubmed/h100": {
+    "status": "PASS",
+    "accuracies": [
+      79.0,
+      78.8,
+      78.4,
+      78.9,
+      77.9
+    ],
+    "min_accuracy": 77.9
+  },
+  "gin/Reddit/a100": {
+    "status": "PASS",
+    "accuracies": [
+      67.8725,
+      74.3838,
+      61.1619,
+      65.4507,
+      69.086
+    ],
+    "min_accuracy": 61.1619
+  },
+  "gin/Reddit/h100": {
+    "status": "PASS",
+    "accuracies": [
+      62.9445,
+      65.8205,
+      66.8582,
+      61.643,
+      67.0502
+    ],
+    "min_accuracy": 61.643
+  },
+  "sage/Arxiv/a100": {
+    "status": "PASS",
+    "accuracies": [
+      62.6566,
+      62.9179,
+      63.6586,
+      63.0866,
+      62.9447
+    ],
+    "min_accuracy": 62.6566
+  },
+  "sage/Arxiv/h100": {
+    "status": "PASS",
+    "accuracies": [
+      62.6669,
+      62.2554,
+      63.1566,
+      63.6689,
+      61.9159
+    ],
+    "min_accuracy": 61.9159
+  },
+  "sage/Cora/a100": {
+    "status": "PASS",
+    "accuracies": [
+      79.0,
+      79.1,
+      78.7,
+      78.9,
+      79.1
+    ],
+    "min_accuracy": 78.7
+  },
+  "sage/Cora/h100": {
+    "status": "PASS",
+    "accuracies": [
+      78.8,
+      79.2,
+      78.5,
+      78.8,
+      79.2
+    ],
+    "min_accuracy": 78.5
+  },
+  "sage/CoraFull/a100": {
+    "status": "PASS",
+    "accuracies": [
+      72.5926,
+      73.1987,
+      72.9966,
+      72.7273,
+      73.165
+    ],
+    "min_accuracy": 72.5926
+  },
+  "sage/CoraFull/h100": {
+    "status": "PASS",
+    "accuracies": [
+      72.6599,
+      73.064,
+      72.3232,
+      72.6263,
+      72.8956
+    ],
+    "min_accuracy": 72.3232
+  },
+  "sage/Products/a100": {
+    "status": "PASS",
+    "accuracies": [
+      70.48,
+      70.3634,
+      70.4916,
+      70.6594,
+      70.1482
+    ],
+    "min_accuracy": 70.1482
+  },
+  "sage/Products/h100": {
+    "status": "PASS",
+    "accuracies": [
+      70.0053,
+      70.3797,
+      70.1505,
+      70.2614,
+      70.0194
+    ],
+    "min_accuracy": 70.0053
+  },
+  "sage/Pubmed/a100": {
+    "status": "PASS",
+    "accuracies": [
+      79.2,
+      79.2,
+      79.2,
+      79.0,
+      79.2
+    ],
+    "min_accuracy": 79.0
+  },
+  "sage/Pubmed/h100": {
+    "status": "PASS",
+    "accuracies": [
+      79.3,
+      79.2,
+      79.3,
+      79.1,
+      79.3
+    ],
+    "min_accuracy": 79.1
+  },
+  "sage/Reddit/a100": {
+    "status": "PASS",
+    "accuracies": [
+      95.6537,
+      95.5945,
+      95.6304,
+      95.5586,
+      95.6322
+    ],
+    "min_accuracy": 95.5586
+  },
+  "sage/Reddit/h100": {
+    "status": "PASS",
+    "accuracies": [
+      95.5335,
+      95.5999,
+      95.5676,
+      95.6573,
+      95.6483
+    ],
+    "min_accuracy": 95.5335
+  }
+}
