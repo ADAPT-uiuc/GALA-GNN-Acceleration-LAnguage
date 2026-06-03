@@ -500,7 +500,7 @@ int start_vals = 0;";
             {
                 aggrKernelCall += "}";
             }
-            aggrKernelCall += "for (auto s : streams) cudaStreamDestroy(s);\n\
+            aggrKernelCall += "cudaDeviceSynchronize();\nfor (auto s : streams) cudaStreamDestroy(s);\n\
 return output_dense;\n\
 }";
             // Adding the kernel call and setting the name
@@ -603,6 +603,7 @@ default_function_kernel_mult_sddvv_undir(\n\
         oden_array, &offset_ptr[i1 * (nrows + 1)], &val_ptr[start_vals],\n\
         &col_ptr[start_vals], nrows);\n\
   }\n\
+  cudaDeviceSynchronize();\n\
   for (auto s : streams) cudaStreamDestroy(s);\n\
 \n\
   return output_dense;\n\
@@ -635,6 +636,7 @@ torch::Tensor inplace_softmax_sddvv(torch::Tensor row_val,\n\
             &val_ptr[start_vals], &offset_ptr[i1 * (nrows + 1)], row_val_ptr,\n\
             &col_ptr[start_vals], nrows);\n\
     }\n\
+    cudaDeviceSynchronize();\n\
     for (auto s : streams) cudaStreamDestroy(s);\n\
     return value_graph;\n\
 }\n\
@@ -666,6 +668,7 @@ torch::Tensor inplace_softmax_sddvv_mult(torch::Tensor row_val,\n\
             &val_ptr[start_vals], &offset_ptr[i1 * (nrows + 1)], row_val_ptr,\n\
             &col_ptr[start_vals], nrows);\n\
     }\n\
+    cudaDeviceSynchronize();\n\
     for (auto s : streams) cudaStreamDestroy(s);\n\
     return value_graph;\n\
 }";
@@ -784,6 +787,7 @@ default_function_kernel_sddmm_mult_undir_shared(\n\
         oden_array, &offset_ptr[i1 * (nrows + 1)], &val_ptr[start_vals],\n\
         &col_ptr[start_vals], nrows);\n\
   }\n\
+  cudaDeviceSynchronize();\n\
   for (auto s : streams) cudaStreamDestroy(s);\n\
 \n\
   return output_dense;\n\
@@ -823,6 +827,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
             &oden_array[start_vals], &offset_ptr[i1 * (nrows + 1)], iden_ptr1,\n\
             iden_ptr2, &col_ptr[start_vals], nrows);\n\
     }\n\
+    cudaDeviceSynchronize();\n\
     for (auto s : streams) cudaStreamDestroy(s);\n\
     return output_sparse;\n\
 }\n\
@@ -864,6 +869,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
             &oden_array[start_vals], &offset_ptr[i1 * (nrows + 1)], iden_ptr1,\n\
             iden_ptr2, &col_ptr[start_vals], nrows, dcols);\n\
     }\n\
+    cudaDeviceSynchronize();\n\
     for (auto s : streams) cudaStreamDestroy(s);\n\
     return output_sparse;\n\
 }\n";
@@ -939,6 +945,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
           &oden_array[start_vals], &offset_ptr[i1 * (nrows + 1)], iden_ptr1,\n\
           iden_ptr2, &col_ptr[start_vals], nrows);\n\
   }\n\
+  cudaDeviceSynchronize();\n\
   for (auto s : streams) cudaStreamDestroy(s);\n\
   return output_sparse;\n\
 }\n";
@@ -975,6 +982,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
                                                  stream1>>>(\n\
           oden_array, offset_ptr, iden_ptr1,\n\
           iden_ptr2, col_ptr, nrows);\n\
+  cudaDeviceSynchronize();\n\
   cudaStreamDestroy(stream1);\n\
   return output_sparse;\n\
 }\n";
