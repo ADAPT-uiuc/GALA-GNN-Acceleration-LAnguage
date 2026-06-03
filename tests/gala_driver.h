@@ -4,6 +4,7 @@
 #include "common.h"
 #include <filesystem>
 #include <iostream>
+#include <boost/program_options.hpp>
 
 #ifdef TMKL
 typedef long long int ind1_t;
@@ -47,19 +48,45 @@ typedef CSRCMatrix<ind1_t, ind2_t, val_t> SM_t;
 // apply_training_transforms: run trainingInvariantCodeMotion and trainingSubGraph passes
 // col_tile_divisor: if > 0 and opt_input is set, load graph data and add a COL_TILE transformation
 inline int gala_run(int argc, char **argv, bool apply_training_transforms, int col_tile_divisor = 0) {
-	std::string inputFile = argv[1];
-	std::string outputPath = argv[2];
+	namespace po = boost::program_options;
+
+	po::options_description desc("Usage: gala <script> <output> [options]\n\nOptions");
+	desc.add_options()
+		("help,h",                                                                     "Show this help message")
+		("data-root,d", po::value<std::string>()->default_value(GALA_SRC_ROOT "/Data"), "Data root directory");
+
+	po::options_description hidden;
+	hidden.add_options()
+		("script", po::value<std::string>()->required())
+		("output", po::value<std::string>()->required());
+
+	po::options_description all;
+	all.add(desc).add(hidden);
+
+	po::positional_options_description pos;
+	pos.add("script", 1);
+	pos.add("output", 1);
+
+	po::variables_map vm;
+	try {
+		po::store(po::command_line_parser(argc, argv).options(all).positional(pos).run(), vm);
+		if (vm.count("help")) {
+			std::cout << desc << "\n";
+			return 0;
+		}
+		po::notify(vm);
+	} catch (const po::error &e) {
+		std::cerr << "Error: " << e.what() << "\n" << desc << "\n";
+		return -1;
+	}
+
+	std::string inputFile = vm["script"].as<std::string>();
+	std::string outputPath = vm["output"].as<std::string>();
+	std::string dataRoot   = vm["data-root"].as<std::string>();
+
 	if (outputPath.empty() || outputPath.back() != '/')
 		outputPath += '/';
 	std::filesystem::create_directories(outputPath);
-
-	std::string dataRoot = GALA_SRC_ROOT "/Data";
-	for (int i = 3; i < argc - 1; i++) {
-		if (std::string(argv[i]) == "--data-root") {
-			dataRoot = argv[i + 1];
-			break;
-		}
-	}
 
 	m1 = ModelConfig();
 
