@@ -797,7 +797,7 @@ default_function_kernel_sddmm_mult_undir_shared(\n\
     if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) { // This is fine\n\
         for (int k = threadIdx.x; k < dcols; k += 32) {\n\
             if (k < dcols) {\n\
-                shared_mem[k] =\n\
+                shared_mem[((int)threadIdx.y) * dcols + k] =\n\
                     A[((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols + k];\n\
             }\n\
         }\n\
@@ -811,7 +811,7 @@ default_function_kernel_sddmm_mult_undir_shared(\n\
             for (int k = 0; k < dcols; k++) {\n\
                 local_C =\n\
                     local_C +\n\
-                    ((shared_mem[k] *\n\
+                    ((shared_mem[((int)threadIdx.y) * dcols + k] *\n\
                       B[(J_indices_data[(j + J_indptr_data[((((int)blockIdx.x) * 8) +\n\
                                                             ((int)threadIdx.y))])]) *\n\
                             dcols +\n\
@@ -935,7 +935,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
         streams.push_back(stream1);\n\
         dim3 gridDim(((int)(nrows - 1) / 8) + 1);\n\
         dim3 blockDim(32, 8);\n\
-        int shared_memory_size = dcols * sizeof(float);\n\
+        int shared_memory_size = dcols * 8 * sizeof(float);\n\
         default_function_kernel_sddmm_mult_undir_shared<<<\n\
             gridDim, blockDim, shared_memory_size, stream1>>>(\n\
             &oden_array[start_vals], &offset_ptr[i1 * (nrows + 1)], iden_ptr1,\n\
