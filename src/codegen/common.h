@@ -761,8 +761,9 @@ public:\n\
                     autoGradFunction += "unsupported(NON_LNR_OP_SOFTMAX)\n";
                 }
 
-                autoGradFunction += "    torch::Tensor val_exp = torch::exp(value_graph);\n\
-    val_exp = torch::clamp(val_exp, 0.0, 1e12);\n\
+                autoGradFunction += "    value_graph = value_graph.clone();\n\
+    sparse_softmax_stabilize(offset_graph, columns_graph, value_graph, bounds, global_nrows, segments);\n\
+    torch::Tensor val_exp = torch::exp(value_graph);\n\
     torch::Tensor row_sum = node_spmv_backward_of_sddmm_nln(\n\
         offset_graph, columns_graph, val_exp, bounds, global_nrows,\n\
         segments);\n\

@@ -509,6 +509,47 @@ return output_dense;\n\
             }
         } else if (cNode->getOp() == NON_LNR_OP_SOFTMAX) {
             std::string kernelCodeStr = "extern \"C\" __global__ void __launch_bounds__(256)\n\
+default_function_kernel_sparse_row_max(\n\
+    float *__restrict__ C, // Output dense (per-row max)\n\
+    int *__restrict__ J_indptr_data,\n\
+    float *__restrict__ A, // Input values\n\
+    int *__restrict__ J_indices_data, int nrows) {\n\
+  int rid = ((int)blockIdx.x) * 32 + ((int)threadIdx.x);\n\
+  if (rid < nrows) {\n\
+    int start = J_indptr_data[rid];\n\
+    int end = J_indptr_data[rid + 1];\n\
+    float local_max = -1e30f;\n\
+    for (int j = start; j < end; ++j) {\n\
+      float v = A[j];\n\
+      if (v > local_max) local_max = v;\n\
+    }\n\
+    // Use atomicMax via CAS for float (needed for multi-tile)\n\
+    int *addr_as_int = (int*)&C[rid];\n\
+    int old_val = *addr_as_int, assumed;\n\
+    do {\n\
+      assumed = old_val;\n\
+      old_val = atomicCAS(addr_as_int, assumed,\n\
+                          __float_as_int(fmaxf(local_max, __int_as_float(assumed))));\n\
+    } while (assumed != old_val);\n\
+  }\n\
+}\n\
+extern \"C\" __global__ void __launch_bounds__(256)\n\
+default_function_kernel_sparse_row_subtract(\n\
+    float *__restrict__ A, // Values (modified in place)\n\
+    int *__restrict__ J_indptr_data,\n\
+    float *__restrict__ C, // Per-row max values\n\
+    int *__restrict__ J_indices_data, int nrows) {\n\
+  if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {\n\
+    int rid = (((int)blockIdx.x) * 8) + ((int)threadIdx.y);\n\
+    float row_max = C[rid];\n\
+    for (int j = (int)threadIdx.x;\n\
+         j < (J_indptr_data[rid + 1] - J_indptr_data[rid]);\n\
+         j += 32) {\n\
+      A[j + J_indptr_data[rid]] -= row_max;\n\
+    }\n\
+  }\n\
+}\n\
+extern \"C\" __global__ void __launch_bounds__(256)\n\
 default_function_kernel_spmm_backward_sddmm_32_nln(\n\
     float *__restrict__ C, // Output dense\n\
     int *__restrict__ J_indptr_data,\n\
@@ -568,7 +609,43 @@ default_function_kernel_mult_sddvv_undir(\n\
 }";
             kernelCode.addCode(kernelCodeStr);
 
-            std::string kernelCallCodeStr = "torch::Tensor node_spmv_backward_of_sddmm_nln(torch::Tensor offset_graph,\n\
+            std::string kernelCallCodeStr = "void sparse_softmax_stabilize(torch::Tensor offset_graph,\n\
+                                          torch::Tensor columns_graph,\n\
+                                          torch::Tensor value_graph,\n\
+                                          torch::Tensor bounds, int nrows,\n\
+                                          int segments) {\n\
+  // Compute per-row max for numerical stability\n\
+  auto options_nograd = torch::TensorOptions()\n\
+                     .dtype(torch::kFloat)\n\
+                     .requires_grad(false)\n\
+                     .device(torch::kCUDA, 0);\n\
+  auto row_max = torch::full({nrows}, -1e30f, options_nograd);\n\
+  float *max_array = row_max.data_ptr<float>();\n\
+  int *offset_ptr = offset_graph.data_ptr<int>();\n\
+  int *col_ptr = columns_graph.data_ptr<int>();\n\
+  float *val_ptr = value_graph.data_ptr<float>();\n\
+  int *bounds_ptr = bounds.data_ptr<int>();\n\
+  for (int i = 0; i < segments; i++) {\n\
+    int start_vals = bounds_ptr[i * 2];\n\
+    dim3 gridDim_rem(((int)(nrows - 1) / 32) + 1);\n\
+    dim3 blockDim_rem(32);\n\
+    default_function_kernel_sparse_row_max<<<gridDim_rem, blockDim_rem>>>(\n\
+        max_array, &offset_ptr[i * (nrows + 1)], &val_ptr[start_vals],\n\
+        &col_ptr[start_vals], nrows);\n\
+  }\n\
+  cudaDeviceSynchronize();\n\
+  // Subtract per-row max from values\n\
+  for (int i = 0; i < segments; i++) {\n\
+    int start_vals = bounds_ptr[i * 2];\n\
+    dim3 gridDim_sub(((int)(nrows - 1) / 8) + 1);\n\
+    dim3 blockDim_sub(32, 8);\n\
+    default_function_kernel_sparse_row_subtract<<<gridDim_sub, blockDim_sub>>>(\n\
+        &val_ptr[start_vals], &offset_ptr[i * (nrows + 1)], max_array,\n\
+        &col_ptr[start_vals], nrows);\n\
+  }\n\
+  cudaDeviceSynchronize();\n\
+}\n\
+torch::Tensor node_spmv_backward_of_sddmm_nln(torch::Tensor offset_graph,\n\
                                           torch::Tensor columns_graph,\n\
                                           torch::Tensor value_graph,\n\
                                           torch::Tensor bounds, int nrows,\n\
