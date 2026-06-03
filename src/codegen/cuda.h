@@ -79,6 +79,7 @@ public:
         }
 
         res += "    cudaStreamCreate(&stream" + std::to_string(cFact) + ");\n";
+        res += "    streams.push_back(stream" + std::to_string(cFact) + ");\n";
 
         if (prevLayer == -1)
         {
@@ -472,12 +473,14 @@ float *val_ptr = value_graph.data_ptr<float>();\n";
             if (isColTile)
             {
                 aggrKernelCall += "int *bounds_ptr = bounds.data_ptr<int>();\n\
+std::vector<cudaStream_t> streams;\n\
 for (int i = 0; i < segments; i++) {\n\
   int i1 = i;\n\
   int start_vals = bounds_ptr[i1 * 2];";
             } else
             {
-                aggrKernelCall += "int i1 = 0;\n\
+                aggrKernelCall += "std::vector<cudaStream_t> streams;\n\
+int i1 = 0;\n\
 int start_vals = 0;";
             }
 
@@ -497,7 +500,8 @@ int start_vals = 0;";
             {
                 aggrKernelCall += "}";
             }
-            aggrKernelCall += "return output_dense;\n\
+            aggrKernelCall += "for (auto s : streams) cudaStreamDestroy(s);\n\
+return output_dense;\n\
 }";
             // Adding the kernel call and setting the name
             kernelCallCode.addCode(aggrKernelCall);
@@ -583,6 +587,7 @@ default_function_kernel_mult_sddvv_undir(\n\
   float *val_ptr = value_graph.data_ptr<float>();\n\
   int *bounds_ptr = bounds.data_ptr<int>();\n\
 \n\
+  std::vector<cudaStream_t> streams;\n\
   for (int i = 0; i < segments; i++) {\n\
     int i1 = i;\n\
     int start_vals = bounds_ptr[i1 * 2];\n\
@@ -590,6 +595,7 @@ default_function_kernel_mult_sddvv_undir(\n\
     cudaStream_t stream1;\n\
 \n\
     cudaStreamCreate(&stream1);\n\
+    streams.push_back(stream1);\n\
     dim3 gridDim_rem(((int)(nrows - 1) / 32) + 1);\n\
     dim3 blockDim_rem(32);\n\
     default_function_kernel_spmm_backward_sddmm_32_nln<<<gridDim_rem, blockDim_rem,\n\
@@ -597,6 +603,7 @@ default_function_kernel_mult_sddvv_undir(\n\
         oden_array, &offset_ptr[i1 * (nrows + 1)], &val_ptr[start_vals],\n\
         &col_ptr[start_vals], nrows);\n\
   }\n\
+  for (auto s : streams) cudaStreamDestroy(s);\n\
 \n\
   return output_dense;\n\
 }\n\
@@ -612,6 +619,7 @@ torch::Tensor inplace_softmax_sddvv(torch::Tensor row_val,\n\
     int *col_ptr = columns_graph.data_ptr<int>();\n\
     float *val_ptr = value_graph.data_ptr<float>();\n\
     int *bounds_ptr = bounds.data_ptr<int>();\n\
+    std::vector<cudaStream_t> streams;\n\
     for (int i = 0; i < segments; i++) {\n\
         int i1 = i;\n\
         int start_vals = bounds_ptr[i1 * 2];\n\
@@ -619,6 +627,7 @@ torch::Tensor inplace_softmax_sddvv(torch::Tensor row_val,\n\
         // int nvals = end_vals - start_vals;\n\
         cudaStream_t stream1;\n\
         cudaStreamCreate(&stream1);\n\
+        streams.push_back(stream1);\n\
         dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1);\n\
         dim3 blockDim_rem(32, 8);\n\
         default_function_kernel_softmax_sddvv_undir<<<gridDim_rem, blockDim_rem, 0,\n\
@@ -626,6 +635,7 @@ torch::Tensor inplace_softmax_sddvv(torch::Tensor row_val,\n\
             &val_ptr[start_vals], &offset_ptr[i1 * (nrows + 1)], row_val_ptr,\n\
             &col_ptr[start_vals], nrows);\n\
     }\n\
+    for (auto s : streams) cudaStreamDestroy(s);\n\
     return value_graph;\n\
 }\n\
 torch::Tensor inplace_softmax_sddvv_mult(torch::Tensor row_val,\n\
@@ -640,6 +650,7 @@ torch::Tensor inplace_softmax_sddvv_mult(torch::Tensor row_val,\n\
     int *col_ptr = columns_graph.data_ptr<int>();\n\
     float *val_ptr = value_graph.data_ptr<float>();\n\
     int *bounds_ptr = bounds.data_ptr<int>();\n\
+    std::vector<cudaStream_t> streams;\n\
     for (int i = 0; i < segments; i++) {\n\
         int i1 = i;\n\
         int start_vals = bounds_ptr[i1 * 2];\n\
@@ -647,6 +658,7 @@ torch::Tensor inplace_softmax_sddvv_mult(torch::Tensor row_val,\n\
         // int nvals = end_vals - start_vals;\n\
         cudaStream_t stream1;\n\
         cudaStreamCreate(&stream1);\n\
+        streams.push_back(stream1);\n\
         dim3 gridDim_rem(((int)(nrows - 1) / 8) + 1);\n\
         dim3 blockDim_rem(32, 8);\n\
         default_function_kernel_mult_sddvv_undir<<<gridDim_rem, blockDim_rem, 0,\n\
@@ -654,6 +666,7 @@ torch::Tensor inplace_softmax_sddvv_mult(torch::Tensor row_val,\n\
             &val_ptr[start_vals], &offset_ptr[i1 * (nrows + 1)], row_val_ptr,\n\
             &col_ptr[start_vals], nrows);\n\
     }\n\
+    for (auto s : streams) cudaStreamDestroy(s);\n\
     return value_graph;\n\
 }";
             kernelCallCode.addCode(kernelCallCodeStr);
@@ -755,6 +768,7 @@ default_function_kernel_sddmm_mult_undir_shared(\n\
   float *val_ptr = value_graph.data_ptr<float>();\n\
   int *bounds_ptr = bounds.data_ptr<int>();\n\
 \n\
+  std::vector<cudaStream_t> streams;\n\
   for (int i = 0; i < segments; i++) {\n\
     int i1 = i;\n\
     int start_vals = bounds_ptr[i1 * 2];\n\
@@ -762,6 +776,7 @@ default_function_kernel_sddmm_mult_undir_shared(\n\
     cudaStream_t stream1;\n\
 \n\
     cudaStreamCreate(&stream1);\n\
+    streams.push_back(stream1);\n\
     dim3 gridDim_rem(((int)(nrows - 1) / 32) + 1);\n\
     dim3 blockDim_rem(32);\n\
     default_function_kernel_spmm_backward_sddmm_32_eaggr<<<gridDim_rem, blockDim_rem,\n\
@@ -769,6 +784,7 @@ default_function_kernel_sddmm_mult_undir_shared(\n\
         oden_array, &offset_ptr[i1 * (nrows + 1)], &val_ptr[start_vals],\n\
         &col_ptr[start_vals], nrows);\n\
   }\n\
+  for (auto s : streams) cudaStreamDestroy(s);\n\
 \n\
   return output_dense;\n\
 }\n\
@@ -793,11 +809,13 @@ torch::Tensor bounds, int nrows, int segments) {\n\
     int *col_ptr = columns_graph.data_ptr<int>();\n\
     float *val_ptr = value_graph.data_ptr<float>();\n\
     int *bounds_ptr = bounds.data_ptr<int>();\n\
+    std::vector<cudaStream_t> streams;\n\
     for (int i = 0; i < segments; i++) {\n\
         int i1 = i;\n\
         int start_vals = bounds_ptr[i1 * 2];\n\
         cudaStream_t stream1;\n\
         cudaStreamCreate(&stream1);\n\
+        streams.push_back(stream1);\n\
         dim3 gridDim(((int)(nrows - 1) / 8) + 1);\n\
         dim3 blockDim(32, 8);\n\
         default_function_kernel_sddvv_plus_undir<<<gridDim, blockDim, 0,\n\
@@ -805,6 +823,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
             &oden_array[start_vals], &offset_ptr[i1 * (nrows + 1)], iden_ptr1,\n\
             iden_ptr2, &col_ptr[start_vals], nrows);\n\
     }\n\
+    for (auto s : streams) cudaStreamDestroy(s);\n\
     return output_sparse;\n\
 }\n\
 torch::Tensor edge_sddmm(torch::Tensor input_dense1, torch::Tensor input_dense2,\n\
@@ -830,11 +849,13 @@ torch::Tensor bounds, int nrows, int segments) {\n\
     int *col_ptr = columns_graph.data_ptr<int>();\n\
     float *val_ptr = value_graph.data_ptr<float>();\n\
     int *bounds_ptr = bounds.data_ptr<int>();\n\
+    std::vector<cudaStream_t> streams;\n\
     for (int i = 0; i < segments; i++) {\n\
         int i1 = i;\n\
         int start_vals = bounds_ptr[i1 * 2];\n\
         cudaStream_t stream1;\n\
         cudaStreamCreate(&stream1);\n\
+        streams.push_back(stream1);\n\
         dim3 gridDim(((int)(nrows - 1) / 8) + 1);\n\
         dim3 blockDim(32, 8);\n\
         int shared_memory_size = dcols * sizeof(float);\n\
@@ -843,6 +864,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
             &oden_array[start_vals], &offset_ptr[i1 * (nrows + 1)], iden_ptr1,\n\
             iden_ptr2, &col_ptr[start_vals], nrows, dcols);\n\
     }\n\
+    for (auto s : streams) cudaStreamDestroy(s);\n\
     return output_sparse;\n\
 }\n";
             kernelCallCode.addCode(kernelCallCodeStr);
@@ -901,6 +923,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
   // dim3 blockDim(32, 8);\n\
   // default_function_kernel_sddvv_plus<<<gridDim, blockDim, 0, stream1>>>(\n\
   //     oden_array, offset_ptr, iden_ptr1, iden_ptr2, col_ptr, nrows);\n\
+  std::vector<cudaStream_t> streams;\n\
   for (int i = 0; i < segments; i++) {\n\
     int i1 = i;\n\
     int start_vals = bounds_ptr[i1 * 2];\n\
@@ -908,6 +931,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
     int nvals = end_vals - start_vals;\n\
     cudaStream_t stream1, stream2, stream3;\n\
       cudaStreamCreate(&stream1);\n\
+      streams.push_back(stream1);\n\
       dim3 gridDim(((int)(nrows - 1) / 8) + 1);\n\
       dim3 blockDim(32, 8);\n\
       default_function_kernel_sddvv_mult_undir<<<gridDim, blockDim, 0,\n\
@@ -915,6 +939,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
           &oden_array[start_vals], &offset_ptr[i1 * (nrows + 1)], iden_ptr1,\n\
           iden_ptr2, &col_ptr[start_vals], nrows);\n\
   }\n\
+  for (auto s : streams) cudaStreamDestroy(s);\n\
   return output_sparse;\n\
 }\n";
             kernelCallCode.addCode(kernelCallCodeStr);
@@ -950,6 +975,7 @@ torch::Tensor bounds, int nrows, int segments) {\n\
                                                  stream1>>>(\n\
           oden_array, offset_ptr, iden_ptr1,\n\
           iden_ptr2, col_ptr, nrows);\n\
+  cudaStreamDestroy(stream1);\n\
   return output_sparse;\n\
 }\n";
             kernelCallCode.addCode(kernelCallCodeStr2);
