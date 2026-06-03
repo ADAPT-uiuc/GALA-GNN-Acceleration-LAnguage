@@ -876,8 +876,8 @@ public:\n\
             torch::Tensor offset_graph = global_offset_graph[2 * li + 1];\n\
             torch::Tensor columns_graph = global_columns_graph[2 * li + 1];";
                 if (isColTile){
-                    autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
-            int segments = global_segments[2 * li];\n\
+                    autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li + 1];\n\
+            int segments = global_segments[2 * li + 1];\n\
             return {" + getKernelName(cNode) + "_call(dZ, offset_graph, columns_graph, value_graph,\n\
  bounds, segments),\n\
  edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
