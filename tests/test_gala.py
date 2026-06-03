@@ -249,6 +249,7 @@ def main():
         min_acc = result_data["min_accuracy"]
         threshold = expected.get(test_name)
         if threshold is not None:
+            threshold = threshold["min_accuracy"]
             all_results[test_name]["expected_accuracy"] = threshold
 
         if threshold is not None and min_acc is not None and min_acc < threshold:
