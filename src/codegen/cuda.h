@@ -306,11 +306,10 @@ public:
                 kernelCodeStr += ") {\n\
 if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {\n";
 
-                // The local register storage
+                // The local register storage (initialized to 0 for multi-tile safety)
                 for (int j = 0; j <= cFact; j++)
                 {
-                    kernelCodeStr += "    float local" + std::to_string(j) + " = C[(((((((int)blockIdx.x) * 8)\
-+ ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) + ((int)threadIdx.x)) + " + std::to_string(32 * j) + ")];\n";
+                    kernelCodeStr += "    float local" + std::to_string(j) + " = 0;\n";
                 }
 
                 if (isKernelSample) {
@@ -349,9 +348,9 @@ if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {\n";
                 for (int j = 0; j <= cFact; j++)
                 {
                 kernelCodeStr += "\n\
-C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +\n\
+atomicAdd(&C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +\n\
 (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) +\n\
-((int)threadIdx.x) + " + std::to_string(32 * j) + ")] = local" + std::to_string(j) + ";\n";
+((int)threadIdx.x) + " + std::to_string(32 * j) + ")], local" + std::to_string(j) + ");\n";
                 }
 
                 if (isKernelSample){
@@ -381,12 +380,10 @@ C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +\n\
                 kernelCodeStr += ") {\n\
 if (((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) < nrows) {\n";
 
-                // The local register storage
+                // The local register storage (initialized to 0 for multi-tile safety)
                 for (int j = 0; j <= cFact; j++)
                 {
-                    kernelCodeStr += "    float local" + std::to_string(j) + " = C[(((((((int)blockIdx.x) * 8)\
-+ ((int)threadIdx.y)) * dcols + (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) + ((int)threadIdx.x)) + "
-                    + std::to_string(32 * j) + ") + offset];\n";
+                    kernelCodeStr += "    float local" + std::to_string(j) + " = 0;\n";
                 }
 
                 if (isKernelSample){
@@ -426,9 +423,9 @@ local" + std::to_string(j) + " = local" + std::to_string(j) + " +";
                 for (int j = 0; j <= cFact; j++)
                 {
                 kernelCodeStr += "\n\
-C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +\n\
+atomicAdd(&C[((((((int)blockIdx.x) * 8) + ((int)threadIdx.y)) * dcols +\n\
 (((int)blockIdx.y) * " + std::to_string(32 * (cFact + 1)) + ")) +\n\
-((int)threadIdx.x) + " + std::to_string(32 * j) + ") + offset] = local" + std::to_string(j) + ";\n";
+((int)threadIdx.x) + " + std::to_string(32 * j) + ") + offset], local" + std::to_string(j) + ");\n";
                 }
 
                 if (isKernelSample){
@@ -565,8 +562,7 @@ default_function_kernel_spmm_backward_sddmm_32_nln(\n\
       local_C = (local_C + (A[(j + J_indptr_data[((((int)blockIdx.x) * 32) +\n\
                                                   ((int)threadIdx.x))])]));\n\
     }\n\
-    C[((((int)blockIdx.x) * 32) + ((int)threadIdx.x))] =\n\
-        C[((((int)blockIdx.x) * 32) + ((int)threadIdx.x))] + local_C;\n\
+    atomicAdd(&C[((((int)blockIdx.x) * 32) + ((int)threadIdx.x))], local_C);\n\
   }\n\
 }\n\
 extern \"C\" __global__ void __launch_bounds__(256)\n\
@@ -767,8 +763,7 @@ torch::Tensor inplace_softmax_sddvv_mult(torch::Tensor row_val,\n\
       local_C = (local_C + (A[(j + J_indptr_data[((((int)blockIdx.x) * 32) +\n\
                                                   ((int)threadIdx.x))])]));\n\
     }\n\
-    C[((((int)blockIdx.x) * 32) + ((int)threadIdx.x))] =\n\
-        C[((((int)blockIdx.x) * 32) + ((int)threadIdx.x))] + local_C;\n\
+    atomicAdd(&C[((((int)blockIdx.x) * 32) + ((int)threadIdx.x))], local_C);\n\
   }\n\
 }\n\
 extern \"C\" __global__ void __launch_bounds__(256)\n\
