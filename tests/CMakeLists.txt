@@ -1,4 +1,6 @@
 
+find_package(Boost REQUIRED COMPONENTS program_options)
+
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ../src/frontend)
 
 BISON_TARGET(Parser ../src/frontend/frontend.y ${CMAKE_CURRENT_BINARY_DIR}/parser.cpp DEFINES_FILE ${CMAKE_CURRENT_BINARY_DIR}/parser.hpp)
@@ -14,4 +16,5 @@ add_executable(gala_test gala_test.cpp ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTP
 
 foreach(target gala_inference gala_inference_sample gala_inference_long gala_train gala_train_memory gala_test)
     target_compile_definitions(${target} PRIVATE GALA_SRC_ROOT="${CMAKE_SOURCE_DIR}")
+    target_link_libraries(${target} Boost::program_options)
 endforeach()
