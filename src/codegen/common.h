@@ -447,6 +447,23 @@ public:
                         {
                             resString += "  global_segments.push_back(segments_" + dNode->getName() + ");\n";
                             resString += "  global_bounds.push_back(total_bounds_" + dNode->getName() + ");\n";
+                            // Undirected: perm maps each (j,i) position to (i,j) position in the same tiled CSR.
+                            resString += "  {\n";
+                            resString += "    std::vector<int> perm_data_" + dNode->getName() + " = compute_transpose_perm<iT>(\n";
+                            resString += "        offset_ptr_" + dNode->getName() + ", col_ptr_" + dNode->getName() + ",\n";
+                            resString += "        total_bounds_" + dNode->getName() + ".data_ptr<iT>(), segments_" + dNode->getName() + ",\n";
+                            resString += "        offset_ptr_" + dNode->getName() + ", col_ptr_" + dNode->getName() + ",\n";
+                            resString += "        total_bounds_" + dNode->getName() + ".data_ptr<iT>(), segments_" + dNode->getName() + ",\n";
+                            resString += "        (int)" + srcNode->getName() + ".nrows(), (int)" + srcNode->getName() + ".nvals());\n";
+                            resString += "    int *dev_perm_" + dNode->getName() + ";\n";
+                            resString += "    CUDA_CHECK(cudaMalloc((void**)&dev_perm_" + dNode->getName() + ", " + srcNode->getName() + ".nvals() * sizeof(int)));\n";
+                            resString += "    CUDA_CHECK(cudaMemcpy(dev_perm_" + dNode->getName() + ", perm_data_" + dNode->getName() + ".data(),\n";
+                            resString += "        " + srcNode->getName() + ".nvals() * sizeof(int), cudaMemcpyHostToDevice));\n";
+                            resString += "    torch::Tensor t_perm_" + dNode->getName() + " = torch::from_blob(dev_perm_" + dNode->getName() + ",\n";
+                            resString += "        {(int64_t)" + srcNode->getName() + ".nvals()},\n";
+                            resString += "        torch::TensorOptions().dtype(torch::kInt).requires_grad(false).device(torch::kCUDA, 0));\n";
+                            resString += "    global_transpose_perm.push_back(t_perm_" + dNode->getName() + ");\n";
+                            resString += "  }\n";
                         } else
                         {
                             std::string tilingParam;
@@ -480,6 +497,23 @@ public:
 
                             resString += "  global_segments.push_back(segments_" + dNode->getName() + "_b);\n";
                             resString += "  global_bounds.push_back(total_bounds_" + dNode->getName() + "_b);\n";
+                            // Directed: perm maps tiled-backward positions to tiled-forward positions.
+                            resString += "  {\n";
+                            resString += "    std::vector<int> perm_data_" + dNode->getName() + " = compute_transpose_perm<iT>(\n";
+                            resString += "        offset_ptr_" + dNode->getName() + ", col_ptr_" + dNode->getName() + ",\n";
+                            resString += "        total_bounds_" + dNode->getName() + ".data_ptr<iT>(), segments_" + dNode->getName() + ",\n";
+                            resString += "        offset_ptr_" + dNode->getName() + "_b, col_ptr_" + dNode->getName() + "_b,\n";
+                            resString += "        total_bounds_" + dNode->getName() + "_b.data_ptr<iT>(), segments_" + dNode->getName() + "_b,\n";
+                            resString += "        (int)" + srcNode->getName() + "_b.nrows(), (int)" + srcNode->getName() + "_b.nvals());\n";
+                            resString += "    int *dev_perm_" + dNode->getName() + ";\n";
+                            resString += "    CUDA_CHECK(cudaMalloc((void**)&dev_perm_" + dNode->getName() + ", " + srcNode->getName() + "_b.nvals() * sizeof(int)));\n";
+                            resString += "    CUDA_CHECK(cudaMemcpy(dev_perm_" + dNode->getName() + ", perm_data_" + dNode->getName() + ".data(),\n";
+                            resString += "        " + srcNode->getName() + "_b.nvals() * sizeof(int), cudaMemcpyHostToDevice));\n";
+                            resString += "    torch::Tensor t_perm_" + dNode->getName() + " = torch::from_blob(dev_perm_" + dNode->getName() + ",\n";
+                            resString += "        {(int64_t)" + srcNode->getName() + "_b.nvals()},\n";
+                            resString += "        torch::TensorOptions().dtype(torch::kInt).requires_grad(false).device(torch::kCUDA, 0));\n";
+                            resString += "    global_transpose_perm.push_back(t_perm_" + dNode->getName() + ");\n";
+                            resString += "  }\n";
                         }
                     } else if (tr->getTransformation() == SUBGRAPH_DOPT)
                     {
@@ -659,15 +693,24 @@ public:\n\
                              torch::autograd::tensor_list grad_outputs) {\n\
                     torch::Tensor d_value_graph = grad_outputs[0];\n";
                 autoGradFunction += " int li = ctx->saved_data[\"li\"].toInt();\n\
-        torch::Tensor offset_graph = global_offset_graph[2 * li + 1];\n\
-        torch::Tensor columns_graph = global_columns_graph[2 * li + 1];\n\
-        torch::Tensor bounds = global_bounds[2 * li + 1];\n\
-        int segments = global_segments[2 * li + 1];\n\
-        torch::Tensor back_res = node_spmv_backward_of_sddmm_eaggr(\n\
-                    offset_graph, columns_graph, // This should be the reverse graph\n\
-                    d_value_graph, bounds, global_nrows, segments);\n\
-        return {back_res,\n\
-                back_res,\n\
+        torch::Tensor offset_graph_fwd = global_offset_graph[2 * li];\n\
+        torch::Tensor columns_graph_fwd = global_columns_graph[2 * li];\n\
+        torch::Tensor bounds_fwd = global_bounds[2 * li];\n\
+        int segments_fwd = global_segments[2 * li];\n\
+        torch::Tensor offset_graph_bwd = global_offset_graph[2 * li + 1];\n\
+        torch::Tensor columns_graph_bwd = global_columns_graph[2 * li + 1];\n\
+        torch::Tensor bounds_bwd = global_bounds[2 * li + 1];\n\
+        int segments_bwd = global_segments[2 * li + 1];\n\
+        torch::Tensor perm = global_transpose_perm[li];\n\
+        torch::Tensor d_value_graph_b = d_value_graph.index_select(0, perm);\n\
+        torch::Tensor back_res1 = node_spmv_backward_of_sddmm_eaggr(\n\
+                    offset_graph_fwd, columns_graph_fwd,\n\
+                    d_value_graph, bounds_fwd, global_nrows, segments_fwd);\n\
+        torch::Tensor back_res2 = node_spmv_backward_of_sddmm_eaggr(\n\
+                    offset_graph_bwd, columns_graph_bwd,\n\
+                    d_value_graph_b, bounds_bwd, global_nrows, segments_bwd);\n\
+        return {back_res1,\n\
+                back_res2,\n\
                 torch::Tensor()};\n\
     }\n\
 };\n";
@@ -876,12 +919,18 @@ public:\n\
             torch::Tensor offset_graph = global_offset_graph[2 * li + 1];\n\
             torch::Tensor columns_graph = global_columns_graph[2 * li + 1];";
                 if (isColTile){
-                    autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li + 1];\n\
-            int segments = global_segments[2 * li + 1];\n\
-            return {" + getKernelName(cNode) + "_call(dZ, offset_graph, columns_graph, value_graph,\n\
- bounds, segments),\n\
- edge_sddmm(dZ, X, offset_graph, columns_graph, value_graph, bounds,\n\
-           global_nrows, segments),\n\
+                    autoGradFunction += "        torch::Tensor bounds_b = global_bounds[2 * li + 1];\n\
+            int segments_b = global_segments[2 * li + 1];\n\
+            torch::Tensor perm = global_transpose_perm[li];\n\
+            torch::Tensor value_graph_b = value_graph.index_select(0, perm);\n\
+            torch::Tensor offset_graph_f = global_offset_graph[2 * li];\n\
+            torch::Tensor columns_graph_f = global_columns_graph[2 * li];\n\
+            torch::Tensor bounds_f = global_bounds[2 * li];\n\
+            int segments_f = global_segments[2 * li];\n\
+            return {" + getKernelName(cNode) + "_call(dZ, offset_graph, columns_graph, value_graph_b,\n\
+ bounds_b, segments_b),\n\
+ edge_sddmm(dZ, X, offset_graph_f, columns_graph_f, value_graph,\n\
+           bounds_f, global_nrows, segments_f),\n\
  torch::Tensor()};";
                 } else
                 {
@@ -1680,7 +1729,8 @@ bool global_is_directed;\n\
 std::vector<torch::Tensor> global_offset_graph;\n\
 std::vector<torch::Tensor> global_columns_graph;\n\
 std::vector<torch::Tensor> global_value_graph;\n\
-std::vector<torch::Tensor> global_bounds;\n";
+std::vector<torch::Tensor> global_bounds;\n\
+std::vector<torch::Tensor> global_transpose_perm;\n";
         } else
         {
             tempStdCommon = "#include <algorithm>\n\
@@ -1707,7 +1757,8 @@ bool global_is_directed;\n\
 std::vector<torch::Tensor> global_offset_graph;\n\
 std::vector<torch::Tensor> global_columns_graph;\n\
 std::vector<torch::Tensor> global_value_graph;\n\
-std::vector<torch::Tensor> global_bounds;\n";
+std::vector<torch::Tensor> global_bounds;\n\
+std::vector<torch::Tensor> global_transpose_perm;\n";
         }
 
         importCode.addCode(tempStdCommon);

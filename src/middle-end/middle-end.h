@@ -291,7 +291,8 @@ public:
                             // Add aggregate operation
                             auto aggregate = new ForwardNode(AGGREGATE_NODE, AGGREGATE_MUL_SUM_OP);
                             auto outputInfo = new DataInfo(RM_DTYPE);
-                            outputInfo->setDims(-1, 32); // -1=N=232965, the number of nodes in the graph
+                            auto inputFeatureDim = cNodeRb1->getInput(1)->getDataInfo()->getDimCol();
+                            outputInfo->setDims(-1, inputFeatureDim); // Feature dim matches input
                             auto rootOutputLevel = new DataLevel(outputInfo, true);
                             auto outputData = new DataNode("res", INT32, INT32, F32, rootOutputLevel);
                             aggregate->addInputData(cNodeRb1->getInput(1));
@@ -329,10 +330,10 @@ public:
                         // TODO add the computation that adds the dependency to the object?
                         int outputUses = 0;
                         auto output = cNode->getOutput(0);
-                        auto inputDataInfo = cNode->getInput(0)->getDataInfo();
-                        auto inputCols = inputDataInfo->getDimCol();
-                        auto outputCols = output->getDataInfo()->getDimCol();
-                        // std::cout << "works: " << output->getName() << " " << cNode->getInput(0)->getName() << std::endl;
+                        // Use weight matrix dimensions (input(1)) instead of data node dims
+                        // which can be corrupted by shared data node dimension overwrites.
+                        auto inputCols = cNode->getInput(1)->getDataInfo()->getDimRow();
+                        auto outputCols = cNode->getInput(1)->getDataInfo()->getDimCol();
                         for (int iy = ix + 1; iy < lNode->getLoopNodeNum(); iy++)
                         {
                             // use data deppendenciey here
@@ -346,8 +347,7 @@ public:
                                 cNode->getOutput(0)->setName(cNode->getOutput(0)->getName() + "_e");
 
                                 oNode->setInputDataNode(0, cNode->getInput(0));
-                                oNode->getOutput(0)->getDataInfo()->setDims(inputDataInfo->getDimRow(), inputCols);
-
+                                oNode->getOutput(0)->getDataInfo()->setDims(cNode->getInput(0)->getDataInfo()->getDimRow(), inputCols);
                                 // Add weight operation
                                 auto ffn = new ForwardNode(UPDATE_NODE, FFN_OP_REPEAT);
                                 // Res DIR

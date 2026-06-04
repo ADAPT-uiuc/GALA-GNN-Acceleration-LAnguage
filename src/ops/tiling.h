@@ -1755,5 +1755,52 @@ void sort_nnz_row_tile_info(std::vector<SM *> tiled_adj,
     }
 }
 
+// Compute the edge permutation mapping tiled-backward positions to tiled-forward positions.
+//
+// For each edge at tiled-backward position e', perm[e'] is the position of the same edge
+// (with src and dst swapped) in the tiled-forward array.  For undirected graphs, pass the
+// same arrays for both fwd and bwd (the function maps each (j,i) entry to the (i,j) entry
+// in the same tiled CSR).
+//
+// Arguments:
+//   off_fwd / col_fwd / bnd_fwd / seg_fwd  — tiled forward CSR (from ord_col_tiling_torch)
+//   off_bwd / col_bwd / bnd_bwd / seg_bwd  — tiled backward CSR; pass fwd arrays for undirected
+//   nrows   — number of rows/cols (square matrix)
+//   nvals   — total number of edges
+template<typename iT>
+std::vector<int> compute_transpose_perm(
+        const iT* off_fwd, const iT* col_fwd, const iT* bnd_fwd, int seg_fwd,
+        const iT* off_bwd, const iT* col_bwd, const iT* bnd_bwd, int seg_bwd,
+        int nrows, int nvals) {
+
+    // Build (i,j) -> tiled-forward position map.
+    std::unordered_map<int64_t, int> fwd_map;
+    fwd_map.reserve(nvals);
+    for (int t = 0; t < seg_fwd; t++) {
+        int base = bnd_fwd[t * 2];
+        for (int i = 0; i < nrows; i++) {
+            int ls = off_fwd[t * (nrows + 1) + i];
+            int le = off_fwd[t * (nrows + 1) + i + 1];
+            for (int k = ls; k < le; k++)
+                fwd_map[(int64_t)i * nrows + col_fwd[base + k]] = base + k;
+        }
+    }
+
+    // For each tiled-backward position e', backward edge is (j -> i).
+    // Look up forward edge (i -> j) to get perm[e'].
+    std::vector<int> perm(nvals);
+    for (int t = 0; t < seg_bwd; t++) {
+        int base = bnd_bwd[t * 2];
+        for (int j = 0; j < nrows; j++) {
+            int ls = off_bwd[t * (nrows + 1) + j];
+            int le = off_bwd[t * (nrows + 1) + j + 1];
+            for (int k = ls; k < le; k++) {
+                int i = col_bwd[base + k];
+                perm[base + k] = fwd_map[(int64_t)i * nrows + j];
+            }
+        }
+    }
+    return perm;
+}
 
 #endif //SPARSE_ACCELERATOR_TILING_H
