@@ -6,6 +6,9 @@
 #define SPARSE_ACCELERATOR_TILING_H
 
 #include <random>
+#include <utility>
+#include <parallel/algorithm>
+#include <omp.h>
 #include <torch/torch.h>
 
 // TODO -  This WILL work with CSR, but not sure of others at the moment
@@ -1773,33 +1776,53 @@ std::vector<int> compute_transpose_perm(
         const iT* off_bwd, const iT* col_bwd, const iT* bnd_bwd, int seg_bwd,
         int nrows, int nvals) {
 
-    // Build (i,j) -> tiled-forward position map.
-    std::unordered_map<int64_t, int> fwd_map;
-    fwd_map.reserve(nvals);
+    // Each edge is identified by the forward-orientation key i*nrows + j.
+    // A forward edge (i,j) and its matching backward edge (stored at row j,
+    // col i) produce the same key, so sorting both edge lists by key lines
+    // them up element-for-element -- no hash map, and every phase is parallel.
+    //
+    // .first  = key (i*nrows + j),  .second = position in the tiled CSR array.
+    std::vector<std::pair<int64_t, int>> fwd(nvals); // (key, fwd_pos)
+    std::vector<std::pair<int64_t, int>> bwd(nvals); // (key, bwd_pos)
+
+    // Forward edges: key from row i and column col_fwd. Each output slot
+    // (base+k) is written exactly once, so the loop is independent.
+    #pragma omp parallel for collapse(2) schedule(dynamic, 64)
     for (int t = 0; t < seg_fwd; t++) {
-        int base = bnd_fwd[t * 2];
         for (int i = 0; i < nrows; i++) {
+            int base = bnd_fwd[t * 2];
             int ls = off_fwd[t * (nrows + 1) + i];
             int le = off_fwd[t * (nrows + 1) + i + 1];
-            for (int k = ls; k < le; k++)
-                fwd_map[(int64_t)i * nrows + col_fwd[base + k]] = base + k;
-        }
-    }
-
-    // For each tiled-backward position e', backward edge is (j -> i).
-    // Look up forward edge (i -> j) to get perm[e'].
-    std::vector<int> perm(nvals);
-    for (int t = 0; t < seg_bwd; t++) {
-        int base = bnd_bwd[t * 2];
-        for (int j = 0; j < nrows; j++) {
-            int ls = off_bwd[t * (nrows + 1) + j];
-            int le = off_bwd[t * (nrows + 1) + j + 1];
             for (int k = ls; k < le; k++) {
-                int i = col_bwd[base + k];
-                perm[base + k] = fwd_map[(int64_t)i * nrows + j];
+                int p = base + k;
+                fwd[p] = { (int64_t)i * nrows + col_fwd[p], p };
             }
         }
     }
+
+    // Backward edges: stored at row j, col i, so the forward key is i*nrows + j.
+    #pragma omp parallel for collapse(2) schedule(dynamic, 64)
+    for (int t = 0; t < seg_bwd; t++) {
+        for (int j = 0; j < nrows; j++) {
+            int base = bnd_bwd[t * 2];
+            int ls = off_bwd[t * (nrows + 1) + j];
+            int le = off_bwd[t * (nrows + 1) + j + 1];
+            for (int k = ls; k < le; k++) {
+                int p = base + k;
+                bwd[p] = { (int64_t)col_bwd[p] * nrows + j, p };
+            }
+        }
+    }
+
+    // Both lists hold the same multiset of keys (transpose of one another),
+    // so after sorting, the n-th forward edge matches the n-th backward edge.
+    __gnu_parallel::sort(fwd.begin(), fwd.end());
+    __gnu_parallel::sort(bwd.begin(), bwd.end());
+
+    std::vector<int> perm(nvals);
+    #pragma omp parallel for schedule(static)
+    for (int n = 0; n < nvals; n++)
+        perm[bwd[n].second] = fwd[n].second;
     return perm;
 }
 
