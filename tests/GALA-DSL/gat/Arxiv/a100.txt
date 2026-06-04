@@ -23,6 +23,7 @@ m1.train(iters=100, validation_step=5);
 res = m1.eval();
 
 # schedule
+G=G.set_undirected(false); // Arxiv is a directed graph
 G=G.set_unweighted(true); // false by default
 G=G.is_sparser(true); // false by default
 feature_size(128); // -2 if not given

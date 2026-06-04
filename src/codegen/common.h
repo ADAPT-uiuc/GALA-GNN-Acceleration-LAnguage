@@ -474,6 +474,14 @@ public:
                             {
                                 tilingParam = tr->getParam(0);
                             }
+                            // The directed tiling below references <srcNode>_b (the reverse
+                            // graph). Subgraphs receive theirs from getMaskSubgraphs, but the
+                            // top-level loaded graph (adj0) has no transpose yet, so build it.
+                            if (srcNode->getName() == "adj0")
+                            {
+                                resString += "  SM " + srcNode->getName() + "_b;\n\
+      buildTranspose(&" + srcNode->getName() + ", &" + srcNode->getName() + "_b);\n";
+                            }
                             resString +=  "  std::vector<SM *> tiled_" + dNode->getName() +"_b;\n\
       tiled_" + dNode->getName() + "_b.push_back(&" + srcNode->getName() + "_b);\n\
       torch::Tensor total_offsets_" + dNode->getName() + "_b;\n\
@@ -825,13 +833,17 @@ public:\n\
            torch::autograd::tensor_list grad_outputs) {\n\
     torch::Tensor d_value_graph = grad_outputs[0];\n\
     auto saved = ctx->get_saved_variables();\n";
+                // Softmax is a per-row op: its backward must group over the SAME graph as
+                // the forward (global_offset_graph[2*li]), not the reverse graph. For
+                // undirected graphs offset[2*li]==offset[2*li+1] so this was masked; for
+                // directed graphs the reverse graph is the transpose and breaks the gradient.
                 autoGradFunction += " int li = ctx->saved_data[\"li\"].toInt();\n\
-        torch::Tensor offset_graph = global_offset_graph[2 * li + 1];\n\
-        torch::Tensor columns_graph = global_columns_graph[2 * li + 1];\n";
+        torch::Tensor offset_graph = global_offset_graph[2 * li];\n\
+        torch::Tensor columns_graph = global_columns_graph[2 * li];\n";
 
                 if (isColTile){
-                    autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li + 1];\n\
-        int segments = global_segments[2 * li + 1];\n";
+                    autoGradFunction += "        torch::Tensor bounds = global_bounds[2 * li];\n\
+        int segments = global_segments[2 * li];\n";
                 } else
                 {
                     autoGradFunction += "unsupported\n";
