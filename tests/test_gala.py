@@ -23,6 +23,7 @@ import json
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -54,8 +55,10 @@ def parse_args():
     p.add_argument(
         "--output-dir",
         type=Path,
-        default=PROJECT_ROOT / "tests" / "output",
-        help="Base directory for generated CUDA modules and build artifacts",
+        default=None,
+        help="Base directory for generated CUDA modules and build artifacts. "
+        "If not specified, a temporary directory is created and removed when done "
+        "(see --keep-output).",
     )
     p.add_argument(
         "--jobs",
@@ -72,7 +75,8 @@ def parse_args():
     p.add_argument(
         "--keep-output",
         action="store_true",
-        help="Keep generated output directories even for passing tests",
+        help="Keep generated output and build directories instead of deleting "
+        "them when done (including the temporary working directory)",
     )
     p.add_argument(
         "--expected",
@@ -227,6 +231,24 @@ def main():
     if not expected:
         print(f"Note: no expected results loaded from {args.expected}\n")
 
+    # Determine the working directory for generated code and build artifacts.
+    # When --output-dir is not given, use a temporary directory that is removed
+    # on exit unless --keep-output is set.
+    using_temp_dir = args.output_dir is None
+    if using_temp_dir:
+        args.output_dir = Path(tempfile.mkdtemp(prefix="gala-test-"))
+        print(f"Using temporary working directory {args.output_dir}\n")
+
+    try:
+        return run_tests(args, tests, expected)
+    finally:
+        if using_temp_dir and not args.keep_output:
+            shutil.rmtree(args.output_dir, ignore_errors=True)
+        elif using_temp_dir:
+            print(f"\nKept working directory {args.output_dir}")
+
+
+def run_tests(args, tests, expected):
     print(f"Running {len(tests)} tests ({NUM_RUNS} runs each)...\n")
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
