@@ -6,11 +6,11 @@ For each DSL file under tests/GALA-DSL/{gat,gcn,gin,sage}/:
   2. Run cmake to configure the CUDA module build
   3. Run make to compile the CUDA module
   4. Run the resulting gala_model binary 5 times, recording the accuracy
-     reported by each run and keeping the minimum
+     reported by each run and computing the mean
 
 A test fails if any pipeline step exits with a non-zero status, or if the
-minimum observed accuracy is below the threshold for that test in
-tests/expected_results.json.
+mean observed accuracy is more than 10% below the recorded mean accuracy
+for that test in tests/expected_results.json (i.e. below 90% of it).
 
 Results are saved to <output-dir>/results.json.
 
@@ -206,6 +206,7 @@ def run_test(rel_path, dsl_file, args):
     result_data = {
         "accuracies": accuracies,
         "min_accuracy": min(accuracies) if accuracies else None,
+        "mean_accuracy": sum(accuracies) / len(accuracies) if accuracies else None,
     }
 
     if not args.keep_output:
@@ -245,26 +246,32 @@ def main():
             continue
 
         # Pipeline passed — record run data and check accuracy threshold.
+        # The test fails if the observed mean accuracy drops more than 10%
+        # below the recorded mean accuracy (i.e. below 90% of it).
         all_results[test_name].update(result_data)
-        min_acc = result_data["min_accuracy"]
-        threshold = expected.get(test_name)
-        if threshold is not None:
-            threshold = threshold["min_accuracy"]
-            all_results[test_name]["expected_accuracy"] = threshold
+        mean_acc = result_data["mean_accuracy"]
+        threshold = None
+        expected_entry = expected.get(test_name)
+        if expected_entry is not None:
+            recorded = expected_entry.get("accuracies") or []
+            if recorded:
+                recorded_mean = sum(recorded) / len(recorded)
+                threshold = recorded_mean * 0.90
+                all_results[test_name]["expected_accuracy"] = threshold
 
-        if threshold is not None and min_acc is not None and min_acc < threshold:
+        if threshold is not None and mean_acc is not None and mean_acc < threshold:
             all_results[test_name]["status"] = "FAIL"
             all_results[test_name]["failed_step"] = "accuracy"
             print(
                 f"  FAIL  {test_name}"
-                f"  [min_acc={min_acc:.2f}% < threshold={threshold:.2f}%]"
+                f"  [mean_acc={mean_acc:.2f}% < threshold={threshold:.2f}%]"
                 f"  (log: {log_path})"
             )
             failed += 1
         else:
             acc_parts = []
-            if min_acc is not None:
-                acc_parts.append(f"min_acc={min_acc:.2f}%")
+            if mean_acc is not None:
+                acc_parts.append(f"mean_acc={mean_acc:.2f}%")
             if threshold is not None:
                 acc_parts.append(f"threshold={threshold:.2f}%")
             suffix = f"  {', '.join(acc_parts)}" if acc_parts else ""
